@@ -188,23 +188,27 @@ See [schemas.py](schemas.py) for `Event`, `DayRoundTranscript`, and `CompressedR
 
 ## What Is Fixed vs Customizable
 
-**Fixed:**
+**Fixed (shared by all players):**
 - Game rules
 - Game loop logic
 - Turn structure
 - Validation rules
 - Input/output interface
+- SGR reasoning schema
+- Memory/belief storage format
 
 **Customizable per player:**
-- Persona and personality
-- Memory strategy
-- Belief formation approach
-- Reasoning structure
-- Speech style
+- Persona (see [04_player_agent.md](04_player_agent.md) for full spec):
+  - Identity (name, background, core traits)
+  - Voice and behavior (speech style, reasoning style, accusation/defense style, trust disposition, risk tolerance, signature phrases, quirks)
+  - Role guidance (optional, brief - contextualizes traits per role)
+  - Relationships (optional, fixed lore with other personas)
+
+There are no separate "memory strategy" or "reasoning structure" modules. The persona IS the strategy - it instructs the LLM how to interpret events, what to prioritize, and how to behave.
 
 **Customizable per game:**
 - Which personas participate
-- Which models power each player
+- Which model powers the players
 - Random seed
 
 ## Error Handling

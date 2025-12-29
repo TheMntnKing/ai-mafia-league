@@ -57,15 +57,53 @@ Different players may form different beliefs from the same facts. This is intent
 
 ## Personas
 
-Each player has a persona defining personality and style:
+Personas are the primary differentiator between agents and the main creative dimension for community submissions. A well-crafted persona balances entertainment value with strategic depth.
 
-- **Name:** Identity in the game
-- **Personality traits:** Aggressive/cautious, logical/emotional, trusting/paranoid
-- **Speech style:** Formal/casual, verbose/terse, direct/indirect
-- **Strategic tendencies:** How they play as Town vs Mafia
-- **Quirks:** Distinctive behaviors recognizable across games
+**Key principle:** Behavioral invariants define HOW they act. Role guidance only contextualizes, never introduces new tactics. This prevents role leakage.
 
-**Consistency requirement:** Same personality whether Town or Mafia (otherwise role is obvious). Persona is injected into every LLM call.
+**Target length:** 250-400 words. Under 200 feels thin; over 500 causes drift and contradictions. Aim for ~300-350.
+
+### Persona Structure
+
+All fields are sent to the LLM prompt. See `Persona` schema in [schemas.py](schemas.py).
+
+```yaml
+persona:
+  identity:
+    name: str
+    background: str  # 1-2 sentences, informs motivation
+    core_traits: list[str]  # 3-5 role-neutral traits
+
+  voice_and_behavior:
+    speech_style: str  # vocabulary, structure, tone
+    reasoning_style: str  # how they analyze (logical, intuitive, pattern-based, absurdist)
+    accusation_style: str  # how/when they target others
+    defense_style: str  # how they handle being accused
+    trust_disposition: str  # paranoid, neutral, trusting, conditional
+    risk_tolerance: str  # aggressive plays vs safe plays
+    signature_phrases: list[str]  # 0-3 catchphrases
+    quirks: list[str]  # 0-3 recognizable behaviors
+
+  role_guidance:  # optional, brief - contextualizes, doesn't introduce new tactics
+    town: str  # 1-2 sentences applying traits
+    mafia: str  # 1-2 sentences applying traits
+    detective: str  # 1-2 sentences applying traits
+
+  relationships:  # optional, fixed lore between personas
+    other_persona_name: str  # relationship description
+```
+
+### Relationships
+
+Relationships between personas can be:
+- **Fixed lore** (in persona.relationships): Pre-existing rivalries or alliances that affect behavior. Sent to LLM.
+- **Dynamic** (in memory): Built during games, tracked in player memory state between turns.
+
+Example fixed lore: `{"Moriarty": "Ancient rival - always suspects, never trusts"}`
+
+### Persona as Prompt
+
+The entire persona is rendered into the system prompt for every LLM call. The engine provides structured facts and stores memory/beliefs between turns. The persona instructs the LLM how to interpret facts, what to prioritize, and how to express itself.
 
 ## Player Actions
 
@@ -96,14 +134,14 @@ LLMs are stateless. Engine manages continuity:
 
 Each call is self-contained from player's perspective.
 
-## Skill Differentiation
+## What Differentiates Players
 
-**MVP:** All players use same reasoning structure, differ only by persona and model.
+All players share the same:
+- SGR reasoning structure
+- Input/output interface
+- Game engine and rules
+- Base model (per game configuration)
 
-**Future competition:** Customizable elements become skill dimension:
-- Reasoning schema design
-- Memory strategy
-- Belief formation
-- Attention patterns
+Players differ only by **persona** - which includes identity, voice and behavior, role guidance, and relationships (see Personas section above).
 
-**Fixed:** Input/output interface, base model, game rules.
+This is intentional. The creative challenge is crafting personas that are both entertaining to watch and effective at the game. There are no separate "AI architecture" or "reasoning strategy" modules to customize - the persona IS the strategy.

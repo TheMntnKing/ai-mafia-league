@@ -5,15 +5,15 @@
 CREATE TABLE personas (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    traits TEXT,      -- JSON
-    play_style TEXT,  -- JSON
+    definition TEXT NOT NULL,  -- Full Persona JSON (identity, voice_and_behavior, role_guidance, relationships)
     games_played INTEGER DEFAULT 0,
-    win_rate REAL
+    wins INTEGER DEFAULT 0
 );
 
 -- Game records
 CREATE TABLE games (
     id TEXT PRIMARY KEY,
+    tournament_id TEXT REFERENCES tournaments(id),  -- NULL for standalone games
     timestamp DATETIME,
     winner TEXT,      -- 'town' or 'mafia'
     rounds INTEGER,
@@ -33,14 +33,20 @@ CREATE TABLE game_players (
 CREATE TABLE tournaments (
     id TEXT PRIMARY KEY,
     name TEXT,
-    status TEXT,
-    standings TEXT    -- JSON
+    status TEXT,       -- 'pending', 'active', 'completed'
+    roster TEXT,       -- JSON array of persona_ids (fixed for tournament)
+    games_total INTEGER,
+    standings TEXT     -- JSON (persona scores, wins, etc.)
 );
 
 -- Cross-game memory for tournaments (future)
+-- Each persona maintains memories of opponents, scoped to tournament
 CREATE TABLE persona_memories (
+    tournament_id TEXT REFERENCES tournaments(id),
     persona_id TEXT REFERENCES personas(id),
     opponent_id TEXT REFERENCES personas(id),
-    observations TEXT,  -- JSON
-    PRIMARY KEY (persona_id, opponent_id)
+    memory TEXT,  -- Free-form text in persona's voice (~100-200 words)
+    games_together INTEGER DEFAULT 0,
+    last_updated DATETIME,
+    PRIMARY KEY (tournament_id, persona_id, opponent_id)
 );

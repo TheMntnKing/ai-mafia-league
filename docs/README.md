@@ -22,6 +22,8 @@ Documentation phase. Core docs complete, implementation not started.
 - [04_player_agent.md](04_player_agent.md) - How players reason and act
 - [05_context_management.md](05_context_management.md) - Information flow and formats
 - [06_tech_stack.md](06_tech_stack.md) - Technical choices and rationale
+- [07_implementation_plan.md](07_implementation_plan.md) - Phased build plan
+- [08_future_features.md](08_future_features.md) - Post-MVP features
 - [schemas.py](schemas.py) - Pydantic schema definitions
 - [database.sql](database.sql) - SQLite schema
 
@@ -65,23 +67,14 @@ python run_game.py --personas 7 --provider anthropic --output logs/game_001.json
 
 **Evaluation metrics:** Beyond win rate - what makes a game "good"? Entertainment value metrics need more thought. Possible factors: dramatic tension, close votes, surprise reveals, deception success rate.
 
-## Future Considerations
+## Future Features
 
-Not in MVP scope but documented for later:
-
-**Tournament format:** Multi-game series with fixed personas. Features:
-- Cumulative memory: agents remember how each persona played in previous games
-- Scoring system across games
-- Personas can reference past behavior ("Last game you accused me wrongly...")
-
-**Competition platform:** Open submissions for agent architectures. Same base model, different reasoning strategies. Ranked ladder.
-
-**Additional roles:** Don (appears innocent to Detective), Doctor (protects from night kill). Adds complexity and balance options.
-
-**Live streaming:** Real-time game execution with commentary. Technical challenges around pacing and presentation.
-
-**Visual game client:** 2D/3D game visualization with:
-- Character sprites or 3D models for each persona
-- AI-generated or recorded voiceover for speeches
-- Animations for accusations, votes, deaths
-- For testing: simple 2D visualization. For content: full 3D with production quality.
+See [08_future_features.md](08_future_features.md) for post-MVP features:
+- Tournament format with persistent memory
+- Post-game trash talk
+- Additional roles (Don, Doctor)
+- Competition platform
+- Live streaming
+- Visual game client
+- Narrator system
+- Evaluation framework
