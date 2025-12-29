@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # LLM Provider
     anthropic_api_key: str = ""
-    model_name: str = "claude-3-5-haiku-20241022"
+    model_name: str = "claude-haiku-4-5-20251001"
 
     # Langfuse observability (optional)
     langfuse_public_key: str = ""
