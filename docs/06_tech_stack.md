@@ -3,7 +3,7 @@
 ## Core
 
 - **Language:** Python 3.11+
-- **LLM Providers:** Claude Haiku 4.5 (primary), Gemini Flash 3.0, Qwen 3
+- **LLM Providers:** Claude Haiku (primary, version configurable), Gemini Flash 3.0, Qwen 3
 - **Storage:** SQLite + JSON files
 - **Observability:** Langfuse
 
@@ -11,7 +11,7 @@
 
 | Provider | Model | Pricing | Structured Output |
 |----------|-------|---------|-------------------|
-| Anthropic | Claude Haiku 4.5 | $1/$5 per M tokens | tool_use or JSON mode |
+| Anthropic | Claude Haiku (configurable) | $1/$5 per M tokens | tool_use or JSON mode |
 | Google | Gemini Flash 3.0 | Competitive | response_schema |
 | Qwen | Qwen 3 | Free (local) | JSON mode |
 

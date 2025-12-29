@@ -100,7 +100,7 @@ class Persona(BaseModel):
     Under 200 feels thin; over 500 causes drift and contradictions.
 
     Key principle: Behavioral invariants define HOW they act.
-    Role guidance only contextualizes, never introduces new tactics.
+    Role guidance may include tactics only if they are consistent with behavioral invariants.
     """
     identity: PersonaIdentity
     voice_and_behavior: VoiceAndBehavior
@@ -174,6 +174,12 @@ class Speech(BaseModel):
     nomination: str
 
 
+class DefenseSpeech(BaseModel):
+    """Defense speech during revote (no nomination)."""
+    speaker: str
+    text: str
+
+
 class DayRoundTranscript(BaseModel):
     """
     Full detail transcript for a day round.
@@ -187,7 +193,7 @@ class DayRoundTranscript(BaseModel):
     speeches: list[Speech]
     votes: dict[str, str]  # player -> target or "skip"
     vote_outcome: str  # "eliminated:{name}", "no_elimination", "revote"
-    defense_speeches: list[Speech] | None  # If revote
+    defense_speeches: list[DefenseSpeech] | None  # If revote
     revote: dict[str, str] | None
     revote_outcome: str | None
 

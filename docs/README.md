@@ -34,7 +34,7 @@ See [06_tech_stack.md](06_tech_stack.md) for detailed technical choices.
 
 **Summary:**
 - **Language:** Python 3.11+
-- **LLM Providers:** Claude Haiku 4.5 (primary), Gemini Flash 3.0, Qwen 3
+- **LLM Providers:** Claude Haiku (primary, version configurable), Gemini Flash 3.0, Qwen 3
 - **Reasoning:** Schema-Guided Reasoning (SGR) for structured thinking
 - **Storage:** SQLite (structured data) + JSON files (game logs)
 - **Cost:** ~$0.20-0.80 per game (50-80 LLM calls)

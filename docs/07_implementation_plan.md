@@ -5,7 +5,7 @@ Phased approach to build the AI Mafia Agent League MVP.
 ## Decisions
 
 - **First milestone:** Phases 1-6 (full working game loop)
-- **Provider strategy:** Anthropic only (Claude Haiku 4.5), add others later
+- **Provider strategy:** Anthropic only (Claude Haiku, model id configurable), add others later
 - **Testing:** Test as we go - each phase includes tests
 - **Observability:** Langfuse from the start
 
@@ -75,7 +75,7 @@ Phased approach to build the AI Mafia Agent League MVP.
 
 2.2. Create `src/providers/anthropic.py`:
 - `AnthropicProvider` implementing `PlayerProvider`
-- Claude Haiku 4.5 with tool_use for structured output
+- Claude Haiku with tool_use for structured output
 - Langfuse `@observe` decorator on API calls
 - Parse structured response into action-specific schema based on `action_type`
 
