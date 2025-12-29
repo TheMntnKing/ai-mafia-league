@@ -33,7 +33,8 @@ class DayRoundTranscript(BaseModel):
     last_words: str | None  # Killed player's last words
     speeches: list[Speech]
     votes: dict[str, str]  # player -> target or "skip"
-    vote_outcome: str  # "eliminated:{name}", "no_elimination", "revote"
+    # "eliminated:{name}", "no_elimination", "revote", or "pending" (in-progress)
+    vote_outcome: str
     defense_speeches: list[DefenseSpeech] | None = None  # If revote
     revote: dict[str, str] | None = None
     revote_outcome: str | None = None

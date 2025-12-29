@@ -1,0 +1,646 @@
+"""Tests for transcript management and context building."""
+
+import pytest
+
+from src.engine.context import ContextBuilder
+from src.engine.transcript import TranscriptManager
+from src.schemas import (
+    ActionType,
+    DefenseSpeech,
+    Event,
+    GameState,
+    PlayerMemory,
+    Speech,
+)
+
+
+class TestTranscriptManager:
+    @pytest.fixture
+    def manager(self):
+        return TranscriptManager()
+
+    def test_add_speech(self, manager):
+        """Can add speeches to current round."""
+        manager.add_speech("Alice", "I think Bob is suspicious", "Bob")
+        manager.add_speech("Bob", "I'm innocent!", "Alice")
+
+        speeches = manager.get_current_speeches()
+        assert len(speeches) == 2
+        assert speeches[0].speaker == "Alice"
+        assert speeches[1].nomination == "Alice"
+
+    def test_finalize_round(self, manager):
+        """Finalize round creates transcript and clears current speeches."""
+        manager.add_speech("Alice", "Hello", "Bob")
+        manager.add_speech("Bob", "Hi", "Alice")
+
+        transcript = manager.finalize_round(
+            round_number=1,
+            night_kill=None,
+            last_words=None,
+            votes={"Alice": "Bob", "Bob": "skip"},
+            vote_outcome="no_elimination",
+        )
+
+        assert transcript.round_number == 1
+        assert len(transcript.speeches) == 2
+        assert manager.get_current_speeches() == []
+        assert len(manager.rounds) == 1
+
+    def test_live_round_includes_night_info(self, manager):
+        """In-progress round includes night kill and last words."""
+        manager.start_round(2, night_kill="Alice", last_words="Goodbye")
+        manager.add_speech("Bob", "We lost Alice", "Charlie")
+
+        transcript = manager.get_transcript_for_player(current_round=2)
+        live = transcript[-1]
+
+        assert live.round_number == 2
+        assert live.night_kill == "Alice"
+        assert live.last_words == "Goodbye"
+        assert len(live.speeches) == 1
+
+    def test_finalize_round_with_revote(self, manager):
+        """Finalize round captures revote data."""
+        manager.add_speech("Alice", "Vote Bob", "Bob")
+
+        transcript = manager.finalize_round(
+            round_number=2,
+            night_kill="Charlie",
+            last_words="Goodbye",
+            votes={"Alice": "Bob", "Bob": "Alice"},
+            vote_outcome="revote",
+            defense_speeches=[DefenseSpeech(speaker="Alice", text="I'm innocent")],
+            revote={"Diana": "Bob"},
+            revote_outcome="eliminated:Bob",
+        )
+
+        assert transcript.revote_outcome == "eliminated:Bob"
+        assert transcript.defense_speeches is not None
+
+    def test_live_round_has_pending_vote_outcome(self, manager):
+        """Live (in-progress) rounds have vote_outcome='pending'."""
+        manager.start_round(1, night_kill=None, last_words=None)
+        manager.add_speech("Alice", "Hello", "Bob")
+
+        transcript = manager.get_transcript_for_player(current_round=1)
+        live_round = transcript[-1]
+
+        assert live_round.vote_outcome == "pending"
+
+
+class TestTranscriptCompression:
+    @pytest.fixture
+    def manager(self):
+        return TranscriptManager()
+
+    def test_two_round_window(self, manager):
+        """Transcripts older than 2 rounds are compressed."""
+        # Add 3 rounds
+        for i in range(1, 4):
+            manager.add_speech(f"Player{i}", "Speech text", f"Player{i+1}")
+            manager.finalize_round(
+                round_number=i,
+                night_kill=None if i == 1 else f"Player{i-1}",
+                last_words=None,
+                votes={f"Player{i}": "skip"},
+                vote_outcome="no_elimination",
+            )
+
+        # Get transcript for round 3
+        transcript = manager.get_transcript_for_player(current_round=3)
+
+        # Round 1 should be compressed
+        assert hasattr(transcript[0], "accusations")  # CompressedRoundSummary
+        # Rounds 2 and 3 should be full
+        assert hasattr(transcript[1], "speeches")  # DayRoundTranscript
+        assert hasattr(transcript[2], "speeches")  # DayRoundTranscript
+
+    def test_compression_extracts_accusations(self, manager):
+        """Compression identifies accusation patterns."""
+        manager.add_speech("Alice", "Bob is definitely mafia, vote him out!", "Bob")
+        manager.add_speech("Bob", "I'm innocent, Alice is suspicious", "Alice")
+        manager.finalize_round(
+            round_number=1,
+            night_kill=None,
+            last_words=None,
+            votes={},
+            vote_outcome="no_elimination",
+        )
+
+        # Add more rounds to push round 1 out of window
+        for i in range(2, 4):
+            manager.add_speech("Charlie", "Discussion", "Diana")
+            manager.finalize_round(
+                round_number=i,
+                night_kill=None,
+                last_words=None,
+                votes={},
+                vote_outcome="no_elimination",
+            )
+
+        transcript = manager.get_transcript_for_player(current_round=3)
+        compressed = transcript[0]
+
+        # Should have captured the accusations
+        assert len(compressed.accusations) > 0
+        assert any("Alice" in acc and "Bob" in acc for acc in compressed.accusations)
+
+    def test_compression_extracts_claims(self, manager):
+        """Compression identifies role claims."""
+        manager.add_speech("Alice", "I am the detective and I investigated Bob", "Bob")
+        manager.finalize_round(
+            round_number=1,
+            night_kill=None,
+            last_words=None,
+            votes={},
+            vote_outcome="no_elimination",
+        )
+
+        # Add rounds to push out of window
+        for i in range(2, 4):
+            manager.add_speech("Bob", "Test", "Charlie")
+            manager.finalize_round(i, None, None, {}, "no_elimination")
+
+        transcript = manager.get_transcript_for_player(current_round=3)
+        compressed = transcript[0]
+
+        assert len(compressed.claims) > 0
+        assert any("Detective" in claim for claim in compressed.claims)
+
+    def test_compression_captures_deaths(self, manager):
+        """Compression captures night and vote deaths."""
+        manager.add_speech("Alice", "Vote Bob", "Bob")
+        manager.finalize_round(
+            round_number=1,
+            night_kill="Charlie",
+            last_words=None,
+            votes={"Alice": "Bob"},
+            vote_outcome="eliminated:Bob",
+        )
+
+        # Add rounds
+        for i in range(2, 4):
+            manager.add_speech("Diana", "Test", "Eve")
+            manager.finalize_round(i, None, None, {}, "no_elimination")
+
+        transcript = manager.get_transcript_for_player(current_round=3)
+        compressed = transcript[0]
+
+        assert compressed.night_death == "Charlie"
+        assert compressed.vote_death == "Bob"
+
+
+class TestContextBuilder:
+    @pytest.fixture
+    def builder(self):
+        return ContextBuilder()
+
+    @pytest.fixture
+    def game_state(self):
+        return GameState(
+            phase="day_1",
+            round_number=1,
+            living_players=["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+            dead_players=[],
+            nominated_players=[],
+        )
+
+    @pytest.fixture
+    def memory(self):
+        return PlayerMemory(facts={}, beliefs={})
+
+    def test_build_context_includes_all_sections(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Context includes all required sections."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+        )
+
+        assert "[YOUR IDENTITY]" in context
+        assert "[GAME RULES]" in context
+        assert "[CURRENT STATE]" in context
+        assert "[TRANSCRIPT]" in context
+        assert "[YOUR MEMORY]" in context
+        assert "[YOUR TASK: SPEAK]" in context
+
+    def test_context_includes_persona_info(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Context includes persona details."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+        )
+
+        assert sample_persona.identity.name in context
+        assert sample_persona.identity.background in context
+        assert sample_persona.voice_and_behavior.speech_style in context
+
+    def test_mafia_context_includes_partner(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Mafia players see partner info."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="mafia",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+            extra={"partner": "Bob"},
+        )
+
+        assert "[MAFIA INFO]" in context
+        assert "Your partner is Bob" in context
+
+    def test_detective_context_includes_results(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Detective sees investigation results."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="detective",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+            extra={"results": [{"target": "Bob", "result": "Mafia"}]},
+        )
+
+        assert "[INVESTIGATION RESULTS]" in context
+        assert "Bob: Mafia" in context
+
+    def test_action_prompts_differ_by_type(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Different action types get different prompts."""
+        speak_context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+        )
+
+        vote_context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.VOTE,
+        )
+
+        assert "[YOUR TASK: SPEAK]" in speak_context
+        assert "[YOUR TASK: VOTE]" in vote_context
+        assert "nomination" in speak_context.lower()
+        assert "vote" in vote_context.lower()
+
+    def test_night_kill_shows_valid_targets(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Night kill prompt shows valid targets (excluding self)."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="mafia",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.NIGHT_KILL,
+            extra={"partner": "Bob"},
+        )
+
+        assert "[YOUR TASK: MAFIA NIGHT KILL]" in context
+        # Should list targets excluding Alice
+        assert "Alice" not in context.split("Valid targets:")[1].split("\n")[0]
+        # Should list targets excluding partner
+        assert "Bob" not in context.split("Valid targets:")[1].split("\n")[0]
+
+    def test_recent_events_section(self, builder, sample_persona, game_state, memory):
+        """Recent events section renders public events."""
+        events = [
+            Event(
+                type="vote",
+                timestamp="2025-01-01T00:00:00Z",
+                data={"outcome": "no_elimination"},
+                private_fields=[],
+            )
+        ]
+
+        context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+            recent_events=events,
+        )
+
+        assert "[RECENT EVENTS]" in context
+        assert "vote" in context
+        assert "no_elimination" in context
+
+    def test_recent_events_filters_private_fields(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Recent events section filters out private_fields from event data."""
+        events = [
+            Event(
+                type="investigation",
+                timestamp="2025-01-01T00:00:00Z",
+                data={
+                    "target": "Bob",
+                    "result": "Mafia",
+                    "reasoning": "I suspected Bob because...",
+                },
+                private_fields=["target", "result", "reasoning"],
+            ),
+            Event(
+                type="speech",
+                timestamp="2025-01-01T00:01:00Z",
+                data={
+                    "speaker": "Alice",
+                    "text": "I think Bob is suspicious",
+                    "reasoning": "Private thought process here",
+                },
+                private_fields=["reasoning"],
+            ),
+        ]
+
+        context = builder.build_context(
+            player_name="Charlie",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+            recent_events=events,
+        )
+
+        assert "[RECENT EVENTS]" in context
+        recent_section = context.split("[RECENT EVENTS]")[1].split("[YOUR MEMORY]")[0]
+        # Investigation: all fields private, should render as empty {}
+        assert "investigation: {}" in recent_section
+        assert "Mafia" not in recent_section  # result filtered
+        assert "I suspected Bob because" not in recent_section  # reasoning filtered
+        # Speech: public fields remain, private reasoning filtered
+        assert "I think Bob is suspicious" in recent_section
+        assert "Private thought process" not in recent_section
+
+    def test_vote_prompt_does_not_duplicate_skip(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Vote prompt doesn't show duplicate skip when no nominations."""
+        game_state.nominated_players = []
+
+        context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.VOTE,
+        )
+
+        assert "skip, skip" not in context
+
+    def test_transcript_renders_full_rounds(self, builder, sample_persona, memory):
+        """Full round transcripts show complete speeches."""
+        from src.schemas import DayRoundTranscript
+
+        transcript = [
+            DayRoundTranscript(
+                round_number=1,
+                night_kill=None,
+                last_words=None,
+                speeches=[
+                    Speech(speaker="Alice", text="Hello everyone", nomination="Bob"),
+                    Speech(speaker="Bob", text="I'm innocent", nomination="Alice"),
+                ],
+                votes={"Alice": "Bob", "Bob": "Alice"},
+                vote_outcome="no_elimination",
+            )
+        ]
+
+        game_state = GameState(
+            phase="day_2",
+            round_number=2,
+            living_players=["Alice", "Bob", "Charlie"],
+            dead_players=[],
+            nominated_players=[],
+        )
+
+        context = builder.build_context(
+            player_name="Charlie",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=transcript,
+            memory=memory,
+            action_type=ActionType.SPEAK,
+        )
+
+        assert "Day 1 (full)" in context
+        assert 'Alice: "Hello everyone"' in context
+        assert 'Bob: "I\'m innocent"' in context
+        assert "Nominated: Bob" in context
+
+    def test_transcript_renders_compressed_rounds(self, builder, sample_persona, memory):
+        """Compressed rounds show summaries."""
+        from src.schemas import CompressedRoundSummary
+
+        transcript = [
+            CompressedRoundSummary(
+                round_number=1,
+                night_death=None,
+                vote_death="Bob",
+                accusations=["Alice accused Bob"],
+                vote_result="eliminated:Bob",
+                claims=["Charlie claimed Detective"],
+            )
+        ]
+
+        game_state = GameState(
+            phase="day_3",
+            round_number=3,
+            living_players=["Alice", "Charlie"],
+            dead_players=["Bob"],
+            nominated_players=[],
+        )
+
+        context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=transcript,
+            memory=memory,
+            action_type=ActionType.SPEAK,
+        )
+
+        assert "Day 1 (summary)" in context
+        assert "Vote elimination: Bob" in context
+        assert "Alice accused Bob" in context
+        assert "Charlie claimed Detective" in context
+
+    def test_memory_renders_to_json(self, builder, sample_persona, game_state):
+        """Memory section shows facts and beliefs as JSON."""
+        memory = PlayerMemory(
+            facts={"speeches_heard": ["Alice spoke first"]},
+            beliefs={"suspicions": {"Bob": "very suspicious"}},
+        )
+
+        context = builder.build_context(
+            player_name="Charlie",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+        )
+
+        assert "[YOUR MEMORY]" in context
+        assert "speeches_heard" in context
+        assert "very suspicious" in context
+
+    def test_defense_context_section(self, builder, sample_persona, game_state, memory):
+        """Defense context shows tied players, vote counts, and votes."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.DEFENSE,
+            extra={
+                "defense_context": {
+                    "tied_players": ["Alice", "Bob"],
+                    "vote_counts": {"Alice": 2, "Bob": 2},
+                    "votes": {"Charlie": "Alice", "Diana": "Bob"},
+                }
+            },
+        )
+
+        assert "[DEFENSE CONTEXT]" in context
+        assert "Tied players: Alice, Bob" in context
+        assert "Alice:2" in context
+        assert "Bob:2" in context
+        assert "Charlie->Alice" in context
+
+    def test_detective_empty_results(self, builder, sample_persona, game_state, memory):
+        """Detective with no results shows appropriate message."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="detective",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+            extra={"results": []},
+        )
+
+        assert "[INVESTIGATION RESULTS]" in context
+        assert "No investigations completed yet" in context
+
+    def test_mafia_dead_partner(self, builder, sample_persona, game_state, memory):
+        """Mafia context shows dead partner status."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="mafia",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+            extra={"partner": "Bob", "partner_alive": False},
+        )
+
+        assert "[MAFIA INFO]" in context
+        assert "Your partner is Bob (dead)" in context
+
+    def test_investigation_prompt(self, builder, sample_persona, game_state, memory):
+        """Investigation prompt shows valid targets excluding self."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="detective",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.INVESTIGATION,
+        )
+
+        assert "[YOUR TASK: DETECTIVE INVESTIGATION]" in context
+        assert "Choose someone to investigate" in context
+        # Should exclude self from targets
+        targets_section = context.split("Valid targets:")[1].split("\n")[0]
+        assert "Alice" not in targets_section
+
+    def test_last_words_prompt(self, builder, sample_persona, game_state, memory):
+        """Last words prompt shows appropriate instructions."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.LAST_WORDS,
+        )
+
+        assert "[YOUR TASK: LAST WORDS]" in context
+        assert "eliminated from the game" in context
+        assert "final statement" in context
+
+
+class TestTranscriptFullMode:
+    @pytest.fixture
+    def manager(self):
+        return TranscriptManager()
+
+    def test_full_mode_returns_uncompressed(self, manager):
+        """full=True returns all rounds uncompressed."""
+        # Add 3 rounds
+        for i in range(1, 4):
+            manager.add_speech(f"Player{i}", "Speech text", f"Player{i+1}")
+            manager.finalize_round(
+                round_number=i,
+                night_kill=None if i == 1 else f"Player{i-1}",
+                last_words=None,
+                votes={f"Player{i}": "skip"},
+                vote_outcome="no_elimination",
+            )
+
+        # Get transcript with full=True
+        transcript = manager.get_transcript_for_player(current_round=3, full=True)
+
+        # All rounds should be DayRoundTranscript (not compressed)
+        for item in transcript:
+            assert hasattr(item, "speeches"), "Expected full transcript, got compressed"
+            assert not hasattr(item, "accusations"), "Got compressed instead of full"
