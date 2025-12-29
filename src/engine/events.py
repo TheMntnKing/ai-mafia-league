@@ -58,6 +58,8 @@ class EventLog:
         """
         public_events = []
         for event in self.events[since_index:]:
+            if event.private_fields and set(event.private_fields) >= set(event.data.keys()):
+                continue
             public_data = {
                 k: v for k, v in event.data.items() if k not in event.private_fields
             }

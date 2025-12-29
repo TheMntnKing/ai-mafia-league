@@ -1,5 +1,7 @@
 """Tests for database operations."""
 
+import sqlite3
+
 import pytest
 
 from src.storage.database import Database
@@ -27,6 +29,20 @@ class TestDatabase:
         assert "game_players" in table_names
         assert "tournaments" in table_names
         assert "persona_memories" in table_names
+
+    async def test_initialize_schema_with_changed_cwd(self, tmp_path, monkeypatch):
+        """Schema initializes even when cwd differs from repo root."""
+        db = Database(str(tmp_path / "test.db"))
+        await db.connect()
+        monkeypatch.chdir(tmp_path)
+        await db.initialize_schema()
+        cursor = await db._connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )
+        tables = await cursor.fetchall()
+        table_names = [t["name"] for t in tables]
+        assert "personas" in table_names
+        await db.close()
 
     async def test_initialize_schema_missing_file(self, tmp_path):
         """Missing schema file raises an error."""
@@ -62,6 +78,12 @@ class TestPersonaCRUD:
         retrieved = await test_db.get_persona_by_name("Test Player")
         assert retrieved is not None
         assert retrieved.identity.name == "Test Player"
+
+    async def test_get_persona_id_by_name(self, test_db, sample_persona):
+        """Can retrieve a persona's database ID by name."""
+        persona_id = await test_db.create_persona(sample_persona)
+        retrieved_id = await test_db.get_persona_id_by_name("Test Player")
+        assert retrieved_id == persona_id
 
     async def test_duplicate_persona_name(self, test_db, sample_persona):
         """Creating a persona with duplicate name raises error."""
@@ -136,6 +158,18 @@ class TestGameRecords:
         assert row["role"] == "detective"
         assert row["outcome"] == "survived"
 
+    async def test_record_game_player_requires_game(self, test_db, sample_persona):
+        """Foreign keys prevent orphaned game_players records."""
+        persona_id = await test_db.create_persona(sample_persona)
+
+        with pytest.raises(sqlite3.IntegrityError):
+            await test_db.record_game_player(
+                game_id="missing_game",
+                persona_id=persona_id,
+                role="town",
+                outcome="survived",
+            )
+
     async def test_list_games(self, test_db):
         """Can list recorded games."""
         await test_db.record_game(
@@ -181,6 +215,12 @@ class TestGameRecords:
             rounds=5,
             log_file="logs/update_game_1.json",
         )
+
+        await test_db._connection.execute(
+            "INSERT INTO tournaments (id, name, status) VALUES (?, ?, ?)",
+            ("tourney_1", "Test Tourney", "active"),
+        )
+        await test_db._connection.commit()
 
         await test_db.update_game(
             "update_game_1",

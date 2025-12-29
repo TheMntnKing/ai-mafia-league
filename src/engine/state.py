@@ -153,15 +153,21 @@ class GameStateManager:
 
     def get_living_players(self) -> list[str]:
         """Get list of living player names."""
-        return [p.name for p in self.players.values() if p.alive]
+        living = [p for p in self.players.values() if p.alive]
+        living.sort(key=lambda p: p.seat)
+        return [p.name for p in living]
 
     def get_players_by_role(self, role: str) -> list[str]:
         """Get all players with a specific role."""
-        return [p.name for p in self.players.values() if p.role == role]
+        players = [p for p in self.players.values() if p.role == role]
+        players.sort(key=lambda p: p.seat)
+        return [p.name for p in players]
 
     def get_living_players_by_role(self, role: str) -> list[str]:
         """Get living players with a specific role."""
-        return [p.name for p in self.players.values() if p.role == role and p.alive]
+        players = [p for p in self.players.values() if p.role == role and p.alive]
+        players.sort(key=lambda p: p.seat)
+        return [p.name for p in players]
 
     def is_alive(self, player_name: str) -> bool:
         """Check if a player is alive."""

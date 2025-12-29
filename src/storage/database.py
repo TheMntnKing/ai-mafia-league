@@ -22,6 +22,7 @@ class Database:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = await aiosqlite.connect(self.db_path)
         self._connection.row_factory = aiosqlite.Row
+        await self._connection.execute("PRAGMA foreign_keys = ON")
 
     async def close(self) -> None:
         """Close database connection."""
@@ -35,6 +36,8 @@ class Database:
             raise RuntimeError("Database not connected")
 
         schema_file = Path(schema_path)
+        if not schema_file.is_absolute():
+            schema_file = Path(__file__).resolve().parents[2] / schema_file
         if not schema_file.exists():
             raise FileNotFoundError(f"Schema file not found: {schema_file}")
 
@@ -95,6 +98,20 @@ class Database:
         row = await cursor.fetchone()
         if row:
             return Persona.model_validate_json(row["definition"])
+        return None
+
+    async def get_persona_id_by_name(self, name: str) -> str | None:
+        """Get a persona's database ID by name."""
+        if not self._connection:
+            raise RuntimeError("Database not connected")
+
+        cursor = await self._connection.execute(
+            "SELECT id FROM personas WHERE name = ?",
+            (name,),
+        )
+        row = await cursor.fetchone()
+        if row:
+            return row["id"]
         return None
 
     async def list_personas(self) -> list[Persona]:

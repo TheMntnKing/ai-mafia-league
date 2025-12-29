@@ -427,7 +427,7 @@ class TestEventLog:
         assert "reasoning" in event.private_fields
 
         public = log.get_public_view()
-        assert public[0].data == {}  # All fields filtered
+        assert public == []  # Fully private events should be hidden
 
 
 class TestGameLogWriter:

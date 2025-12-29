@@ -24,6 +24,10 @@ python -m src.engine.run
 - **Observability**: langfuse
 - **Testing**: pytest, pytest-asyncio
 
+### Model Names
+
+Default model: `claude-haiku-4-5-20251001` (Claude 4.5 Haiku)
+
 ## Code Style
 
 **Linting and formatting with ruff:**

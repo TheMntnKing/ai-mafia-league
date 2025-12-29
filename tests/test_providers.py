@@ -215,6 +215,33 @@ class TestAnthropicProvider:
                 context="Test context",
             )
 
+    async def test_records_usage_with_langfuse(
+        self, provider, mock_anthropic_client, sample_tool_response, monkeypatch
+    ):
+        """Langfuse receives usage details when available."""
+        from src.providers import anthropic as provider_module
+
+        mock_langfuse = MagicMock()
+        monkeypatch.setattr(provider_module, "LANGFUSE_AVAILABLE", True)
+        monkeypatch.setattr(provider_module, "Langfuse", MagicMock(return_value=mock_langfuse))
+
+        usage = MagicMock()
+        usage.input_tokens = 10
+        usage.output_tokens = 5
+        sample_tool_response.usage = usage
+
+        mock_anthropic_client.messages.create = AsyncMock(return_value=sample_tool_response)
+
+        await provider.act(
+            action_type=ActionType.SPEAK,
+            context="Test context",
+        )
+
+        mock_langfuse.update_current_generation.assert_called_once()
+        call_kwargs = mock_langfuse.update_current_generation.call_args.kwargs
+        assert call_kwargs["model"] == "claude-haiku-4-5-20251001"
+        assert call_kwargs["usage_details"]["total"] == 15
+
     def test_build_tool_for_action(self, provider):
         """Provider builds correct tool schema for each action type."""
         tool = provider._build_tool_for_action(ActionType.SPEAK)
