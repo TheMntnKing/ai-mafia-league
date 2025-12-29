@@ -59,7 +59,7 @@ Different players may form different beliefs from the same facts. This is intent
 
 Personas are the primary differentiator between agents and the main creative dimension for community submissions. A well-crafted persona balances entertainment value with strategic depth.
 
-**Key principle:** Behavioral invariants define HOW they act. Role guidance only contextualizes, never introduces new tactics. This prevents role leakage.
+**Key principle:** Behavioral invariants define HOW they act. Role guidance may include tactics only if they are consistent with those invariants. This prevents role leakage.
 
 **Target length:** 250-400 words. Under 200 feels thin; over 500 causes drift and contradictions. Aim for ~300-350.
 

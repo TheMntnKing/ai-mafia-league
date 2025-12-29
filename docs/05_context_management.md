@@ -29,6 +29,8 @@ Engine provides ground truth facts. Players build interpretations.
 - Required action (speak, vote, night action, last words)
 - Constraints (nominated players, etc.)
 
+**LLM output contract:** Providers return a raw action output dict that matches the action-specific schema. The PlayerAgent validates it and wraps it into `PlayerResponse` with updated memory.
+
 ## Event Format
 
 Events are structured facts, not narrative.
@@ -103,11 +105,11 @@ Events are structured facts, not narrative.
 
 **Killed player (called first):** Fixed context + memory + prompt for last words
 
-**Speakers (called in order):** Fixed context + memory + death announcement with last words + all speeches from this round so far + prompt to speak and nominate
+**Speakers (called in order):** Fixed context + memory + death announcement with last words + all speeches from this round so far (in-progress) + prompt to speak and nominate
 
 **Tied players (if revote):** Fixed context + context of the tie + prompt for defense speech
 
-**Voting:** Fixed context + full transcript + nominated players (or tied players for revote) + prompt to vote
+**Voting:** Fixed context + full transcript including the current round's speeches + nominated players (or tied players for revote) + prompt to vote
 
 ## Transcript Management
 
@@ -154,8 +156,8 @@ Players DON'T receive:
 Every call injects fresh ground truth:
 - Exact living/dead player lists
 - Player's own role
-- Mafia partner identity
-- Detective investigation results
+- Mafia partner identity (Mafia only)
+- Detective investigation results (Detective only)
 
 Format: structured data, explicit lists, current state separated from history.
 

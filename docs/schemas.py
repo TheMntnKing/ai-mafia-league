@@ -9,9 +9,9 @@ Flow: observe → analyze → strategize → decide → output
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional, Protocol, Union
-from pydantic import BaseModel, Field
+from typing import Protocol
 
+from pydantic import BaseModel, Field
 
 # =============================================================================
 # Core Types
@@ -47,7 +47,7 @@ class PlayerMemory(BaseModel):
 
 class PlayerResponse(BaseModel):
     """What a player returns after acting."""
-    output: dict  # Action-specific (speech, vote, target, etc.)
+    output: dict  # Must match the action-specific schema (SpeakingOutput, VotingOutput, etc.)
     updated_memory: PlayerMemory
 
 
@@ -85,7 +85,7 @@ class VoiceAndBehavior(BaseModel):
 class RoleGuidance(BaseModel):
     """
     Brief contextualization of how traits apply to each role.
-    1-2 sentences each. Must NOT introduce new tactics - only applies existing traits.
+    1-2 sentences each. Tactics are allowed only if consistent with behavioral invariants.
     """
     town: str
     mafia: str
@@ -104,7 +104,7 @@ class Persona(BaseModel):
     """
     identity: PersonaIdentity
     voice_and_behavior: VoiceAndBehavior
-    role_guidance: Optional[RoleGuidance] = None  # Optional but recommended
+    role_guidance: RoleGuidance | None = None  # Optional but recommended
     relationships: dict[str, str] = Field(default_factory=dict)  # persona_name -> relationship description
 
 
@@ -182,21 +182,21 @@ class DayRoundTranscript(BaseModel):
     Round 1 = Day 1 (no night kill), Round 2 = Day 2 (includes Night 1 kill), etc.
     """
     round_number: int
-    night_kill: Optional[str]  # Who died preceding night, or None
-    last_words: Optional[str]  # Killed player's last words
+    night_kill: str | None  # Who died preceding night, or None
+    last_words: str | None  # Killed player's last words
     speeches: list[Speech]
     votes: dict[str, str]  # player -> target or "skip"
     vote_outcome: str  # "eliminated:{name}", "no_elimination", "revote"
-    defense_speeches: Optional[list[Speech]]  # If revote
-    revote: Optional[dict[str, str]]
-    revote_outcome: Optional[str]
+    defense_speeches: list[Speech] | None  # If revote
+    revote: dict[str, str] | None
+    revote_outcome: str | None
 
 
 class CompressedRoundSummary(BaseModel):
     """Compressed summary for older rounds (2+ rounds ago)."""
     round_number: int
-    night_death: Optional[str]
-    vote_death: Optional[str]
+    night_death: str | None
+    vote_death: str | None
     accusations: list[str]
     vote_result: str
     claims: list[str]
@@ -206,18 +206,16 @@ class CompressedRoundSummary(BaseModel):
 # Provider Interface
 # =============================================================================
 
-Transcript = list[Union[DayRoundTranscript, CompressedRoundSummary]]
+Transcript = list[DayRoundTranscript | CompressedRoundSummary]
 
 
 class PlayerProvider(Protocol):
     """Common interface for all LLM providers."""
     async def act(
         self,
-        game_state: GameState,
-        transcript: Transcript,
-        memory: PlayerMemory,
-        action_type: ActionType
-    ) -> PlayerResponse:
+        action_type: ActionType,
+        context: str
+    ) -> dict:
         ...
 
 

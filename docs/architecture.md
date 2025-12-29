@@ -82,13 +82,14 @@ sequenceDiagram
 
     loop Each Phase
         GR->>GSM: Get current state
-        GR->>CB: Build context for player
-        CB->>PA: Pass context + transcript + memory
-        PA->>PR: Request action
-        PR->>LLM: Prompt with SGR schema
+        GR->>CB: Build prompt for player
+        CB->>PA: Pass prompt
+        PA->>PR: Send prompt + action_type
+        PR->>LLM: Invoke model with prompt
         LLM-->>PR: Structured response
-        PR-->>PA: Parsed output + updated memory
-        PA-->>GR: Action result
+        PR-->>PA: Parsed output
+        PA->>PA: Update memory
+        PA-->>GR: PlayerResponse (output + updated memory)
         GR->>GSM: Update state
     end
 
@@ -110,15 +111,17 @@ flowchart LR
 
     subgraph Engine["Game Engine"]
         CB[ContextBuilder]
+        P[Prompt]
     end
 
     subgraph Agent["PlayerAgent"]
         PA[Agent]
+        UPD[Update Memory]
     end
 
     subgraph Provider["LLM Provider"]
         PR[Provider]
-        PROMPT[Build Prompt]
+        CALL[Invoke Model]
         PARSE[Parse Response]
     end
 
@@ -134,15 +137,17 @@ flowchart LR
     PER --> CB
     ROLE --> CB
 
-    CB --> PA
+    CB --> P
+    P --> PA
     PA --> PR
-    PR --> PROMPT
-    PROMPT --> LLM[(LLM API)]
+    PR --> CALL
+    CALL --> LLM[(LLM API)]
     LLM --> PARSE
     PARSE --> SGR
-    PARSE --> UMEM
-    SGR --> UMEM
     SGR --> ACT
+    SGR --> UPD
+    MEM --> UPD
+    UPD --> UMEM
 ```
 
 ## Schema Relationships

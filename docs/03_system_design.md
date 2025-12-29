@@ -113,6 +113,8 @@ When a player is called to speak:
 - Summarized history of previous rounds
 - Their own memory/belief state from previous turns
 
+The engine packages these into a prompt via the ContextBuilder. The PlayerAgent passes that prompt to the provider, which returns a raw action output dict. The PlayerAgent validates it and wraps it into `PlayerResponse` with updated memory.
+
 **Processing they do:**
 - Update beliefs based on new information
 - Reason about suspicions, alliances, threats

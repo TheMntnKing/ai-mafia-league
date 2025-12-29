@@ -69,7 +69,7 @@ Phased approach to build the AI Mafia Agent League MVP.
 ### Tasks
 
 2.1. Create `src/providers/base.py`:
-- `PlayerProvider` protocol (from docs/schemas.py)
+- `PlayerProvider` protocol (from docs/schemas.py), e.g. `act(action_type, context)`
 - Base exception classes (ProviderError, RetryExhausted)
 - Retry decorator with exponential backoff (max 3 attempts)
 
@@ -77,7 +77,7 @@ Phased approach to build the AI Mafia Agent League MVP.
 - `AnthropicProvider` implementing `PlayerProvider`
 - Claude Haiku 4.5 with tool_use for structured output
 - Langfuse `@observe` decorator on API calls
-- Parse structured response into action-specific schema
+- Parse structured response into action-specific schema based on `action_type`
 
 2.3. Create `tests/test_providers.py`:
 - Mock anthropic client responses
@@ -153,7 +153,7 @@ Phased approach to build the AI Mafia Agent League MVP.
 - Build fixed context: role, persona description, rules summary, game state
 - Build accumulated context: memory, beliefs, events since last turn
 - **Use public-filtered event stream only** (no private reasoning from other players)
-- Build action-specific prompts for each ActionType:
+- Build action-specific prompts (string) for each ActionType:
   - SPEAK: transcript so far, prompt to speak and nominate
   - VOTE: full transcript, nominated players, prompt to vote
   - NIGHT_KILL: partner info, prompt for target
