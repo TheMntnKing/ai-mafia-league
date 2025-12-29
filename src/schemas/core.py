@@ -41,7 +41,7 @@ class PlayerMemory(BaseModel):
 class PlayerResponse(BaseModel):
     """What a player returns after acting."""
 
-    output: dict  # Action-specific (speech, vote, target, etc.)
+    output: dict  # Must match the action-specific schema (SpeakingOutput, VotingOutput, etc.)
     updated_memory: PlayerMemory
 
 

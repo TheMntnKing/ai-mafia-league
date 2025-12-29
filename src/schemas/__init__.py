@@ -25,6 +25,7 @@ from src.schemas.persona import (
 from src.schemas.transcript import (
     CompressedRoundSummary,
     DayRoundTranscript,
+    DefenseSpeech,
     Speech,
     Transcript,
 )
@@ -47,6 +48,7 @@ __all__ = [
     # Transcript
     "CompressedRoundSummary",
     "DayRoundTranscript",
+    "DefenseSpeech",
     "Speech",
     "Transcript",
     # Persona

@@ -23,7 +23,7 @@ Engine provides ground truth facts. Players build interpretations.
 
 **Accumulated context:**
 - Memory and beliefs from previous turns
-- Events since last turn
+- Events since last turn (rendered as `[RECENT EVENTS]` from the public event log)
 
 **Turn-specific prompt:**
 - Required action (speak, vote, night action, last words)
@@ -34,6 +34,7 @@ Engine provides ground truth facts. Players build interpretations.
 ## Event Format
 
 Events are structured facts, not narrative.
+Only the **public** view of events is injected into LLM context; private fields are filtered out.
 
 | Event | Fields |
 |-------|--------|

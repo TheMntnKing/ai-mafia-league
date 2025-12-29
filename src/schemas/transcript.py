@@ -13,6 +13,13 @@ class Speech(BaseModel):
     nomination: str
 
 
+class DefenseSpeech(BaseModel):
+    """Defense speech during revote (no nomination)."""
+
+    speaker: str
+    text: str
+
+
 class DayRoundTranscript(BaseModel):
     """
     Full detail transcript for a day round.
@@ -27,7 +34,7 @@ class DayRoundTranscript(BaseModel):
     speeches: list[Speech]
     votes: dict[str, str]  # player -> target or "skip"
     vote_outcome: str  # "eliminated:{name}", "no_elimination", "revote"
-    defense_speeches: list[Speech] | None = None  # If revote
+    defense_speeches: list[DefenseSpeech] | None = None  # If revote
     revote: dict[str, str] | None = None
     revote_outcome: str | None = None
 

@@ -29,7 +29,7 @@ class VoiceAndBehavior(BaseModel):
 class RoleGuidance(BaseModel):
     """
     Brief contextualization of how traits apply to each role.
-    1-2 sentences each. Must NOT introduce new tactics - only applies existing traits.
+    1-2 sentences each. Tactics are allowed only if consistent with behavioral invariants.
     """
 
     town: str
@@ -45,7 +45,7 @@ class Persona(BaseModel):
     Under 200 feels thin; over 500 causes drift and contradictions.
 
     Key principle: Behavioral invariants define HOW they act.
-    Role guidance only contextualizes, never introduces new tactics.
+    Role guidance may include tactics only if they are consistent with behavioral invariants.
     """
 
     identity: PersonaIdentity

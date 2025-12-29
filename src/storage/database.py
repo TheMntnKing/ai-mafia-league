@@ -35,10 +35,12 @@ class Database:
             raise RuntimeError("Database not connected")
 
         schema_file = Path(schema_path)
-        if schema_file.exists():
-            schema = schema_file.read_text()
-            await self._connection.executescript(schema)
-            await self._connection.commit()
+        if not schema_file.exists():
+            raise FileNotFoundError(f"Schema file not found: {schema_file}")
+
+        schema = schema_file.read_text()
+        await self._connection.executescript(schema)
+        await self._connection.commit()
 
     # =========================================================================
     # Persona CRUD
@@ -48,6 +50,14 @@ class Database:
         """Create a new persona and return its ID."""
         if not self._connection:
             raise RuntimeError("Database not connected")
+
+        # Enforce unique persona names
+        cursor = await self._connection.execute(
+            "SELECT 1 FROM personas WHERE name = ?",
+            (persona.identity.name,),
+        )
+        if await cursor.fetchone():
+            raise ValueError(f"Persona name already exists: {persona.identity.name}")
 
         persona_id = uuid.uuid4().hex
         definition = persona.model_dump_json()
@@ -151,6 +161,69 @@ class Database:
             VALUES (?, ?, ?, ?)
             """,
             (game_id, persona_id, role, outcome),
+        )
+        await self._connection.commit()
+
+    async def list_games(self, limit: int | None = None) -> list[dict]:
+        """List game records, optionally limited to most recent."""
+        if not self._connection:
+            raise RuntimeError("Database not connected")
+
+        query = "SELECT * FROM games"
+        params: tuple = ()
+        if limit is not None:
+            query += " ORDER BY timestamp DESC LIMIT ?"
+            params = (limit,)
+
+        cursor = await self._connection.execute(query, params)
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+    async def update_game(
+        self,
+        game_id: str,
+        winner: str | None = None,
+        rounds: int | None = None,
+        log_file: str | None = None,
+        tournament_id: str | None = None,
+    ) -> None:
+        """Update a game record."""
+        if not self._connection:
+            raise RuntimeError("Database not connected")
+
+        updates: dict[str, object] = {}
+        if winner is not None:
+            updates["winner"] = winner
+        if rounds is not None:
+            updates["rounds"] = rounds
+        if log_file is not None:
+            updates["log_file"] = log_file
+        if tournament_id is not None:
+            updates["tournament_id"] = tournament_id
+
+        if not updates:
+            raise ValueError("No fields provided to update")
+
+        set_clause = ", ".join(f"{field} = ?" for field in updates)
+        values = [*updates.values(), game_id]
+        await self._connection.execute(
+            f"UPDATE games SET {set_clause} WHERE id = ?",
+            values,
+        )
+        await self._connection.commit()
+
+    async def delete_game(self, game_id: str) -> None:
+        """Delete a game record and its participants."""
+        if not self._connection:
+            raise RuntimeError("Database not connected")
+
+        await self._connection.execute(
+            "DELETE FROM game_players WHERE game_id = ?",
+            (game_id,),
+        )
+        await self._connection.execute(
+            "DELETE FROM games WHERE id = ?",
+            (game_id,),
         )
         await self._connection.commit()
 

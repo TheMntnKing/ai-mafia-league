@@ -7,8 +7,13 @@ from src.schemas import (
     ActionType,
     CompressedRoundSummary,
     DayRoundTranscript,
+    DefenseOutput,
+    DefenseSpeech,
     Event,
     GameState,
+    InvestigationOutput,
+    LastWordsOutput,
+    NightKillOutput,
     PersonaIdentity,
     PlayerResponse,
     SpeakingOutput,
@@ -143,6 +148,7 @@ class TestTranscript:
             speeches=[Speech(speaker="Alice", text="Hello", nomination="Bob")],
             votes={"Alice": "Bob", "Bob": "skip"},
             vote_outcome="no_elimination",
+            defense_speeches=[DefenseSpeech(speaker="Bob", text="I'm innocent")],
         )
         assert transcript.round_number == 1
         assert len(transcript.speeches) == 1
@@ -191,3 +197,41 @@ class TestSGROutputs:
             vote="Bob",
         )
         assert output.vote == "Bob"
+
+    def test_night_kill_output(self):
+        """NightKillOutput captures target selection."""
+        output = NightKillOutput(
+            new_events=["Night 1"],
+            notable_changes=[],
+            suspicion_updates={"Alice": "dangerous"},
+            pattern_notes=[],
+            current_goal="reduce town",
+            reasoning="Alice is a threat",
+            target_reasoning="Eliminate strongest town voice",
+            target="Alice",
+        )
+        assert output.target == "Alice"
+
+    def test_investigation_output(self):
+        """InvestigationOutput captures investigation target."""
+        output = InvestigationOutput(
+            new_events=["Night 1"],
+            notable_changes=[],
+            suspicion_updates={"Bob": "unknown"},
+            pattern_notes=[],
+            current_goal="find mafia",
+            reasoning="Need more info",
+            target_reasoning="Bob was evasive",
+            target="Bob",
+        )
+        assert output.target == "Bob"
+
+    def test_last_words_output(self):
+        """LastWordsOutput captures final statement."""
+        output = LastWordsOutput(text="I was town. Watch Alice.")
+        assert "town" in output.text
+
+    def test_defense_output(self):
+        """DefenseOutput captures defense statement."""
+        output = DefenseOutput(text="I'm not mafia. Check my votes.")
+        assert "votes" in output.text

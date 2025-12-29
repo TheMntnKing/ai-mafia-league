@@ -1,5 +1,6 @@
 """Tests for database operations."""
 
+import pytest
 
 from src.storage.database import Database
 
@@ -24,6 +25,16 @@ class TestDatabase:
         assert "personas" in table_names
         assert "games" in table_names
         assert "game_players" in table_names
+        assert "tournaments" in table_names
+        assert "persona_memories" in table_names
+
+    async def test_initialize_schema_missing_file(self, tmp_path):
+        """Missing schema file raises an error."""
+        db = Database(str(tmp_path / "test.db"))
+        await db.connect()
+        with pytest.raises(FileNotFoundError):
+            await db.initialize_schema(schema_path=str(tmp_path / "missing.sql"))
+        await db.close()
 
 
 class TestPersonaCRUD:
@@ -51,6 +62,12 @@ class TestPersonaCRUD:
         retrieved = await test_db.get_persona_by_name("Test Player")
         assert retrieved is not None
         assert retrieved.identity.name == "Test Player"
+
+    async def test_duplicate_persona_name(self, test_db, sample_persona):
+        """Creating a persona with duplicate name raises error."""
+        await test_db.create_persona(sample_persona)
+        with pytest.raises(ValueError):
+            await test_db.create_persona(sample_persona)
 
     async def test_list_personas(self, test_db, seven_personas):
         """Can list all personas."""
@@ -118,3 +135,103 @@ class TestGameRecords:
         row = await cursor.fetchone()
         assert row["role"] == "detective"
         assert row["outcome"] == "survived"
+
+    async def test_list_games(self, test_db):
+        """Can list recorded games."""
+        await test_db.record_game(
+            game_id="list_game_1",
+            winner="town",
+            rounds=3,
+            log_file="logs/list_game_1.json",
+        )
+        await test_db.record_game(
+            game_id="list_game_2",
+            winner="mafia",
+            rounds=4,
+            log_file="logs/list_game_2.json",
+        )
+
+        games = await test_db.list_games()
+        game_ids = {game["id"] for game in games}
+        assert {"list_game_1", "list_game_2"} <= game_ids
+
+    async def test_list_games_limit(self, test_db):
+        """Can limit game listing."""
+        await test_db.record_game(
+            game_id="limit_game_1",
+            winner="town",
+            rounds=2,
+            log_file="logs/limit_game_1.json",
+        )
+        await test_db.record_game(
+            game_id="limit_game_2",
+            winner="mafia",
+            rounds=2,
+            log_file="logs/limit_game_2.json",
+        )
+
+        games = await test_db.list_games(limit=1)
+        assert len(games) == 1
+
+    async def test_update_game(self, test_db):
+        """Can update a game record."""
+        await test_db.record_game(
+            game_id="update_game_1",
+            winner="town",
+            rounds=5,
+            log_file="logs/update_game_1.json",
+        )
+
+        await test_db.update_game(
+            "update_game_1",
+            winner="mafia",
+            rounds=6,
+            log_file="logs/update_game_1_v2.json",
+            tournament_id="tourney_1",
+        )
+
+        game = await test_db.get_game("update_game_1")
+        assert game["winner"] == "mafia"
+        assert game["rounds"] == 6
+        assert game["log_file"] == "logs/update_game_1_v2.json"
+        assert game["tournament_id"] == "tourney_1"
+
+    async def test_update_game_no_fields(self, test_db):
+        """Update requires at least one field."""
+        await test_db.record_game(
+            game_id="update_game_2",
+            winner="town",
+            rounds=2,
+            log_file="logs/update_game_2.json",
+        )
+
+        with pytest.raises(ValueError):
+            await test_db.update_game("update_game_2")
+
+    async def test_delete_game(self, test_db, sample_persona):
+        """Can delete a game and its participants."""
+        persona_id = await test_db.create_persona(sample_persona)
+        await test_db.record_game(
+            game_id="delete_game_1",
+            winner="town",
+            rounds=1,
+            log_file="logs/delete_game_1.json",
+        )
+        await test_db.record_game_player(
+            game_id="delete_game_1",
+            persona_id=persona_id,
+            role="town",
+            outcome="survived",
+        )
+
+        await test_db.delete_game("delete_game_1")
+
+        game = await test_db.get_game("delete_game_1")
+        assert game is None
+
+        cursor = await test_db._connection.execute(
+            "SELECT * FROM game_players WHERE game_id = ?",
+            ("delete_game_1",),
+        )
+        rows = await cursor.fetchall()
+        assert rows == []
