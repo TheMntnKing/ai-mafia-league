@@ -1,40 +1,38 @@
-# Phase 2 Implementation Summary
+# Phase 2: LLM Provider Layer
 
-This is a human-readable snapshot of Phase 2 as implemented, including the
-original provider layer plus the review-time fixes.
+**Goal:** Anthropic provider with structured output and observability.
 
-## Provider Base (protocol + retry)
-The base layer in `src/providers/base.py` establishes the contract for LLM
-providers and the retry utility:
-- `PlayerProvider` defines `act(action_type, context)` as the standard API.
-- `retry_with_backoff` implements async exponential backoff retries.
-- Provider exceptions are centralized (`ProviderError`, `InvalidResponseError`).
+## Deliverables
 
-### Changes Made During Review
-- Added the spec-named `RetryExhausted` exception and kept the old
-  `RetryExhaustedError` as a legacy alias.
-- Updated the provider contract to state that providers return validated
-  structured output.
+### Provider Base (`src/providers/base.py`)
+- `PlayerProvider` protocol: `act(action_type, context) -> dict`
+- `retry_with_backoff` decorator: async exponential backoff, configurable exceptions
+- Exceptions: `ProviderError`, `RetryExhausted`, `InvalidResponseError`
 
-## Anthropic Provider
-`src/providers/anthropic.py` implements the only Phase 2 provider:
-- Uses `AsyncAnthropic` with tool_use to enforce structured output.
-- Builds per-action tool schemas from Pydantic models.
-- Adds Langfuse tracing when available (with a no-op fallback if not installed).
-- Emits generation spans with usage and cost details when model pricing is known.
+### Anthropic Provider (`src/providers/anthropic.py`)
+- `AnthropicProvider` implementing `PlayerProvider`
+- Uses tool_use to enforce structured output (schema from Pydantic models)
+- Validates responses against action schema before returning
+- Retries on `APIError` and `APIConnectionError` (max 3 attempts)
+- Langfuse integration: `@observe` decorator, usage/cost tracking (optional, graceful fallback)
 
-### Changes Made During Review
-- Tool outputs are now validated against the action schema before returning.
-  Invalid shapes raise `InvalidResponseError` instead of slipping through.
-- Langfuse traces are recorded as generation spans and include token usage;
-  cost is computed for known models (e.g., `claude-3-5-haiku-20241022`).
+### Tests (`tests/test_providers.py`)
+| Test Area | Coverage |
+|-----------|----------|
+| Retry decorator | Success first try, success after retry, exhaustion, exception filtering |
+| Tool schema | Correct schema generation for SPEAK, VOTE, LAST_WORDS |
+| Provider | Returns tool output, calls API correctly, missing tool_use error, invalid schema error |
+| Retry integration | Retries on API error, exhausts after repeated failures |
+| Observability | Langfuse receives usage details |
 
-## Tests
-`tests/test_providers.py` covers:
-- Retry behavior (success, retry, exhaustion, and exception filtering).
-- Provider tool schema generation for key actions.
-- Anthropic provider happy-path parsing and missing tool_use errors.
+## Files Created
+```
+src/providers/__init__.py
+src/providers/base.py
+src/providers/anthropic.py
+tests/test_providers.py
+```
 
-### Changes Made During Review
-- Added tests for invalid schema responses (must raise `InvalidResponseError`).
-- Added tests for retry on `APIConnectionError` and exhaustion behavior.
+## Design Notes
+- Tool_use pattern for structured output: define single tool per action type, force Claude to use it via `tool_choice`
+- This ensures reliable JSON output matching the schema without parsing issues

@@ -1,52 +1,54 @@
-# Phase 1 Implementation Summary
+# Phase 1: Project Foundation
 
-This is a plain-English summary of what Phase 1 delivers today, including the
-original implementation plus the follow-up changes made during review.
+**Goal:** Establish project structure, dependencies, and core data models.
 
-## Project Foundations
-The project is set up as a Python 3.11 package with a clean directory structure,
-and `pyproject.toml` captures the core dependencies (LLM provider SDK, schemas,
-storage, observability) along with dev tooling (`pytest`, `pytest-asyncio`,
-`ruff`). Pytest runs async tests via `asyncio_mode = "auto"` so async fixtures
-and tests work without extra markers.
+## Deliverables
 
-## Schema Split (Pydantic)
-The monolithic `docs/schemas.py` spec is split into focused modules under
-`src/schemas/`:
-- `core.py` defines the runtime types the engine will pass around:
-  `ActionType`, `GameState`, `PlayerMemory`, `PlayerResponse`, and `Event`.
-- `actions.py` encodes SGR outputs for each action type (speaking, voting,
-  night kill, investigation, last words, defense) plus the shared reasoning
-  block in `BaseThinking`.
-- `transcript.py` captures full round transcripts and compressed summaries,
-  with a `Transcript` alias that mixes both.
-- `persona.py` defines persona identity, behavior, and role guidance.
-- `__init__.py` re-exports the public surface so other modules can import from
-  `src.schemas` directly.
+### Project Setup
+- Python 3.11+ package with `pyproject.toml`
+- Dependencies: anthropic, pydantic, aiosqlite, langfuse, rich, pytest, pytest-asyncio, ruff
+- Async test support via `asyncio_mode = "auto"`
 
-## Configuration
-`src/config.py` uses `pydantic-settings` to load environment-backed settings
-with a cached `get_settings()` accessor. This is the base for API keys, model
-names, retry policy, and default paths.
+### Schemas (`src/schemas/`)
+| Module | Contents |
+|--------|----------|
+| `core.py` | `ActionType`, `GameState`, `PlayerMemory`, `PlayerResponse`, `Event` |
+| `actions.py` | SGR outputs: `SpeakingOutput`, `VotingOutput`, `NightKillOutput`, `InvestigationOutput`, `LastWordsOutput`, `DefenseOutput`, `BaseThinking` |
+| `transcript.py` | `Speech`, `DefenseSpeech`, `DayRoundTranscript`, `CompressedRoundSummary`, `Transcript` |
+| `persona.py` | `Persona`, `PersonaIdentity`, `VoiceAndBehavior`, `RoleGuidance` |
+| `__init__.py` | Re-exports all public types |
 
-## Storage (SQLite)
-`src/storage/database.py` provides an async SQLite wrapper for Phase 1 needs:
-- Connection lifecycle helpers (`connect`, `close`) and schema initialization
-  from `docs/database.sql`.
-- Persona CRUD (create, get by id, get by name, list) plus stats updates.
-- Game record helpers (record game, record participants, fetch game).
+### Configuration (`src/config.py`)
+- Environment-backed settings via pydantic-settings
+- API keys, model name, retry policy, paths
+- Cached `get_settings()` accessor
 
-### Changes Made During Review
-To align more tightly with the Phase 1 spec and remove sharp edges:
-- Schema initialization now fails fast with a clear error if the SQL schema
-  file is missing (instead of silently doing nothing).
-- Game CRUD is now complete with `list_games`, `update_game`, and `delete_game`
-  (including cleanup of `game_players` when deleting a game).
+### Database (`src/storage/database.py`)
+- Async SQLite wrapper using aiosqlite
+- Schema initialization from `docs/database.sql` (fails fast if missing)
+- Foreign keys enabled
+- Persona CRUD: create, get by id, get by name, get id by name, list, update stats
+- Game CRUD: record, get, list, update, delete (with cascade to game_players)
 
-## Tests
-Phase 1 tests cover schema validation and database behavior:
-- `tests/conftest.py` provides fixtures for sample game state, personas, memory,
-  and a temporary SQLite database.
-- `tests/test_schemas.py` validates core schemas and SGR output shapes.
-- `tests/test_database.py` verifies schema setup, persona CRUD, game records,
-  and the new list/update/delete helpers, plus the missing-schema error case.
+### Tests
+| File | Coverage |
+|------|----------|
+| `conftest.py` | Fixtures: test_db, sample_game_state, sample_persona, sample_memory, seven_personas |
+| `test_schemas.py` | Schema validation, SGR output shapes, persona constraints |
+| `test_database.py` | Connection, schema init, persona CRUD, game records, FK enforcement |
+
+## Files Created
+```
+src/__init__.py
+src/config.py
+src/schemas/__init__.py
+src/schemas/core.py
+src/schemas/actions.py
+src/schemas/transcript.py
+src/schemas/persona.py
+src/storage/__init__.py
+src/storage/database.py
+tests/conftest.py
+tests/test_schemas.py
+tests/test_database.py
+```

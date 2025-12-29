@@ -1,54 +1,63 @@
-# Phase 3 Implementation Summary
+# Phase 3: Game State & Event System
 
-This is a human-readable snapshot of Phase 3 as implemented, including the
-original core state/event/logging layer plus the review-time fixes.
+**Goal:** Core game state management and event logging.
 
-## Game State Manager
-`src/engine/state.py` owns authoritative game state and progression:
-- Randomizes seats and assigns roles (2 Mafia, 1 Detective, 4 Town).
-- Tracks phase/round, living vs dead players, nominations, and votes.
-- Provides a public view (`GameState`) suitable for player prompts.
-- Computes speaking order rotation by seat and day.
-- Enforces win conditions (Town win when Mafia are gone; Mafia win on parity).
+## Deliverables
 
-### Changes Made During Review
-- Nominations are now cleared when entering any night phase to ensure
-  `GameState.nominated_players` stays empty outside the voting phase.
-- Added strict validation for nominations and votes:
-  - Nominations reject unknown or dead players.
-  - Votes reject unknown/dead voters and unknown/dead/non-nominated targets
-    (except "skip").
+### Game State Manager (`src/engine/state.py`)
+- `GameStateManager` class with seeded randomization
+- Initializes 7 players: randomized seats (0-6), roles (2 Mafia, 1 Detective, 4 Town)
+- Tracks: phase, round_number, living/dead players, nominations, votes
+- Phase transitions: setup → night_zero → day_1 → night_1 → day_2 → ...
+- Clears nominations on phase change (day or night)
+- Win conditions: Town wins when Mafia=0, Mafia wins when Mafia >= Town-aligned
+- Speaking order: rotates by day, skips dead players
+- Validation: rejects invalid nominations (unknown/dead) and votes (unknown/dead voter/target, non-nominated target, allows skip)
+- Helpers: `get_mafia_partner()`, `get_player_role()`, `get_living_players()`, `get_players_by_role()`, `get_public_state()`
 
-## Event Log
-`src/engine/events.py` records structured events for runtime context and
-persistent logs, with support for public/private field filtering:
-- Adds typed events (`speech`, `vote`, `night_kill`, `investigation`, etc.).
-- Provides public view (private fields stripped) and full view for persistence.
+### Event Log (`src/engine/events.py`)
+- `EventLog` class managing game events
+- Public/private field filtering for player context vs viewer experience
+- Fully private events (all fields private) excluded from public view
+- Incremental access: `get_public_view(since_index)`, `get_full_view_since(index)`, `get_events_since_timestamp()`
+- Convenience methods for all event types:
 
-### Changes Made During Review
-- Added incremental access methods:
-  - `get_full_view_since(index)` for efficient “events since” reads.
-  - `get_events_since_timestamp(timestamp)` for timestamp-based retrieval.
+| Method | Private Fields |
+|--------|----------------|
+| `add_phase_start` | none |
+| `add_speech` | reasoning |
+| `add_vote` | none |
+| `add_night_kill` | reasoning |
+| `add_investigation` | target, result, reasoning (all) |
+| `add_last_words` | none |
+| `add_defense` | none |
+| `add_game_end` | none |
 
-## JSON Game Logs
-`src/storage/json_logs.py` writes complete game logs to disk:
-- Schema versioned JSON output (per docs).
-- Includes player entries with roles/outcomes and full event history.
-- Provides read/list helpers for log inspection.
+### JSON Game Logs (`src/storage/json_logs.py`)
+- `GameLogWriter` class
+- Schema version 1.0 format
+- Writes to `logs/game_{id}.json`
+- Includes player entries (seat, persona_id, name, role, outcome) and full event history
+- Sync `write()` and async `write_game_log()` methods
+- Read/list helpers for log inspection
 
-### Changes Made During Review
-- `write_game_log` is now truly async (uses `asyncio.to_thread` for file I/O).
+### Tests (`tests/test_state.py`)
+| Test Class | Coverage |
+|------------|----------|
+| TestGameStateManager | Role distribution, player validation, nomination/vote validation |
+| TestPhaseTransitions | All transitions, nomination clearing on day/night |
+| TestWinConditions | Town win, Mafia win (equality/majority), game continues |
+| TestSpeakingOrder | All living speak, rotation by day, dead skipped |
+| TestMafiaPartner | Partner lookup, non-Mafia returns None |
+| TestPublicState | All fields present, reflects deaths/nominations |
+| TestEventLog | Add events, public/private filtering, since methods, convenience methods, investigation hiding |
+| TestGameLogWriter | Write/read, list games, async write |
 
-## Tests
-`tests/test_state.py` validates:
-- Role distribution, phase transitions, speaking order rotation.
-- Win conditions and public state filtering.
-- Event log public/private behavior and convenience methods.
-- Log writing/reading behavior.
-
-### Changes Made During Review
-- Added tests for night-phase nomination clearing.
-- Added tests for full-view “since” access and timestamp filtering.
-- Added async test for `write_game_log`.
-- Added validation tests for invalid nominations and votes (unknown/dead voters
-  and targets, non-nominated targets, and skip acceptance).
+## Files Created
+```
+src/engine/__init__.py
+src/engine/state.py
+src/engine/events.py
+src/storage/json_logs.py
+tests/test_state.py
+```
