@@ -45,6 +45,21 @@ class TestTranscriptManager:
         assert len(transcript.speeches) == 2
         assert manager.get_current_speeches() == []
         assert len(manager.rounds) == 1
+        assert transcript.last_words is None
+
+    def test_finalize_round_stores_last_words(self, manager):
+        """Finalize round stores day-elimination last words."""
+        manager.add_speech("Alice", "Vote Bob", "Bob")
+
+        transcript = manager.finalize_round(
+            round_number=1,
+            night_kill=None,
+            votes={"Alice": "Bob"},
+            vote_outcome="eliminated:Bob",
+            last_words="I was town. Watch Alice.",
+        )
+
+        assert transcript.last_words == "I was town. Watch Alice."
 
     def test_live_round_includes_night_info(self, manager):
         """In-progress round includes night kill (no last words for night kills)."""
@@ -68,6 +83,7 @@ class TestTranscriptManager:
             night_kill="Charlie",
             votes={"Alice": "Bob", "Bob": "Alice"},
             vote_outcome="revote",
+            last_words="Good luck, Town.",
             defense_speeches=[DefenseSpeech(speaker="Alice", text="I'm innocent")],
             revote={"Diana": "Bob"},
             revote_outcome="eliminated:Bob",
@@ -75,7 +91,7 @@ class TestTranscriptManager:
 
         assert transcript.revote_outcome == "eliminated:Bob"
         assert transcript.defense_speeches is not None
-        assert transcript.last_words is None  # Night kills have no last words
+        assert transcript.last_words == "Good luck, Town."
 
     def test_live_round_has_pending_vote_outcome(self, manager):
         """Live (in-progress) rounds have vote_outcome='pending'."""

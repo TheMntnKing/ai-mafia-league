@@ -188,6 +188,7 @@ class DayPhase:
         # Resolve vote
         result = self.vote_resolver.resolve(votes, len(speaking_order))
         eliminated = None
+        last_words: str | None = None
         defense_speeches: list[DefenseSpeech] | None = None
         revote: dict[str, str] | None = None
         revote_outcome: str | None = None
@@ -207,7 +208,13 @@ class DayPhase:
 
         elif result.outcome == "revote":
             # Run revote
-            eliminated, defense_speeches, revote, revote_outcome = await self._run_revote(
+            (
+                eliminated,
+                last_words,
+                defense_speeches,
+                revote,
+                revote_outcome,
+            ) = await self._run_revote(
                 agents,
                 state,
                 transcript_manager,
@@ -235,6 +242,7 @@ class DayPhase:
             night_kill=night_kill,
             votes=votes,
             vote_outcome=vote_outcome,
+            last_words=last_words,
             defense_speeches=defense_speeches,
             revote=revote,
             revote_outcome=revote_outcome,
@@ -271,7 +279,7 @@ class DayPhase:
         tied_players: list[str],
         votes: dict[str, str],
         vote_counts: dict[str, int],
-    ) -> tuple[str | None, list[DefenseSpeech], dict[str, str], str]:
+    ) -> tuple[str | None, str | None, list[DefenseSpeech], dict[str, str], str]:
         """Run revote with defenses."""
         defense_speeches: list[DefenseSpeech] = []
         defense_context = {
@@ -319,6 +327,7 @@ class DayPhase:
         )
 
         eliminated = None
+        last_words: str | None = None
         if result.outcome == "eliminated":
             eliminated = result.eliminated
             last_words = await self._get_last_words(
@@ -334,7 +343,7 @@ class DayPhase:
         if eliminated:
             revote_outcome = f"eliminated:{eliminated}"
 
-        return eliminated, defense_speeches, revotes, revote_outcome
+        return eliminated, last_words, defense_speeches, revotes, revote_outcome
 
 
 class NightPhase:
@@ -423,6 +432,7 @@ class NightPhase:
 
         # Round 1: Both propose independently
         proposals_r1 = {}
+        proposals_r1_details: dict[str, dict] = {}
         for agent in mafia_agents:
             game_state = state.get_public_state()
             # Filter out self and partner
@@ -440,21 +450,37 @@ class NightPhase:
             )
             memories[agent.name] = response.updated_memory
             proposals_r1[agent.name] = response.output.get("target", "skip")
+            proposals_r1_details[agent.name] = response.output
 
         targets = list(proposals_r1.values())
 
         # Check Round 1 agreement
         if targets[0] == targets[1]:
             target = targets[0] if targets[0] != "skip" else None
-            event_log.add_night_kill(target, {"round": 1, "proposals": proposals_r1})
+            event_log.add_night_kill(
+                target,
+                {
+                    "round": 1,
+                    "proposals": proposals_r1,
+                    "proposal_details": proposals_r1_details,
+                },
+            )
             return target
 
         if targets[0] == "skip" and targets[1] == "skip":
-            event_log.add_night_kill(None, {"round": 1, "proposals": proposals_r1})
+            event_log.add_night_kill(
+                None,
+                {
+                    "round": 1,
+                    "proposals": proposals_r1,
+                    "proposal_details": proposals_r1_details,
+                },
+            )
             return None
 
         # Round 2: Each sees partner's R1 proposal
         proposals_r2 = {}
+        proposals_r2_details: dict[str, dict] = {}
         for agent in mafia_agents:
             partner_proposal = proposals_r1[agent.partner]
             game_state = state.get_public_state()
@@ -477,6 +503,7 @@ class NightPhase:
             )
             memories[agent.name] = response.updated_memory
             proposals_r2[agent.name] = response.output.get("target", "skip")
+            proposals_r2_details[agent.name] = response.output
 
         targets_r2 = list(proposals_r2.values())
 
@@ -485,7 +512,13 @@ class NightPhase:
             target = targets_r2[0] if targets_r2[0] != "skip" else None
             event_log.add_night_kill(
                 target,
-                {"round": 2, "proposals_r1": proposals_r1, "proposals_r2": proposals_r2},
+                {
+                    "round": 2,
+                    "proposals_r1": proposals_r1,
+                    "proposals_r2": proposals_r2,
+                    "proposal_details_r1": proposals_r1_details,
+                    "proposal_details_r2": proposals_r2_details,
+                },
             )
             return target
 
@@ -500,6 +533,8 @@ class NightPhase:
                 "round": 2,
                 "proposals_r1": proposals_r1,
                 "proposals_r2": proposals_r2,
+                "proposal_details_r1": proposals_r1_details,
+                "proposal_details_r2": proposals_r2_details,
                 "decided_by": first_mafia.name,
             },
         )

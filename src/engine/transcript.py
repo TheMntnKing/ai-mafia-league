@@ -180,6 +180,7 @@ class TranscriptManager:
         night_kill: str | None,
         votes: dict[str, str],
         vote_outcome: str,
+        last_words: str | None = None,
         defense_speeches: list[DefenseSpeech] | None = None,
         revote: dict[str, str] | None = None,
         revote_outcome: str | None = None,
@@ -192,6 +193,7 @@ class TranscriptManager:
             night_kill: Who died the preceding night (None for day 1)
             votes: Dict of voter -> target or "skip"
             vote_outcome: "eliminated:{name}", "no_elimination", or "revote"
+            last_words: Last words for day elimination (None for night kills or no elim)
             defense_speeches: Defense speeches if revote occurred
             revote: Revote results if applicable
             revote_outcome: Final outcome after revote
@@ -202,7 +204,7 @@ class TranscriptManager:
         transcript = DayRoundTranscript(
             round_number=round_number,
             night_kill=night_kill,
-            last_words=None,  # Night kills have no last words
+            last_words=last_words,
             speeches=self.current_speeches.copy(),
             votes=votes,
             vote_outcome=vote_outcome,
