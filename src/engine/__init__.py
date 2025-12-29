@@ -1,6 +1,7 @@
 """Game engine: loop, rules, state management."""
 
 from src.engine.events import EventLog
+from src.engine.game import GameConfig, GameResult, GameRunner, run_game
 from src.engine.state import GameStateManager
 from src.engine.transcript import TranscriptManager
 from src.engine.voting import VoteResolver, VoteResult
@@ -11,8 +12,12 @@ from src.engine.voting import VoteResolver, VoteResult
 
 __all__ = [
     "EventLog",
+    "GameConfig",
+    "GameResult",
+    "GameRunner",
     "GameStateManager",
     "TranscriptManager",
     "VoteResolver",
     "VoteResult",
+    "run_game",
 ]
