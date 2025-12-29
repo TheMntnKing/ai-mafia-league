@@ -24,6 +24,7 @@ Documentation phase. Core docs complete, implementation not started.
 - [06_tech_stack.md](06_tech_stack.md) - Technical choices and rationale
 - [07_implementation_plan.md](07_implementation_plan.md) - Phased build plan
 - [08_future_features.md](08_future_features.md) - Post-MVP features
+- [architecture.md](architecture.md) - Visual component diagrams (Mermaid)
 - [schemas.py](schemas.py) - Pydantic schema definitions
 - [database.sql](database.sql) - SQLite schema
 

@@ -125,7 +125,7 @@ See [schemas.py](schemas.py) for `DayRoundTranscript` and `CompressedRoundSummar
 
 ## Memory Format
 
-Memory stored by engine and passed back each call:
+Memory stored by engine and passed back each call includes both **facts** and **beliefs**, matching the `PlayerMemory` schema.
 
 **Factual memory:**
 - Key events witnessed

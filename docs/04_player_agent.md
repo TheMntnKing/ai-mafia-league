@@ -6,7 +6,7 @@ How player agents work internally.
 
 A player agent is an LLM-powered entity that plays Mafia. It receives game information, maintains its own understanding, reasons about what to do, and produces actions.
 
-All players share the same structural design but differ in persona and potentially in reasoning strategy.
+All players share the same structural design but differ only by persona, which includes their reasoning style.
 
 ## Player Components
 
@@ -28,9 +28,9 @@ See [schemas.py](schemas.py) for schema definitions.
 
 ## Memory
 
-Memory is facts, not judgments. "Player 3 accused Player 5 in round 2" is memory. "Player 3 is suspicious" is belief.
+PlayerMemory has two parts: **facts** (what happened) and **beliefs** (interpretations). "Player 3 accused Player 5 in round 2" is fact memory. "Player 3 is suspicious" is belief.
 
-**What memory includes:**
+**What factual memory includes:**
 - Speeches heard (who said what, in order)
 - Nominations and votes
 - Deaths (no role information)
