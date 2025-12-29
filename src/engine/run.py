@@ -1,0 +1,124 @@
+"""CLI entry point for running Mafia games."""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import sys
+
+from rich.console import Console
+from rich.panel import Panel
+
+from src.config import get_settings
+from src.engine.game import GameConfig, GameRunner
+from src.providers.anthropic import AnthropicProvider
+
+console = Console()
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Run an AI Mafia game",
+        prog="python -m src.engine.run",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for reproducibility",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Output directory for game logs (default: from settings)",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Model name to use (default: from settings)",
+    )
+    return parser.parse_args()
+
+
+async def run_game_cli(args: argparse.Namespace) -> int:
+    """Run a game from CLI arguments."""
+    settings = get_settings()
+
+    # Check for API key
+    if not settings.anthropic_api_key:
+        console.print("[red]Error: ANTHROPIC_API_KEY not set[/red]")
+        console.print("Set it in your environment or .env file")
+        return 1
+
+    # Load personas
+    try:
+        from src.personas.initial import get_personas
+        personas = get_personas()
+    except ImportError:
+        console.print("[red]Error: No personas defined[/red]")
+        console.print("Create personas in src/personas/initial.py")
+        return 1
+
+    if len(personas) != 7:
+        console.print(f"[red]Error: Expected 7 personas, got {len(personas)}[/red]")
+        return 1
+
+    # Create provider
+    model = args.model or settings.model_name
+    provider = AnthropicProvider(
+        api_key=settings.anthropic_api_key,
+        model=model,
+    )
+
+    # Create game config
+    output_dir = args.output or settings.logs_dir
+    config = GameConfig(
+        player_names=list(personas.keys()),
+        personas=personas,
+        provider=provider,
+        output_dir=output_dir,
+        seed=args.seed,
+    )
+
+    # Display game start
+    console.print(Panel.fit(
+        f"[bold]AI Mafia Game[/bold]\n"
+        f"Players: {', '.join(config.player_names)}\n"
+        f"Model: {model}\n"
+        f"Seed: {args.seed or 'random'}",
+        title="Game Starting",
+    ))
+
+    # Run game
+    runner = GameRunner(config)
+
+    try:
+        result = await runner.run()
+    except Exception as e:
+        console.print(f"[red]Game failed: {e}[/red]")
+        raise
+
+    # Display result
+    winner_color = "green" if result.winner == "town" else "red"
+    console.print(Panel.fit(
+        f"[bold {winner_color}]Winner: {result.winner.upper()}[/bold {winner_color}]\n"
+        f"Rounds: {result.rounds}\n"
+        f"Survivors: {', '.join(result.final_living)}\n"
+        f"Log: {result.log_path}",
+        title="Game Complete",
+    ))
+
+    return 0
+
+
+def main() -> int:
+    """Main entry point."""
+    args = parse_args()
+    return asyncio.run(run_game_cli(args))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

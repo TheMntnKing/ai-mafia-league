@@ -323,6 +323,38 @@ Facts you've observed:
 Your current beliefs:
 {beliefs_str}"""
 
+    def _build_night_zero_prompt(self, extra: dict | None) -> str:
+        """Build prompt for Night Zero Mafia coordination."""
+        partner_strategy = (extra or {}).get("partner_strategy")
+
+        if partner_strategy:
+            # Second Mafia sees first's strategy
+            return f"""[YOUR TASK: NIGHT ZERO COORDINATION]
+Your partner shared their strategy:
+---
+{partner_strategy}
+---
+
+Now share YOUR strategy. Discuss:
+- Signals or code words to use during day discussion
+- Cover stories if accused
+- Initial suspicion targets to push on Town
+- How you'll coordinate without being obvious
+
+Provide your strategy in the 'speech' field. The 'nomination' field is not used tonight."""
+        else:
+            # First Mafia
+            return """[YOUR TASK: NIGHT ZERO COORDINATION]
+This is Night Zero. No kill tonight - just coordination with your partner.
+
+Share your initial strategy:
+- Signals or code words to use during day discussion
+- Cover stories if accused
+- Initial suspicion targets to push on Town
+- How you'll coordinate without being obvious
+
+Provide your strategy in the 'speech' field. The 'nomination' field is not used tonight."""
+
     def _build_action_prompt(
         self,
         action_type: ActionType,
@@ -331,6 +363,10 @@ Your current beliefs:
         extra: dict | None = None,
     ) -> str:
         """Build action-specific prompt."""
+        # Special case: NightZero coordination uses SPEAK but needs different prompt
+        if action_type == ActionType.SPEAK and (extra or {}).get("night_zero"):
+            return self._build_night_zero_prompt(extra)
+
         living = ", ".join(state.living_players)
 
         # For Mafia night kill, exclude all Mafia (self and partner)

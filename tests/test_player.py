@@ -46,6 +46,22 @@ class TestActionHandler:
         with pytest.raises(ActionValidationError, match="too short"):
             handler.validate(output, ActionType.SPEAK, game_state)
 
+    def test_validate_speaking_skips_nomination_for_night_zero(self, handler, game_state):
+        """Night Zero flag skips nomination validation."""
+        # Invalid nomination that would normally fail
+        output = {"speech": "My strategy is to target quiet players.", "nomination": ""}
+        # Without night_zero, this would raise ActionValidationError
+        result = handler.validate(
+            output, ActionType.SPEAK, game_state, night_zero=True
+        )
+        assert result["speech"] == "My strategy is to target quiet players."
+
+    def test_validate_speaking_validates_nomination_without_night_zero(self, handler, game_state):
+        """Without night_zero, nomination is still validated."""
+        output = {"speech": "This is a valid speech.", "nomination": "InvalidPlayer"}
+        with pytest.raises(ActionValidationError, match="Invalid nomination"):
+            handler.validate(output, ActionType.SPEAK, game_state, night_zero=False)
+
     def test_validate_voting_valid(self, handler, game_state):
         """Valid vote passes validation."""
         output = {"vote": "Bob"}

@@ -30,7 +30,9 @@ class NightZeroPhase:
     """
     Night Zero: Mafia coordination (no kill).
 
-    Single round where Mafia players share initial strategy.
+    Sequential coordination where Mafia players share strategy.
+    Second Mafia sees first Mafia's strategy before responding.
+    Both strategies stored in both Mafia's memories for future reference.
     """
 
     async def run(
@@ -38,40 +40,76 @@ class NightZeroPhase:
         agents: dict[str, PlayerAgent],
         state: GameStateManager,
         event_log: EventLog,
+        memories: dict[str, PlayerMemory],
         event_cursors: dict[str, int],
-    ) -> None:
-        """Run Night Zero coordination."""
+    ) -> dict[str, PlayerMemory]:
+        """
+        Run Night Zero coordination.
+
+        Returns:
+            Updated memories dict with Mafia strategies stored
+        """
         event_log.add_phase_start("night_zero", 0)
 
         mafia_agents = [a for a in agents.values() if a.role == "mafia"]
 
         if len(mafia_agents) != 2:
-            return
+            return memories
 
-        # Each Mafia shares strategy
-        strategies = {}
+        # Sort by seat so coordination order is deterministic
+        mafia_agents.sort(key=lambda a: a.seat)
+        first_mafia, second_mafia = mafia_agents
+
+        # First Mafia shares strategy
+        game_state = state.get_public_state()
+        response1 = await first_mafia.act(
+            game_state,
+            transcript=[],
+            memory=memories[first_mafia.name],
+            action_type=ActionType.SPEAK,
+            recent_events=_get_recent_events(event_log, event_cursors, first_mafia.name),
+            action_context={"night_zero": True},
+        )
+        memories[first_mafia.name] = response1.updated_memory
+        first_strategy = response1.output.get("speech", "")
+
+        # Second Mafia sees first's strategy and responds
+        response2 = await second_mafia.act(
+            game_state,
+            transcript=[],
+            memory=memories[second_mafia.name],
+            action_type=ActionType.SPEAK,
+            recent_events=_get_recent_events(event_log, event_cursors, second_mafia.name),
+            action_context={
+                "night_zero": True,
+                "partner_strategy": first_strategy,
+            },
+        )
+        memories[second_mafia.name] = response2.updated_memory
+        second_strategy = response2.output.get("speech", "")
+
+        # Store both strategies in both Mafia's memories for future reference
         for agent in mafia_agents:
-            game_state = state.get_public_state()
-            memory = PlayerMemory(facts={}, beliefs={})
+            memory = memories[agent.name]
+            facts = dict(memory.facts)
+            facts["night_zero_strategies"] = {
+                first_mafia.name: first_strategy,
+                second_mafia.name: second_strategy,
+            }
+            memories[agent.name] = PlayerMemory(facts=facts, beliefs=dict(memory.beliefs))
 
-            response = await agent.act(
-                game_state,
-                transcript=[],
-                memory=memory,
-                action_type=ActionType.SPEAK,
-                recent_events=_get_recent_events(event_log, event_cursors, agent.name),
-            )
-            strategies[agent.name] = response.output.get("speech", "")
+        return memories
 
 
 class DayPhase:
     """
     Day Phase: Discussion and voting.
 
-    1. Announce death (if any)
+    1. Announce death (if any) - no last words for night kills
     2. Discussion: each player speaks in order, nominates
     3. Voting: collect votes, resolve
     4. Revote if tied
+    5. Last words only for day eliminations
     """
 
     def __init__(self):
@@ -86,7 +124,6 @@ class DayPhase:
         memories: dict[str, PlayerMemory],
         event_cursors: dict[str, int],
         night_kill: str | None = None,
-        night_kill_last_words: str | None = None,
     ) -> tuple[str | None, dict[str, PlayerMemory]]:
         """
         Run day phase.
@@ -95,9 +132,7 @@ class DayPhase:
             (eliminated_player, updated_memories)
         """
         event_log.add_phase_start(state.phase, state.round_number)
-        transcript_manager.start_round(
-            state.round_number, night_kill, night_kill_last_words
-        )
+        transcript_manager.start_round(state.round_number, night_kill)
 
         # Discussion phase
         speaking_order = state.get_speaking_order()
@@ -198,7 +233,6 @@ class DayPhase:
         transcript_manager.finalize_round(
             round_number=state.round_number,
             night_kill=night_kill,
-            last_words=night_kill_last_words,
             votes=votes,
             vote_outcome=vote_outcome,
             defense_speeches=defense_speeches,
@@ -306,6 +340,8 @@ class DayPhase:
 class NightPhase:
     """
     Night Phase: Mafia kill and Detective investigation.
+
+    Night kills are silent - no last words collected.
     """
 
     async def run(
@@ -315,12 +351,12 @@ class NightPhase:
         event_log: EventLog,
         memories: dict[str, PlayerMemory],
         event_cursors: dict[str, int],
-    ) -> tuple[str | None, str | None, dict[str, PlayerMemory]]:
+    ) -> tuple[str | None, dict[str, PlayerMemory]]:
         """
         Run night phase.
 
         Returns:
-            (killed_player, last_words, updated_memories)
+            (killed_player, updated_memories)
         """
         event_log.add_phase_start(state.phase, state.round_number)
 
@@ -334,22 +370,11 @@ class NightPhase:
             agents, state, event_log, memories, event_cursors
         )
 
-        # Execute kill and get last words
-        last_words = None
+        # Execute kill (no last words - night kills are silent)
         if kill_target and kill_target in agents:
-            # Get last words before killing
-            response = await agents[kill_target].act(
-                state.get_public_state(),
-                [],
-                memories[kill_target],
-                ActionType.LAST_WORDS,
-                recent_events=_get_recent_events(event_log, event_cursors, kill_target),
-            )
-            last_words = response.output.get("text", "")
-            event_log.add_last_words(kill_target, last_words)
             state.kill_player(kill_target)
 
-        return kill_target, last_words, memories
+        return kill_target, memories
 
     async def _run_mafia_coordination(
         self,
@@ -393,8 +418,11 @@ class NightPhase:
             )
             return target if target != "skip" else None
 
-        # Round 1: Both propose
-        proposals = {}
+        # Sort by seat for deterministic order
+        mafia_agents.sort(key=lambda a: a.seat)
+
+        # Round 1: Both propose independently
+        proposals_r1 = {}
         for agent in mafia_agents:
             game_state = state.get_public_state()
             # Filter out self and partner
@@ -411,27 +439,70 @@ class NightPhase:
                 recent_events=_get_recent_events(event_log, event_cursors, agent.name),
             )
             memories[agent.name] = response.updated_memory
-            proposals[agent.name] = response.output.get("target", "skip")
+            proposals_r1[agent.name] = response.output.get("target", "skip")
 
-        targets = list(proposals.values())
+        targets = list(proposals_r1.values())
 
-        # Check agreement
+        # Check Round 1 agreement
         if targets[0] == targets[1]:
             target = targets[0] if targets[0] != "skip" else None
-            event_log.add_night_kill(target, {"proposals": proposals})
+            event_log.add_night_kill(target, {"round": 1, "proposals": proposals_r1})
             return target
 
         if targets[0] == "skip" and targets[1] == "skip":
-            event_log.add_night_kill(None, {"proposals": proposals})
+            event_log.add_night_kill(None, {"round": 1, "proposals": proposals_r1})
             return None
 
-        # Round 2: Try again with partner's proposal visible
-        # (simplified: first Mafia by seat decides on disagreement)
-        first_mafia = min(mafia_agents, key=lambda a: a.seat)
-        target = proposals[first_mafia.name]
+        # Round 2: Each sees partner's R1 proposal
+        proposals_r2 = {}
+        for agent in mafia_agents:
+            partner_proposal = proposals_r1[agent.partner]
+            game_state = state.get_public_state()
+            game_state.living_players = [
+                p for p in game_state.living_players
+                if p != agent.name and p != agent.partner
+            ]
+
+            response = await agent.act(
+                game_state,
+                [],
+                memories[agent.name],
+                ActionType.NIGHT_KILL,
+                recent_events=_get_recent_events(event_log, event_cursors, agent.name),
+                action_context={
+                    "round": 2,
+                    "partner_proposal": partner_proposal,
+                    "my_r1_proposal": proposals_r1[agent.name],
+                },
+            )
+            memories[agent.name] = response.updated_memory
+            proposals_r2[agent.name] = response.output.get("target", "skip")
+
+        targets_r2 = list(proposals_r2.values())
+
+        # Check Round 2 agreement
+        if targets_r2[0] == targets_r2[1]:
+            target = targets_r2[0] if targets_r2[0] != "skip" else None
+            event_log.add_night_kill(
+                target,
+                {"round": 2, "proposals_r1": proposals_r1, "proposals_r2": proposals_r2},
+            )
+            return target
+
+        # Still disagree: first Mafia (by seat) decides
+        first_mafia = mafia_agents[0]
+        target = proposals_r2[first_mafia.name]
         target = target if target != "skip" else None
 
-        event_log.add_night_kill(target, {"proposals": proposals, "decided_by": first_mafia.name})
+        event_log.add_night_kill(
+            target,
+            {
+                "round": 2,
+                "proposals_r1": proposals_r1,
+                "proposals_r2": proposals_r2,
+                "decided_by": first_mafia.name,
+            },
+        )
         return target
 
     async def _run_detective_investigation(

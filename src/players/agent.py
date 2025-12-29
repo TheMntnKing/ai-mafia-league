@@ -112,7 +112,9 @@ class PlayerAgent:
         )
 
         # Get valid output with retries and fallback
-        output = await self._get_valid_output(game_state, action_type, context)
+        output = await self._get_valid_output(
+            game_state, action_type, context, action_context=action_context
+        )
 
         # Update memory from SGR output
         updated_memory = self._update_memory(memory, output, action_type)
@@ -136,6 +138,7 @@ class PlayerAgent:
         action_type: ActionType,
         context: str,
         max_retries: int = 3,
+        action_context: dict | None = None,
     ) -> dict:
         """
         Get valid output with retries and fallback to default.
@@ -145,12 +148,16 @@ class PlayerAgent:
             action_type: Type of action
             context: Context string for LLM
             max_retries: Maximum retry attempts
+            action_context: Action-specific context (for validation flags like night_zero)
 
         Returns:
             Valid output dict
         """
         # Build mafia_names for validation (Mafia players only)
         mafia_names = self._get_mafia_names()
+
+        # Extract night_zero flag for validation
+        night_zero = (action_context or {}).get("night_zero", False)
 
         last_error: str | None = None
 
@@ -174,6 +181,7 @@ class PlayerAgent:
                     game_state,
                     player_name=self.name,
                     mafia_names=mafia_names,
+                    night_zero=night_zero,
                 )
                 return validated
 

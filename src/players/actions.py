@@ -23,6 +23,7 @@ class ActionHandler:
         game_state: GameState,
         player_name: str | None = None,
         mafia_names: list[str] | None = None,
+        night_zero: bool = False,
     ) -> dict:
         """
         Validate output against game rules.
@@ -33,6 +34,7 @@ class ActionHandler:
             game_state: Current game state
             player_name: Name of the acting player (for self-exclusion checks)
             mafia_names: List of all Mafia player names (for Mafia exclusion checks)
+            night_zero: If True, skip nomination validation (Night Zero coordination)
 
         Returns:
             Validated output dict
@@ -41,7 +43,7 @@ class ActionHandler:
             ActionValidationError: If output is invalid
         """
         if action_type == ActionType.SPEAK:
-            return self._validate_speaking(output, game_state)
+            return self._validate_speaking(output, game_state, night_zero=night_zero)
         elif action_type == ActionType.VOTE:
             return self._validate_voting(output, game_state)
         elif action_type == ActionType.NIGHT_KILL:
@@ -52,18 +54,29 @@ class ActionHandler:
             # LAST_WORDS and DEFENSE have no validation constraints
             return output
 
-    def _validate_speaking(self, output: dict, state: GameState) -> dict:
-        """Nomination must be a living player."""
-        nomination = output.get("nomination", "")
-        if nomination not in state.living_players:
-            raise ActionValidationError(
-                f"Invalid nomination '{nomination}'. "
-                f"Must be one of: {state.living_players}"
-            )
+    def _validate_speaking(
+        self, output: dict, state: GameState, night_zero: bool = False
+    ) -> dict:
+        """Validate speaking action.
 
+        Args:
+            output: Raw output dict
+            state: Current game state
+            night_zero: If True, skip nomination validation (Night Zero uses SPEAK
+                but nomination is meaningless during Mafia coordination)
+        """
         speech = output.get("speech", "")
         if not speech or len(speech.strip()) < 10:
             raise ActionValidationError("Speech is too short or empty")
+
+        # Only validate nomination during day phases, not Night Zero
+        if not night_zero:
+            nomination = output.get("nomination", "")
+            if nomination not in state.living_players:
+                raise ActionValidationError(
+                    f"Invalid nomination '{nomination}'. "
+                    f"Must be one of: {state.living_players}"
+                )
 
         return output
 

@@ -613,6 +613,113 @@ class TestContextBuilder:
         assert "final statement" in context
 
 
+class TestNightZeroPrompt:
+    """Tests for Night Zero coordination prompt."""
+
+    @pytest.fixture
+    def builder(self):
+        return ContextBuilder()
+
+    @pytest.fixture
+    def game_state(self):
+        return GameState(
+            phase="night_zero",
+            round_number=0,
+            living_players=["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+            dead_players=[],
+            nominated_players=[],
+        )
+
+    @pytest.fixture
+    def memory(self):
+        return PlayerMemory(facts={}, beliefs={})
+
+    def test_night_zero_prompt_first_mafia(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """First Mafia gets Night Zero coordination prompt without partner strategy."""
+        context = builder.build_context(
+            player_name="Alice",
+            role="mafia",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+            extra={"partner": "Bob", "night_zero": True},
+        )
+
+        assert "[YOUR TASK: NIGHT ZERO COORDINATION]" in context
+        assert "No kill tonight" in context
+        assert "Share your initial strategy" in context
+        assert "nomination" in context.lower()  # Tells LLM nomination is unused
+        # Should NOT have partner's strategy section
+        assert "Your partner shared their strategy" not in context
+
+    def test_night_zero_prompt_second_mafia_sees_partner(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Second Mafia sees partner's strategy in Night Zero prompt."""
+        context = builder.build_context(
+            player_name="Bob",
+            role="mafia",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+            extra={
+                "partner": "Alice",
+                "night_zero": True,
+                "partner_strategy": "Let's use signal words and target quiet players",
+            },
+        )
+
+        assert "[YOUR TASK: NIGHT ZERO COORDINATION]" in context
+        assert "Your partner shared their strategy" in context
+        assert "Let's use signal words and target quiet players" in context
+        assert "Now share YOUR strategy" in context
+
+    def test_night_zero_flag_uses_different_prompt_than_speak(
+        self, builder, sample_persona, game_state, memory
+    ):
+        """Night Zero flag causes different prompt than regular SPEAK."""
+        # Regular SPEAK (day phase)
+        day_state = GameState(
+            phase="day_1",
+            round_number=1,
+            living_players=["Alice", "Bob", "Charlie"],
+            dead_players=[],
+            nominated_players=[],
+        )
+        regular_context = builder.build_context(
+            player_name="Alice",
+            role="town",
+            persona=sample_persona,
+            game_state=day_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+        )
+
+        # Night Zero SPEAK
+        night_zero_context = builder.build_context(
+            player_name="Alice",
+            role="mafia",
+            persona=sample_persona,
+            game_state=game_state,
+            transcript=[],
+            memory=memory,
+            action_type=ActionType.SPEAK,
+            extra={"partner": "Bob", "night_zero": True},
+        )
+
+        # Regular speak has [YOUR TASK: SPEAK], Night Zero has different
+        assert "[YOUR TASK: SPEAK]" in regular_context
+        assert "[YOUR TASK: NIGHT ZERO COORDINATION]" in night_zero_context
+        assert "[YOUR TASK: SPEAK]" not in night_zero_context
+
+
 class TestTranscriptFullMode:
     @pytest.fixture
     def manager(self):
