@@ -75,7 +75,7 @@ The game engine runs this loop:
 4. Record kill (if not skipped)
 
 **Subsequent Days:**
-1. Narrator announces death with last words from killed player
+1. Narrator announces night kill (no last words - night kills are silent)
 2. For each living player in speaking order (first speaker advances by one seat each day; if that seat is dead, skip to next living):
    - Call player with game state and transcript
    - Player returns speech and nomination

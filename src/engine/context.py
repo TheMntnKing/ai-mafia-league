@@ -87,6 +87,7 @@ RULES:
             self._build_rules_section(),
             self._build_game_state_section(game_state),
             self._build_role_specific_section(role, extra),
+            self._build_mafia_coordination_section(extra),
             self._build_recent_events_section(recent_events),
             self._build_defense_context_section(action_type, extra),
             self._build_transcript_section(transcript),
@@ -183,6 +184,30 @@ Nominated for vote: {nominated_str}"""
 
         return None
 
+    def _build_mafia_coordination_section(self, extra: dict | None) -> str | None:
+        """Build Mafia coordination section for Night Zero and Night kills."""
+        if not extra:
+            return None
+
+        lines = []
+
+        # Night Zero: Second Mafia sees first Mafia's strategy
+        if "partner_strategy" in extra:
+            lines.append("[PARTNER'S STRATEGY]")
+            lines.append(f"Your partner said: \"{extra['partner_strategy']}\"")
+            lines.append("Consider this when formulating your response.")
+
+        # Night Round 2: Both Mafia see partner's R1 proposal
+        if "partner_proposal" in extra or "my_r1_proposal" in extra:
+            lines.append("[COORDINATION ROUND 2]")
+            if "my_r1_proposal" in extra:
+                lines.append(f"Your Round 1 proposal: {extra['my_r1_proposal']}")
+            if "partner_proposal" in extra:
+                lines.append(f"Partner's Round 1 proposal: {extra['partner_proposal']}")
+            lines.append("You disagreed in Round 1. Try to reach consensus.")
+
+        return "\n".join(lines) if lines else None
+
     def _build_recent_events_section(
         self, events: list[Event] | None
     ) -> str | None:
@@ -254,8 +279,6 @@ Nominated for vote: {nominated_str}"""
                 lines.append(f"\n--- Day {item.round_number} (full) ---")
                 if item.night_kill:
                     lines.append(f"Night kill: {item.night_kill}")
-                    if item.last_words:
-                        lines.append(f"Last words: \"{item.last_words}\"")
                 else:
                     lines.append("No night kill")
 
@@ -281,6 +304,10 @@ Nominated for vote: {nominated_str}"""
                     )
                     lines.append(f"Revote: {revote_summary}")
                     lines.append(f"Final outcome: {item.revote_outcome}")
+
+                # Last words only for day eliminations (voted out players)
+                if item.last_words:
+                    lines.append(f"Last words: \"{item.last_words}\"")
 
         return "\n".join(lines)
 

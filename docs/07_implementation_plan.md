@@ -238,16 +238,17 @@ Phased approach to build the AI Mafia Agent League MVP.
 - Handle revote: same logic with tied players + skip
 
 6.2. Create `src/engine/phases.py`:
-- `NightZeroPhase`: Mafia coordination (single round, share strategies)
+- `NightZeroPhase`: Mafia coordination (single round, share strategies with partner)
 - `DayPhase`:
-  - Announce death (if any), collect last words
+  - Announce death (if any) - no last words for night kills
   - Run discussion: call speakers in order, collect speeches + nominations
   - Run voting: collect votes, resolve
   - Run revote if needed: defenses, revote, resolve
+  - Collect last words only for day eliminations (voted out players)
 - `NightPhase`:
-  - Mafia coordination (2-round protocol)
+  - Mafia coordination (up to 2 rounds - Round 2 only if disagreement)
   - Detective investigation
-  - Record kill (if any)
+  - Record kill (if any) - no last words collected
 
 6.3. Create `src/engine/game.py`:
 - `GameRunner` class

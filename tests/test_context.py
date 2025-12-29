@@ -37,7 +37,6 @@ class TestTranscriptManager:
         transcript = manager.finalize_round(
             round_number=1,
             night_kill=None,
-            last_words=None,
             votes={"Alice": "Bob", "Bob": "skip"},
             vote_outcome="no_elimination",
         )
@@ -48,8 +47,8 @@ class TestTranscriptManager:
         assert len(manager.rounds) == 1
 
     def test_live_round_includes_night_info(self, manager):
-        """In-progress round includes night kill and last words."""
-        manager.start_round(2, night_kill="Alice", last_words="Goodbye")
+        """In-progress round includes night kill (no last words for night kills)."""
+        manager.start_round(2, night_kill="Alice")
         manager.add_speech("Bob", "We lost Alice", "Charlie")
 
         transcript = manager.get_transcript_for_player(current_round=2)
@@ -57,7 +56,7 @@ class TestTranscriptManager:
 
         assert live.round_number == 2
         assert live.night_kill == "Alice"
-        assert live.last_words == "Goodbye"
+        assert live.last_words is None  # Night kills have no last words
         assert len(live.speeches) == 1
 
     def test_finalize_round_with_revote(self, manager):
@@ -67,7 +66,6 @@ class TestTranscriptManager:
         transcript = manager.finalize_round(
             round_number=2,
             night_kill="Charlie",
-            last_words="Goodbye",
             votes={"Alice": "Bob", "Bob": "Alice"},
             vote_outcome="revote",
             defense_speeches=[DefenseSpeech(speaker="Alice", text="I'm innocent")],
@@ -77,10 +75,11 @@ class TestTranscriptManager:
 
         assert transcript.revote_outcome == "eliminated:Bob"
         assert transcript.defense_speeches is not None
+        assert transcript.last_words is None  # Night kills have no last words
 
     def test_live_round_has_pending_vote_outcome(self, manager):
         """Live (in-progress) rounds have vote_outcome='pending'."""
-        manager.start_round(1, night_kill=None, last_words=None)
+        manager.start_round(1, night_kill=None)
         manager.add_speech("Alice", "Hello", "Bob")
 
         transcript = manager.get_transcript_for_player(current_round=1)
@@ -102,7 +101,6 @@ class TestTranscriptCompression:
             manager.finalize_round(
                 round_number=i,
                 night_kill=None if i == 1 else f"Player{i-1}",
-                last_words=None,
                 votes={f"Player{i}": "skip"},
                 vote_outcome="no_elimination",
             )
@@ -123,7 +121,6 @@ class TestTranscriptCompression:
         manager.finalize_round(
             round_number=1,
             night_kill=None,
-            last_words=None,
             votes={},
             vote_outcome="no_elimination",
         )
@@ -134,7 +131,6 @@ class TestTranscriptCompression:
             manager.finalize_round(
                 round_number=i,
                 night_kill=None,
-                last_words=None,
                 votes={},
                 vote_outcome="no_elimination",
             )
@@ -152,7 +148,6 @@ class TestTranscriptCompression:
         manager.finalize_round(
             round_number=1,
             night_kill=None,
-            last_words=None,
             votes={},
             vote_outcome="no_elimination",
         )
@@ -160,7 +155,7 @@ class TestTranscriptCompression:
         # Add rounds to push out of window
         for i in range(2, 4):
             manager.add_speech("Bob", "Test", "Charlie")
-            manager.finalize_round(i, None, None, {}, "no_elimination")
+            manager.finalize_round(i, None, {}, "no_elimination")
 
         transcript = manager.get_transcript_for_player(current_round=3)
         compressed = transcript[0]
@@ -174,7 +169,6 @@ class TestTranscriptCompression:
         manager.finalize_round(
             round_number=1,
             night_kill="Charlie",
-            last_words=None,
             votes={"Alice": "Bob"},
             vote_outcome="eliminated:Bob",
         )
@@ -182,7 +176,7 @@ class TestTranscriptCompression:
         # Add rounds
         for i in range(2, 4):
             manager.add_speech("Diana", "Test", "Eve")
-            manager.finalize_round(i, None, None, {}, "no_elimination")
+            manager.finalize_round(i, None, {}, "no_elimination")
 
         transcript = manager.get_transcript_for_player(current_round=3)
         compressed = transcript[0]
@@ -632,7 +626,6 @@ class TestTranscriptFullMode:
             manager.finalize_round(
                 round_number=i,
                 night_kill=None if i == 1 else f"Player{i-1}",
-                last_words=None,
                 votes={f"Player{i}": "skip"},
                 vote_outcome="no_elimination",
             )

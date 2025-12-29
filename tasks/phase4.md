@@ -8,9 +8,9 @@
 - `TranscriptManager` class for game history with 2-round window
 - Current + previous round: full detail (`DayRoundTranscript`)
 - Older rounds: compressed summaries (`CompressedRoundSummary`)
-- `start_round()`: Set night kill and last words context before discussion
+- `start_round(round_number, night_kill)`: Set night kill context before discussion (no last words for night kills - they are silent)
 - `add_speech()`: Add speech to current round
-- `finalize_round()`: Complete round with votes, defense speeches, revote data
+- `finalize_round()`: Complete round with votes, defense speeches, revote data (last words only for day eliminations)
 - `get_transcript_for_player()`: Returns windowed transcript (`full=True` for uncompressed)
 - Compression extracts: accusations (keyword heuristics), role claims, deaths (no hard caps)
 
@@ -64,3 +64,16 @@ tests/test_context.py
 - ContextBuilder trusts caller (engine) to pass correct `extra` data
 - Recent events defensively filter `private_fields` to prevent accidental leaks
 - **Deviation:** Spec says VOTE requires full transcript, but ContextBuilder doesn't enforce this. Engine must pass `full=True` transcript for VOTE actions.
+
+### Last Words Policy (updated in Phase 6)
+- **Night kills**: No last words (silent kills - victim doesn't know it's coming)
+- **Day eliminations**: Last words collected before player is killed
+- `start_round()` only receives `night_kill` parameter, no last_words
+- `finalize_round()` stores `last_words=None` for night kills in transcript
+- Strategic implication: Detective eliminated by vote can reveal results; killed at night cannot
+
+### Mafia Coordination Context (added in Phase 6)
+- ContextBuilder extended with `_build_mafia_coordination_section()` method
+- Renders `[PARTNER'S STRATEGY]` section for NightZero (second Mafia sees first's strategy)
+- Renders `[COORDINATION ROUND 2]` section for Night kill disagreement resolution
+- Keys in `extra` dict: `partner_strategy`, `partner_proposal`, `my_r1_proposal`

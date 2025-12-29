@@ -42,7 +42,7 @@ Mafia privately choose a player to kill. They may skip the night kill, though th
 
 Day has three parts: Discussion, Voting, and potentially Revote.
 
-**Discussion:** The killed player gives last words. Then each living player speaks once in rotating order. When speaking, each player must nominate one player for voting consideration.
+**Discussion:** The night kill is announced (no last words - night kills are silent). Then each living player speaks once in rotating order. When speaking, each player must nominate one player for voting consideration.
 
 **Voting:** Players vote simultaneously. Only nominated players can be voted for, plus option to skip. A player is eliminated only if they receive strict majority of votes from living players. If majority is reached, that player gives last words and is eliminated.
 
@@ -85,11 +85,13 @@ Only nominated players can receive votes. Players may vote for any nominated pla
 
 ## Last Words
 
-Players who are eliminated by vote or killed at night may give last words.
+Players who are eliminated by vote give last words. Night kills are silent - victims do not get last words.
 
 Last words may include reads and suspicions formed during the game, defense of their actions, role claims (which cannot be verified), and investigation results if Detective.
 
 Last words must not fabricate game events (e.g., claiming votes or speeches that didn't happen, inventing private conversations). Strategic interpretation and misdirection about intentions are allowed - this is still a game of deception.
+
+This asymmetry is strategic: a Detective eliminated by vote can reveal investigation results, but a Detective killed at night cannot. Mafia must weigh the risk of voting versus killing suspected Detectives.
 
 ## Information Visibility
 

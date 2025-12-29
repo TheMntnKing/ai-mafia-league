@@ -31,7 +31,6 @@ class TranscriptManager:
         self,
         round_number: int,
         night_kill: str | None,
-        last_words: str | None,
     ) -> None:
         """
         Set current round context before discussion starts.
@@ -39,11 +38,10 @@ class TranscriptManager:
         Args:
             round_number: The current day round number
             night_kill: Who died the preceding night (None for day 1)
-            last_words: Killed player's last words
         """
         self.current_round_number = round_number
         self.current_night_kill = night_kill
-        self.current_last_words = last_words
+        self.current_last_words = None  # Night kills have no last words
 
     def add_speech(self, speaker: str, text: str, nomination: str) -> None:
         """
@@ -180,7 +178,6 @@ class TranscriptManager:
         self,
         round_number: int,
         night_kill: str | None,
-        last_words: str | None,
         votes: dict[str, str],
         vote_outcome: str,
         defense_speeches: list[DefenseSpeech] | None = None,
@@ -193,7 +190,6 @@ class TranscriptManager:
         Args:
             round_number: The round being finalized
             night_kill: Who died the preceding night (None for day 1)
-            last_words: Killed player's last words
             votes: Dict of voter -> target or "skip"
             vote_outcome: "eliminated:{name}", "no_elimination", or "revote"
             defense_speeches: Defense speeches if revote occurred
@@ -206,7 +202,7 @@ class TranscriptManager:
         transcript = DayRoundTranscript(
             round_number=round_number,
             night_kill=night_kill,
-            last_words=last_words,
+            last_words=None,  # Night kills have no last words
             speeches=self.current_speeches.copy(),
             votes=votes,
             vote_outcome=vote_outcome,

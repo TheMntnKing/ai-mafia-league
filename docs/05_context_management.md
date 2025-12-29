@@ -40,7 +40,7 @@ Only the **public** view of events is injected into LLM context; private fields 
 |-------|--------|
 | Speech | speaker, text, nomination |
 | Vote | votes (dict), outcome, eliminated |
-| Death | player name, cause, last words |
+| Death | player name, cause, last words (day elimination only; null for night kills) |
 | Investigation (Detective only) | target, result (Mafia/Not Mafia) |
 
 ## Context by Game Phase
@@ -99,14 +99,12 @@ Only the **public** view of events is injected into LLM context; private fields 
 ### Subsequent Days
 
 **Order of events:**
-1. **Night kill announced** - killed player called for last words
+1. **Night kill announced** - no last words (night kills are silent)
 2. **Discussion** - each speaker called in order
 3. **Voting** - all players vote simultaneously
 4. **Revote** (if tie) - tied players defend, then revote
 
-**Killed player (called first):** Fixed context + memory + prompt for last words
-
-**Speakers (called in order):** Fixed context + memory + death announcement with last words + all speeches from this round so far (in-progress) + prompt to speak and nominate
+**Speakers (called in order):** Fixed context + memory + death announcement + all speeches from this round so far (in-progress) + prompt to speak and nominate
 
 **Tied players (if revote):** Fixed context + context of the tie + prompt for defense speech
 
@@ -135,7 +133,7 @@ Memory stored by engine and passed back each call includes both **facts** and **
 - Key events witnessed
 - Claims made by each player
 - Votes cast by each player
-- Deaths and last words
+- Deaths (night kills have no last words; day eliminations do)
 
 **Processed beliefs:**
 - Suspicion level for each living player (with reasoning)
@@ -182,7 +180,6 @@ Day 2: Player 5 eliminated (4-2-1). Claimed Town in last words.
 
 [CURRENT ROUND]
 Night 2: Player 6 killed.
-Last words: "I trusted Player 2, I was wrong."
 
 Discussion so far:
 - Player 1: [speech] Nominated Player 2.

@@ -186,10 +186,14 @@ class DayRoundTranscript(BaseModel):
 
     A "round" = one Day phase, includes preceding night's outcome.
     Round 1 = Day 1 (no night kill), Round 2 = Day 2 (includes Night 1 kill), etc.
+
+    Note: last_words is only populated for DAY eliminations (vote outcomes).
+    Night kills are silent - victims have no last words. The last_words field
+    will be None when night_kill is set.
     """
     round_number: int
-    night_kill: str | None  # Who died preceding night, or None
-    last_words: str | None  # Killed player's last words
+    night_kill: str | None  # Who died preceding night (silent - no last words)
+    last_words: str | None  # Last words from DAY elimination only (None for night kills)
     speeches: list[Speech]
     votes: dict[str, str]  # player -> target or "skip"
     # "eliminated:{name}", "no_elimination", "revote", or "pending" (in-progress)
