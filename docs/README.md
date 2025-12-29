@@ -10,9 +10,9 @@ Games produce watchable content where viewers see both public speech and private
 
 ## Status
 
-**Current: Pre-development**
+**Current: MVP implemented (Phases 1-6)**
 
-Documentation phase. Core docs complete, implementation not started.
+Core game loop, providers, and tests are implemented.
 
 ## Documentation
 
@@ -22,11 +22,12 @@ Documentation phase. Core docs complete, implementation not started.
 - [04_player_agent.md](04_player_agent.md) - How players reason and act
 - [05_context_management.md](05_context_management.md) - Information flow and formats
 - [06_tech_stack.md](06_tech_stack.md) - Technical choices and rationale
-- [07_implementation_plan.md](07_implementation_plan.md) - Phased build plan
 - [08_future_features.md](08_future_features.md) - Post-MVP features
 - [architecture.md](architecture.md) - Visual component diagrams (Mermaid)
 - [schemas.py](schemas.py) - Pydantic schema definitions
 - [database.sql](database.sql) - SQLite schema
+ 
+Progress tracking lives in `tasks/README.md`.
 
 ## Tech Stack
 
@@ -41,11 +42,9 @@ See [06_tech_stack.md](06_tech_stack.md) for detailed technical choices.
 
 ## Running a Game
 
-Not yet implemented.
-
-Target usage:
+Usage:
 ```bash
-python run_game.py --personas 7 --provider anthropic --output logs/game_001.json
+python -m src.engine.run --seed 123 --output logs/game_001.json --model claude-haiku-4-5-20251001
 ```
 
 ## Decisions Made

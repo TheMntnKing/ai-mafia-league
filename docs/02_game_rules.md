@@ -52,13 +52,13 @@ After voting resolves, night begins.
 
 ## Speaking Order
 
-Speaking order rotates each round. The first speaker position advances by one seat each day, regardless of whether that position is alive. If the starting position is a dead player, they are skipped and the next living player in order speaks first. Seating positions are randomized each game.
+Speaking order rotates each round. The first speaker position advances by one seat each day, regardless of whether that position is alive. If the starting position is a dead player, they are skipped and the next living player in order speaks first. Seating positions are randomized each game (seats 0-6).
 
-Example: Seats are P1-P7. Day 1 starts with P1. P1 dies Night 1. Day 2's starting position is P2 (rotation advanced by 1). If P2 were also dead, P3 would speak first.
+Example: Seats are 0-6. Day 1 starts with seat 0. Seat 0 dies Night 1. Day 2's starting position is seat 1 (rotation advanced by 1). If seat 1 were also dead, seat 2 would speak first.
 
 ## Speech Length
 
-Speeches should be approximately 150 words (~1 minute when spoken). This keeps games paced for entertainment while allowing meaningful content. Defense speeches during revote may be shorter.
+Speeches should be approximately 80-120 words. This keeps games paced for entertainment while allowing meaningful content. Defense speeches during revote may be shorter.
 
 ## Nominations
 

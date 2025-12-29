@@ -61,7 +61,7 @@ The game engine runs this loop:
 
 **Day One:**
 1. Narrator announces day begins (no death)
-2. For each player in speaking order (starts at seat 1):
+2. For each player in speaking order (starts at seat 0):
    - Call player with current game state and transcript so far
    - Player returns speech and nomination
    - Append speech to transcript

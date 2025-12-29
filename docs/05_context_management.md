@@ -40,8 +40,12 @@ Only the **public** view of events is injected into LLM context; private fields 
 |-------|--------|
 | Speech | speaker, text, nomination |
 | Vote | votes (dict), outcome, eliminated |
-| Death | player name, cause, last words (day elimination only; null for night kills) |
+| Night kill | target (or null) |
+| Last words | speaker, text (day elimination only) |
 | Investigation (Detective only) | target, result (Mafia/Not Mafia) |
+
+Investigation events are private and never appear in the public event stream. Only the
+Detective receives investigation results via their memory/context.
 
 ## Context by Game Phase
 
@@ -50,7 +54,7 @@ Only the **public** view of events is injected into LLM context; private fields 
 | Role | Receives |
 |------|----------|
 | Mafia | Role, partner identity, strategy prompt |
-| Detective | Role, no action needed |
+| Detective | Nothing (not called) |
 | Town | Nothing (not called) |
 
 **Mafia Coordination (single round):**
