@@ -71,12 +71,38 @@ class ActionHandler:
 
         # Only validate nomination during day phases, not Night Zero
         if not night_zero:
-            nomination = output.get("nomination", "")
-            if nomination not in state.living_players:
-                raise ActionValidationError(
-                    f"Invalid nomination '{nomination}'. "
-                    f"Must be one of: {state.living_players}"
-                )
+            # Normalize nomination (case-insensitive, strip whitespace)
+            nomination = output.get("nomination", "").strip().lower()
+
+            # Check if skip is allowed (Day 1 only)
+            is_day_one = state.phase == "day_1" or (
+                state.phase.startswith("day") and state.round_number == 1
+            )
+            if nomination == "skip":
+                if is_day_one:
+                    # Normalize the output to lowercase "skip"
+                    output["nomination"] = "skip"
+                    return output
+                else:
+                    raise ActionValidationError(
+                        "Nomination 'skip' is only allowed on Day 1."
+                    )
+
+            # Check against living players (case-insensitive)
+            living_lower = {p.lower(): p for p in state.living_players}
+            if nomination in living_lower:
+                # Normalize to correct case
+                output["nomination"] = living_lower[nomination]
+                return output
+
+            # Build helpful error message
+            valid_options = list(state.living_players)
+            if is_day_one:
+                valid_options.append("skip")
+            raise ActionValidationError(
+                f"Invalid nomination '{output.get('nomination', '')}'. "
+                f"Must be one of: {valid_options}"
+            )
 
         return output
 

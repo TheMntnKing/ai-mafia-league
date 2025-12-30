@@ -18,21 +18,22 @@ See `tasks/phase1.md` through `tasks/phase6.md` for detailed deliverables.
 
 ## Next Steps (Draft)
 
-- Improve Mafia night coordination (consider sequential R1 proposals)
-- Improve prompt tuning (speech length, nomination justification)
-- Add log/replay viewer for easier game review
+Phase 7 focus (see `tasks/phase7.md`):
+- Fix Mafia night coordination (sequential Round 1 proposals)
+- Improve Day 1 nomination behavior via prompts
+- Abstract prompts for easier tuning
+- Improve log visibility and replay UX
 - Expand test coverage with multi-run smoke tests
-- Optional: add private Night Zero strategy events to logs
 
-## Post-MVP Phases (Recovered)
+## Post-MVP Ideas (Recovered)
 
-Phase 7: Personas & Community
+Personas & Community
 - Persona data model with SQLite persistence
 - Expand roster to 10+ personas with diverse entertainment styles
 - Basic stats (games played, wins) for viewer interest (not ranking)
 - Community persona submission format and guidelines
 
-Phase 8: CLI & Polish
+CLI & Polish
 - Rich console output during game
 - Configuration file support
 - Game replay viewer

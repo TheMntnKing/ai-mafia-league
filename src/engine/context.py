@@ -49,7 +49,7 @@ GAME FLOW:
 3. Game ends when all Mafia are dead (Town wins) or Mafia >= Town-aligned (Mafia wins).
 
 RULES:
-- Each speech should be ~150 words.
+- Each speech should be ~80-120 words.
 - Votes must be for a nominated player or "skip".
 - Never reveal other players' hidden information you don't have."""
 
@@ -92,7 +92,7 @@ RULES:
             self._build_defense_context_section(action_type, extra),
             self._build_transcript_section(transcript),
             self._build_memory_section(memory),
-            self._build_action_prompt(action_type, game_state, player_name, extra),
+            self._build_action_prompt(action_type, game_state, player_name, role, extra),
         ]
 
         return "\n\n".join(filter(None, sections))
@@ -360,6 +360,7 @@ Provide your strategy in the 'speech' field. The 'nomination' field is not used 
         action_type: ActionType,
         state: GameState,
         player_name: str,
+        role: str,
         extra: dict | None = None,
     ) -> str:
         """Build action-specific prompt."""
@@ -389,16 +390,58 @@ Provide your strategy in the 'speech' field. The 'nomination' field is not used 
         else:
             vote_options = "skip"
 
+        is_day_one = state.phase == "day_1" or (
+            state.phase.startswith("day") and state.round_number == 1
+        )
+        day_one_note = ""
+        if is_day_one:
+            day_one_note = (
+                "\nDay 1 guidance:\n"
+                "- Include a brief self-introduction or opener (1-2 sentences).\n"
+                "- Treat nominations as exploratory, not a hard accusation.\n"
+                "- Focus on reactions and questions, not certainty.\n"
+                "- If you have no lean yet, you may set nomination to \"skip\".\n"
+            )
+
+        # Build nomination targets (include "skip" on Day 1)
+        nomination_targets = living
+        if is_day_one:
+            nomination_targets = f"{living}, skip"
+
+        vote_day_one_note = ""
+        if is_day_one:
+            vote_day_one_note = (
+                "\nDay 1 guidance:\n"
+                "- A nomination alone is NOT a reason to eliminate someone.\n"
+                "- If evidence is thin, it's acceptable to vote \"skip\".\n"
+            )
+
+        last_words_role_note = ""
+        if role == "mafia":
+            last_words_role_note = (
+                "\nAs Mafia: Do NOT reveal you are Mafia or name your partner. "
+                "Stay in character and try to misdirect suspicion."
+            )
+        elif role == "detective":
+            last_words_role_note = (
+                "\nAs Detective: Consider sharing investigation results to help Town."
+            )
+        elif role == "town":
+            last_words_role_note = (
+                "\nAs Town: Share your strongest suspicions and advice for the next vote."
+            )
+
         prompts = {
             ActionType.SPEAK: f"""[YOUR TASK: SPEAK]
 It's your turn to speak in the discussion.
 
 1. Observe what has happened and update your suspicions
 2. Decide what information to share vs hide
-3. Give a speech (~150 words) that fits your persona
-4. You MUST nominate exactly one living player for potential elimination
-
-Valid nomination targets: {living}
+3. Give a speech (~80-120 words) that fits your persona
+4. You MUST nominate exactly one living player for potential elimination (or "skip" on Day 1)
+5. If you nominate someone, clearly explain why (especially on Day 1)
+{day_one_note}
+Valid nomination targets: {nomination_targets}
 
 Fill out ALL fields in the schema. The reasoning fields come first to help you think,
 then your actual speech and nomination.""",
@@ -409,7 +452,7 @@ Discussion is complete. Time to vote.
 1. Review the discussion and your suspicions
 2. Consider who is most likely Mafia
 3. Vote for one nominated player, or "skip" if uncertain
-
+{vote_day_one_note}
 Valid vote options: {vote_options}
 
 Fill out ALL fields in the schema, then provide your vote.""",
@@ -436,7 +479,7 @@ Valid targets: {living_except_self}
 
 Fill out ALL fields in the schema, then provide your target.""",
 
-            ActionType.LAST_WORDS: """[YOUR TASK: LAST WORDS]
+            ActionType.LAST_WORDS: f"""[YOUR TASK: LAST WORDS]
 You have been eliminated from the game. This is your final statement.
 
 You may:
@@ -444,6 +487,7 @@ You may:
 - Reveal your role if you wish
 - Give advice to remaining players
 - Say goodbye in your persona's style
+{last_words_role_note}
 
 Keep it brief and impactful. Fill out the schema with your final message.""",
 

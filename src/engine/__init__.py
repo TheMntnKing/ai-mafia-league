@@ -1,23 +1,19 @@
 """Game engine: loop, rules, state management."""
 
 from src.engine.events import EventLog
-from src.engine.game import GameConfig, GameResult, GameRunner, run_game
 from src.engine.state import GameStateManager
 from src.engine.transcript import TranscriptManager
 from src.engine.voting import VoteResolver, VoteResult
 
-# Note: GameConfig, GameResult, GameRunner, run_game are imported from src.engine.game
-# directly to avoid circular imports with src.players.agent.
-# Phases are also kept out to avoid the same issue.
+# Note: GameConfig, GameResult, GameRunner, run_game are NOT imported here
+# to avoid circular imports with src.players.agent.
+# Import them directly from src.engine.game when needed.
+# Phases are also kept out for the same reason.
 
 __all__ = [
     "EventLog",
-    "GameConfig",
-    "GameResult",
-    "GameRunner",
     "GameStateManager",
     "TranscriptManager",
     "VoteResolver",
     "VoteResult",
-    "run_game",
 ]

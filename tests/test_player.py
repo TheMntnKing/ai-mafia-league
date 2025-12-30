@@ -40,6 +40,12 @@ class TestActionHandler:
         with pytest.raises(ActionValidationError, match="Invalid nomination"):
             handler.validate(output, ActionType.SPEAK, game_state)
 
+    def test_validate_speaking_day1_skip_nomination(self, handler, game_state):
+        """Day 1 allows nomination skip."""
+        output = {"speech": "Let's gather info before naming someone.", "nomination": "skip"}
+        result = handler.validate(output, ActionType.SPEAK, game_state)
+        assert result["nomination"] == "skip"
+
     def test_validate_speaking_empty_speech(self, handler, game_state):
         """Empty speech raises error."""
         output = {"speech": "", "nomination": "Bob"}
@@ -61,6 +67,48 @@ class TestActionHandler:
         output = {"speech": "This is a valid speech.", "nomination": "InvalidPlayer"}
         with pytest.raises(ActionValidationError, match="Invalid nomination"):
             handler.validate(output, ActionType.SPEAK, game_state, night_zero=False)
+
+    def test_validate_speaking_day2_skip_invalid(self, handler, game_state):
+        """Day 2 should not allow skip nomination."""
+        game_state.phase = "day_2"
+        game_state.round_number = 2
+        output = {"speech": "We should make a real nomination.", "nomination": "skip"}
+        with pytest.raises(ActionValidationError, match="only allowed on Day 1"):
+            handler.validate(output, ActionType.SPEAK, game_state)
+
+    def test_validate_speaking_day1_skip_case_insensitive(self, handler, game_state):
+        """Day 1 allows skip with any capitalization."""
+        # Test "Skip" (capitalized)
+        output = {"speech": "Let's gather info first.", "nomination": "Skip"}
+        result = handler.validate(output, ActionType.SPEAK, game_state)
+        assert result["nomination"] == "skip"  # Normalized to lowercase
+
+        # Test "SKIP" (uppercase)
+        output = {"speech": "Let's gather info first.", "nomination": "SKIP"}
+        result = handler.validate(output, ActionType.SPEAK, game_state)
+        assert result["nomination"] == "skip"
+
+        # Test " skip " (with whitespace)
+        output = {"speech": "Let's gather info first.", "nomination": " skip "}
+        result = handler.validate(output, ActionType.SPEAK, game_state)
+        assert result["nomination"] == "skip"
+
+    def test_validate_speaking_nomination_case_insensitive(self, handler, game_state):
+        """Nomination is case-insensitive and normalized to correct case."""
+        output = {"speech": "I suspect this player.", "nomination": "bob"}
+        result = handler.validate(output, ActionType.SPEAK, game_state)
+        assert result["nomination"] == "Bob"  # Normalized to original case
+
+        output = {"speech": "I suspect this player.", "nomination": "BOB"}
+        result = handler.validate(output, ActionType.SPEAK, game_state)
+        assert result["nomination"] == "Bob"
+
+    def test_validate_speaking_day1_error_includes_skip(self, handler, game_state):
+        """Day 1 error message includes 'skip' as valid option."""
+        output = {"speech": "Testing invalid nomination.", "nomination": "InvalidPlayer"}
+        with pytest.raises(ActionValidationError) as exc_info:
+            handler.validate(output, ActionType.SPEAK, game_state)
+        assert "skip" in str(exc_info.value)
 
     def test_validate_voting_valid(self, handler, game_state):
         """Valid vote passes validation."""

@@ -113,6 +113,9 @@ class GameRunner:
         Returns:
             GameResult with winner, rounds played, and log path
         """
+        # Advance to night_zero before running Night Zero phase
+        self.state.advance_phase()  # setup → night_zero
+
         # Night Zero: Mafia coordination
         self.memories = await self.night_zero.run(
             self.agents,
@@ -122,11 +125,13 @@ class GameRunner:
             self.event_cursors,
         )
 
-        self.state.advance_phase()
         night_kill: str | None = None
 
         # Main game loop
         while True:
+            # Advance to day phase before running
+            self.state.advance_phase()  # night_zero → day_1, night_N → day_(N+1)
+
             # Day Phase
             eliminated, self.memories = await self.day_phase.run(
                 self.agents,
@@ -152,7 +157,8 @@ class GameRunner:
             if winner:
                 return await self._finalize_game(winner)
 
-            self.state.advance_phase()
+            # Advance to night phase before running
+            self.state.advance_phase()  # day_N → night_N
 
             # Night Phase (no last words - night kills are silent)
             night_kill, self.memories = await self.night_phase.run(
@@ -177,7 +183,7 @@ class GameRunner:
             if winner:
                 return await self._finalize_game(winner)
 
-            self.state.advance_phase()
+            # Loop continues - advance_phase() at top of loop handles transition
 
     async def _finalize_game(self, winner: str) -> GameResult:
         """Finalize game and write log."""

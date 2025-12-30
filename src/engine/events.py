@@ -146,7 +146,14 @@ class EventLog:
         )
 
     def add_vote(
-        self, votes: dict[str, str], outcome: str, eliminated: str | None
+        self,
+        votes: dict[str, str],
+        outcome: str,
+        eliminated: str | None,
+        vote_details: dict[str, dict] | None = None,
+        revote: dict[str, str] | None = None,
+        revote_outcome: str | None = None,
+        revote_details: dict[str, dict] | None = None,
     ) -> Event:
         """
         Log voting results.
@@ -155,11 +162,31 @@ class EventLog:
             votes: Dict of voter -> target or "skip"
             outcome: "eliminated", "no_elimination", or "revote"
             eliminated: Name of eliminated player if any
+            vote_details: Full per-voter output (private)
+            revote: Revote ballot if a revote occurred
+            revote_outcome: Final outcome after revote
+            revote_details: Full per-voter revote output (private)
         """
-        return self.add(
-            "vote",
-            {"votes": votes, "outcome": outcome, "eliminated": eliminated},
-        )
+        data: dict[str, object] = {
+            "votes": votes,
+            "outcome": outcome,
+            "eliminated": eliminated,
+        }
+        private_fields: list[str] = []
+
+        if vote_details:
+            data["vote_details"] = vote_details
+            private_fields.append("vote_details")
+
+        if revote is not None:
+            data["revote"] = revote
+        if revote_outcome is not None:
+            data["revote_outcome"] = revote_outcome
+        if revote_details:
+            data["revote_details"] = revote_details
+            private_fields.append("revote_details")
+
+        return self.add("vote", data, private_fields=private_fields)
 
     def add_night_kill(self, target: str | None, reasoning: dict) -> Event:
         """

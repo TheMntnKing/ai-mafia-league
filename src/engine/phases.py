@@ -167,6 +167,7 @@ class DayPhase:
 
         # Voting phase
         votes = {}
+        vote_details: dict[str, dict] = {}
         for voter_name in speaking_order:
             agent = agents[voter_name]
             game_state = state.get_public_state()
@@ -183,6 +184,7 @@ class DayPhase:
 
             memories[voter_name] = response.updated_memory
             votes[voter_name] = response.output.get("vote", "skip")
+            vote_details[voter_name] = response.output
             state.record_vote(voter_name, votes[voter_name])
 
         # Resolve vote
@@ -202,7 +204,12 @@ class DayPhase:
                 event_log,
                 event_cursors,
             )
-            event_log.add_vote(votes, f"eliminated:{eliminated}", eliminated)
+            event_log.add_vote(
+                votes,
+                f"eliminated:{eliminated}",
+                eliminated,
+                vote_details=vote_details,
+            )
             event_log.add_last_words(eliminated, last_words)
             state.kill_player(eliminated)
 
@@ -214,6 +221,7 @@ class DayPhase:
                 defense_speeches,
                 revote,
                 revote_outcome,
+                revote_details,
             ) = await self._run_revote(
                 agents,
                 state,
@@ -225,12 +233,25 @@ class DayPhase:
                 votes,
                 result.vote_counts,
             )
-            event_log.add_vote(votes, "revote", None)
+            event_log.add_vote(
+                votes,
+                "revote",
+                None,
+                vote_details=vote_details,
+                revote=revote,
+                revote_outcome=revote_outcome,
+                revote_details=revote_details,
+            )
             if eliminated:
                 state.kill_player(eliminated)
 
         else:
-            event_log.add_vote(votes, "no_elimination", None)
+            event_log.add_vote(
+                votes,
+                "no_elimination",
+                None,
+                vote_details=vote_details,
+            )
 
         # Finalize transcript
         vote_outcome = result.outcome
@@ -279,7 +300,14 @@ class DayPhase:
         tied_players: list[str],
         votes: dict[str, str],
         vote_counts: dict[str, int],
-    ) -> tuple[str | None, str | None, list[DefenseSpeech], dict[str, str], str]:
+    ) -> tuple[
+        str | None,
+        str | None,
+        list[DefenseSpeech],
+        dict[str, str],
+        str,
+        dict[str, dict],
+    ]:
         """Run revote with defenses."""
         defense_speeches: list[DefenseSpeech] = []
         defense_context = {
@@ -305,6 +333,7 @@ class DayPhase:
 
         # Revote
         revotes = {}
+        revote_details: dict[str, dict] = {}
         speaking_order = state.get_speaking_order()
         for voter_name in speaking_order:
             agent = agents[voter_name]
@@ -321,6 +350,7 @@ class DayPhase:
                 recent_events=_get_recent_events(event_log, event_cursors, voter_name),
             )
             revotes[voter_name] = response.output.get("vote", "skip")
+            revote_details[voter_name] = response.output
 
         result = self.vote_resolver.resolve_revote(
             revotes, len(speaking_order), tied_players
@@ -343,7 +373,7 @@ class DayPhase:
         if eliminated:
             revote_outcome = f"eliminated:{eliminated}"
 
-        return eliminated, last_words, defense_speeches, revotes, revote_outcome
+        return eliminated, last_words, defense_speeches, revotes, revote_outcome, revote_details
 
 
 class NightPhase:
