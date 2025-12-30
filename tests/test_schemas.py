@@ -170,14 +170,10 @@ class TestSGROutputs:
     def test_speaking_output(self):
         """SpeakingOutput captures full reasoning chain."""
         output = SpeakingOutput(
-            new_events=["Day 1 started"],
-            notable_changes=[],
-            suspicion_updates={"Bob": "slightly suspicious"},
-            pattern_notes=[],
-            current_goal="survive day 1",
-            reasoning="No strong reads yet",
-            information_to_share=["I have no information"],
-            information_to_hide=[],
+            observations="Day 1 started with no night kill.",
+            suspicions="Bob is slightly suspicious.",
+            strategy="Stay cautious and gather information.",
+            reasoning="No strong reads yet.",
             speech="Hello everyone, let's discuss.",
             nomination="Bob",
         )
@@ -187,13 +183,10 @@ class TestSGROutputs:
     def test_voting_output(self):
         """VotingOutput captures vote with reasoning."""
         output = VotingOutput(
-            new_events=["Discussion complete"],
-            notable_changes=["Bob seemed nervous"],
-            suspicion_updates={"Bob": "highly suspicious"},
-            pattern_notes=["Bob avoided questions"],
-            current_goal="eliminate threat",
-            reasoning="Bob's behavior is suspicious",
-            vote_reasoning="Bob's deflection indicates guilt",
+            observations="Discussion complete; Bob seemed nervous.",
+            suspicions="Bob is highly suspicious and avoided questions.",
+            strategy="Eliminate the top suspect.",
+            reasoning="Bob's deflection indicates guilt.",
             vote="Bob",
         )
         assert output.vote == "Bob"
@@ -201,13 +194,10 @@ class TestSGROutputs:
     def test_night_kill_output(self):
         """NightKillOutput captures target selection."""
         output = NightKillOutput(
-            new_events=["Night 1"],
-            notable_changes=[],
-            suspicion_updates={"Alice": "dangerous"},
-            pattern_notes=[],
-            current_goal="reduce town",
-            reasoning="Alice is a threat",
-            target_reasoning="Eliminate strongest town voice",
+            observations="Night 1 after a tense Day 1.",
+            suspicions="Alice is dangerous and influential.",
+            strategy="Reduce town leadership.",
+            reasoning="Eliminate the strongest town voice.",
             target="Alice",
         )
         assert output.target == "Alice"
@@ -215,23 +205,26 @@ class TestSGROutputs:
     def test_investigation_output(self):
         """InvestigationOutput captures investigation target."""
         output = InvestigationOutput(
-            new_events=["Night 1"],
-            notable_changes=[],
-            suspicion_updates={"Bob": "unknown"},
-            pattern_notes=[],
-            current_goal="find mafia",
-            reasoning="Need more info",
-            target_reasoning="Bob was evasive",
+            observations="Night 1 with unclear alignments.",
+            suspicions="Bob is evasive.",
+            strategy="Gather info to find Mafia.",
+            reasoning="Bob was evasive and needs checking.",
             target="Bob",
         )
         assert output.target == "Bob"
 
     def test_last_words_output(self):
         """LastWordsOutput captures final statement."""
-        output = LastWordsOutput(text="I was town. Watch Alice.")
+        output = LastWordsOutput(
+            reasoning="Warn town about my strongest suspicion.",
+            text="I was town. Watch Alice.",
+        )
         assert "town" in output.text
 
     def test_defense_output(self):
         """DefenseOutput captures defense statement."""
-        output = DefenseOutput(text="I'm not mafia. Check my votes.")
+        output = DefenseOutput(
+            reasoning="Refute the case and point to voting record.",
+            text="I'm not mafia. Check my votes.",
+        )
         assert "votes" in output.text

@@ -8,6 +8,14 @@ from src.engine.game import GameConfig, GameRunner
 from src.engine.voting import VoteResolver
 from src.personas.initial import get_personas
 from src.schemas import PlayerMemory
+from tests.sgr_helpers import (
+    make_defense_response,
+    make_investigation_response,
+    make_last_words_response,
+    make_night_kill_response,
+    make_speak_response,
+    make_vote_response,
+)
 
 
 class TestVoteResolver:
@@ -146,42 +154,40 @@ class TestGameRunner:
             """Generate a response based on action type and game state."""
             call_count[0] += 1
 
-            base = {
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {},
-                "pattern_notes": [],
-                "current_goal": "survive",
-                "reasoning": "Strategic thinking",
-                "information_to_share": [],
-                "information_to_hide": [],
-            }
-
             if action_type == "speak":
                 # Nominate someone who isn't eliminated
                 living = [n for n in game_config.player_names if n not in eliminated]
                 nomination = living[1] if len(living) > 1 else living[0]
-                return {
-                    **base,
-                    "speech": "I've been observing carefully and have some thoughts.",
-                    "nomination": nomination,
-                }
+                return make_speak_response(
+                    speech="I've been observing carefully and have some thoughts.",
+                    nomination=nomination,
+                )
             elif action_type == "vote":
                 living = [n for n in game_config.player_names if n not in eliminated]
                 target = living[1] if len(living) > 1 else "skip"
-                return {**base, "vote_reasoning": "Based on behavior.", "vote": target}
+                return make_vote_response(vote=target, reasoning="Based on behavior.")
             elif action_type == "night_kill":
                 living = [n for n in game_config.player_names if n not in eliminated]
                 # Pick a non-mafia target
                 target = living[2] if len(living) > 2 else living[0]
-                return {**base, "target_reasoning": "Strategic target.", "target": target}
+                return make_night_kill_response(target=target, reasoning="Strategic target.")
             elif action_type == "investigation":
                 living = [n for n in game_config.player_names if n not in eliminated]
-                return {**base, "target_reasoning": "Most suspicious.", "target": living[1]}
+                return make_investigation_response(
+                    target=living[1],
+                    reasoning="Most suspicious.",
+                )
             elif action_type in ("last_words", "defense"):
-                return {"text": "I did my best for the town."}
-            else:
-                return base
+                if action_type == "last_words":
+                    return make_last_words_response(
+                        reasoning="Offer a final note to help town.",
+                        text="I did my best for the town.",
+                    )
+                return make_defense_response(
+                    reasoning="Offer a final note to help town.",
+                    text="I did my best for the town.",
+                )
+            return make_speak_response()
 
         async def mock_act(*args, **kwargs):
             # New signature: act(action_type, context)
@@ -253,47 +259,64 @@ class TestGameIntegration:
             action_type = kwargs.get("action_type") or args[0]
             action_name = action_type.value
 
-            base = {
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {},
-                "pattern_notes": [],
-                "current_goal": "eliminate mafia",
-                "reasoning": "Strategic",
-                "information_to_share": [],
-                "information_to_hide": [],
-            }
-
             if action_name == "speak":
                 target = mafia_names[current_target_idx[0]]
                 is_dead = not runner.state.is_alive(target)
                 if is_dead and current_target_idx[0] < len(mafia_names) - 1:
                     current_target_idx[0] += 1
                     target = mafia_names[current_target_idx[0]]
-                return {
-                    **base,
-                    "speech": f"I suspect {target} is Mafia based on their behavior.",
-                    "nomination": target,
-                }
+                return make_speak_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Mafia targets identified.",
+                    strategy="Eliminate Mafia systematically.",
+                    reasoning="Strategic.",
+                    speech=f"I suspect {target} is Mafia based on their behavior.",
+                    nomination=target,
+                )
             elif action_name == "vote":
                 target = mafia_names[current_target_idx[0]]
                 is_dead = not runner.state.is_alive(target)
                 if is_dead and current_target_idx[0] < len(mafia_names) - 1:
                     current_target_idx[0] += 1
                     target = mafia_names[current_target_idx[0]]
-                return {**base, "vote_reasoning": "Voting for Mafia.", "vote": target}
+                return make_vote_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Mafia targets identified.",
+                    strategy="Eliminate Mafia systematically.",
+                    reasoning="Strategic.",
+                    vote=target,
+                )
             elif action_name == "night_kill":
                 # Mafia kills random town
                 living = runner.state.get_living_players()
                 town = [p for p in living if runner.state.get_player_role(p) == "town"]
                 target = town[0] if town else "skip"
-                return {**base, "target_reasoning": "Kill town.", "target": target}
+                return make_night_kill_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Mafia targets identified.",
+                    strategy="Eliminate Mafia systematically.",
+                    reasoning="Strategic.",
+                    target=target,
+                )
             elif action_name == "investigation":
-                return {**base, "target_reasoning": "Investigate.", "target": mafia_names[0]}
+                return make_investigation_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Mafia targets identified.",
+                    strategy="Eliminate Mafia systematically.",
+                    reasoning="Strategic.",
+                    target=mafia_names[0],
+                )
             elif action_name in ("last_words", "defense"):
-                return {"text": "Final words."}
-            else:
-                return base
+                if action_name == "last_words":
+                    return make_last_words_response(
+                        reasoning="Leave a final note.",
+                        text="Final words.",
+                    )
+                return make_defense_response(
+                    reasoning="Leave a final note.",
+                    text="Final words.",
+                )
+            return make_speak_response()
 
         mock_provider.act = mock_act
 
@@ -330,46 +353,63 @@ class TestGameIntegration:
             action_type = kwargs.get("action_type") or args[0]
             action_name = action_type.value
 
-            base = {
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {},
-                "pattern_notes": [],
-                "current_goal": "eliminate town",
-                "reasoning": "Strategic",
-                "information_to_share": [],
-                "information_to_hide": [],
-            }
-
             if action_name == "speak":
                 # Find next living town member
                 target = town_names[current_target_idx[0]]
                 while not runner.state.is_alive(target):
                     current_target_idx[0] = (current_target_idx[0] + 1) % len(town_names)
                     target = town_names[current_target_idx[0]]
-                return {
-                    **base,
-                    "speech": f"I think {target} is suspicious.",
-                    "nomination": target,
-                }
+                return make_speak_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Town targets identified.",
+                    strategy="Eliminate town to secure majority.",
+                    reasoning="Strategic.",
+                    speech=f"I think {target} is suspicious.",
+                    nomination=target,
+                )
             elif action_name == "vote":
                 target = town_names[current_target_idx[0]]
                 while not runner.state.is_alive(target):
                     current_target_idx[0] = (current_target_idx[0] + 1) % len(town_names)
                     target = town_names[current_target_idx[0]]
-                return {**base, "vote_reasoning": "Voting.", "vote": target}
+                return make_vote_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Town targets identified.",
+                    strategy="Eliminate town to secure majority.",
+                    reasoning="Strategic.",
+                    vote=target,
+                )
             elif action_name == "night_kill":
                 living = runner.state.get_living_players()
                 town = [p for p in living if runner.state.get_player_role(p) in ("town", "detective")]
                 target = town[0] if town else "skip"
-                return {**base, "target_reasoning": "Kill town.", "target": target}
+                return make_night_kill_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Town targets identified.",
+                    strategy="Eliminate town to secure majority.",
+                    reasoning="Strategic.",
+                    target=target,
+                )
             elif action_name == "investigation":
                 living = runner.state.get_living_players()
-                return {**base, "target_reasoning": "Investigate.", "target": living[0]}
+                return make_investigation_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Town targets identified.",
+                    strategy="Eliminate town to secure majority.",
+                    reasoning="Strategic.",
+                    target=living[0],
+                )
             elif action_name in ("last_words", "defense"):
-                return {"text": "Final words."}
-            else:
-                return base
+                if action_name == "last_words":
+                    return make_last_words_response(
+                        reasoning="Leave a final note.",
+                        text="Final words.",
+                    )
+                return make_defense_response(
+                    reasoning="Leave a final note.",
+                    text="Final words.",
+                )
+            return make_speak_response()
 
         mock_provider.act = mock_act
 
@@ -491,30 +531,24 @@ class TestNightZeroCoordination:
             agent_name = args[0].name if args else "unknown"
             call_order.append(agent_name)
 
-            base = {
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {},
-                "pattern_notes": [],
-                "current_goal": "coordinate",
-                "reasoning": "Planning",
-                "information_to_share": [],
-                "information_to_hide": [],
-            }
-
             # Return different strategy based on whether partner's strategy is visible
             if action_context.get("partner_strategy"):
-                return {
-                    **base,
-                    "speech": f"I agree with partner. Let's target the detective.",
-                    "nomination": "Alice",
-                }
-            else:
-                return {
-                    **base,
-                    "speech": "I suggest we use signal words and target quiet players.",
-                    "nomination": "Bob",
-                }
+                return make_speak_response(
+                    observations="Night zero coordination.",
+                    suspicions="No suspicions yet.",
+                    strategy="Coordinate signals and cover.",
+                    reasoning="Planning.",
+                    speech="I agree with partner. Let's target the detective.",
+                    nomination="Alice",
+                )
+            return make_speak_response(
+                observations="Night zero coordination.",
+                suspicions="No suspicions yet.",
+                strategy="Coordinate signals and cover.",
+                reasoning="Planning.",
+                speech="I suggest we use signal words and target quiet players.",
+                nomination="Bob",
+            )
 
         mock_provider.act = mock_act
 
@@ -558,18 +592,14 @@ class TestNightZeroCoordination:
         async def mock_act(_action_type, context_string):
             context_strings.append(context_string)
 
-            return {
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {},
-                "pattern_notes": [],
-                "current_goal": "coordinate",
-                "reasoning": "Planning",
-                "information_to_share": [],
-                "information_to_hide": [],
-                "speech": "My strategy is to target Alice",
-                "nomination": "Alice",
-            }
+            return make_speak_response(
+                observations="Night zero coordination.",
+                suspicions="No suspicions yet.",
+                strategy="Coordinate signals and cover.",
+                reasoning="Planning.",
+                speech="My strategy is to target Alice",
+                nomination="Alice",
+            )
 
         mock_provider.act = mock_act
 
@@ -725,24 +755,24 @@ class TestMafiaCoordination:
         async def mock_act(action_type, _context_string):
             call_count[0] += 1
 
-            base = {
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {},
-                "pattern_notes": [],
-                "current_goal": "kill",
-                "reasoning": "Strategic",
-                "information_to_share": [],
-                "information_to_hide": [],
-            }
-
             if action_type.value == "night_kill":
                 # Both agree on same target
-                return {**base, "target_reasoning": "Kill Alice.", "target": "Alice"}
+                return make_night_kill_response(
+                    observations="Night phase begins.",
+                    suspicions="Town targets identified.",
+                    strategy="Eliminate a key town voice.",
+                    reasoning="Strategic.",
+                    target="Alice",
+                )
             elif action_type.value == "investigation":
-                return {**base, "target_reasoning": "Investigate.", "target": "Bob"}
-            else:
-                return base
+                return make_investigation_response(
+                    observations="Night phase begins.",
+                    suspicions="Town targets identified.",
+                    strategy="Eliminate a key town voice.",
+                    reasoning="Strategic.",
+                    target="Bob",
+                )
+            return make_speak_response()
 
         mock_provider.act = mock_act
 
@@ -783,17 +813,6 @@ class TestMafiaCoordination:
         round2_context_strings = []
 
         async def mock_act(action_type, context_string):
-            base = {
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {},
-                "pattern_notes": [],
-                "current_goal": "kill",
-                "reasoning": "Strategic",
-                "information_to_share": [],
-                "information_to_hide": [],
-            }
-
             if action_type.value == "night_kill":
                 mafia_call_count[0] += 1
                 # Check if this is Round 2 by looking for COORDINATION ROUND 2 in context
@@ -801,17 +820,39 @@ class TestMafiaCoordination:
                 if is_round2:
                     round2_context_strings.append(context_string)
                     # In Round 2, both agree on Alice
-                    return {**base, "target": "Alice"}
+                    return make_night_kill_response(
+                        observations="Night phase begins.",
+                        suspicions="Town targets identified.",
+                        strategy="Eliminate a key town voice.",
+                        reasoning="Strategic.",
+                        target="Alice",
+                    )
                 else:
                     # Round 1: disagree - first says Alice, second says Bob
                     if mafia_call_count[0] == 1:
-                        return {**base, "target": "Alice"}
-                    else:
-                        return {**base, "target": "Bob"}
+                        return make_night_kill_response(
+                            observations="Night phase begins.",
+                            suspicions="Town targets identified.",
+                            strategy="Eliminate a key town voice.",
+                            reasoning="Strategic.",
+                            target="Alice",
+                        )
+                    return make_night_kill_response(
+                        observations="Night phase begins.",
+                        suspicions="Town targets identified.",
+                        strategy="Eliminate a key town voice.",
+                        reasoning="Strategic.",
+                        target="Bob",
+                    )
             elif action_type.value == "investigation":
-                return {**base, "target": "Charlie"}
-            else:
-                return base
+                return make_investigation_response(
+                    observations="Night phase begins.",
+                    suspicions="Town targets identified.",
+                    strategy="Eliminate a key town voice.",
+                    reasoning="Strategic.",
+                    target="Charlie",
+                )
+            return make_speak_response()
 
         mock_provider.act = mock_act
 
@@ -858,29 +899,34 @@ class TestMafiaCoordination:
         mafia_call_count = [0]
 
         async def mock_act(action_type, _context_string):
-            base = {
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {},
-                "pattern_notes": [],
-                "current_goal": "kill",
-                "reasoning": "Strategic",
-                "information_to_share": [],
-                "information_to_hide": [],
-            }
-
             if action_type.value == "night_kill":
                 mafia_call_count[0] += 1
                 # First Mafia always says Alice (calls 1, 3)
                 # Second Mafia always says Bob (calls 2, 4)
                 if mafia_call_count[0] % 2 == 1:
-                    return {**base, "target": "Alice"}
-                else:
-                    return {**base, "target": "Bob"}
+                    return make_night_kill_response(
+                        observations="Night phase begins.",
+                        suspicions="Town targets identified.",
+                        strategy="Eliminate a key town voice.",
+                        reasoning="Strategic.",
+                        target="Alice",
+                    )
+                return make_night_kill_response(
+                    observations="Night phase begins.",
+                    suspicions="Town targets identified.",
+                    strategy="Eliminate a key town voice.",
+                    reasoning="Strategic.",
+                    target="Bob",
+                )
             elif action_type.value == "investigation":
-                return {**base, "target": "Charlie"}
-            else:
-                return base
+                return make_investigation_response(
+                    observations="Night phase begins.",
+                    suspicions="Town targets identified.",
+                    strategy="Eliminate a key town voice.",
+                    reasoning="Strategic.",
+                    target="Charlie",
+                )
+            return make_speak_response()
 
         mock_provider.act = mock_act
 

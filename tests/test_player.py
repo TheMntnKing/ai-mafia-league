@@ -8,6 +8,12 @@ from src.players.actions import ActionHandler, ActionValidationError
 from src.players.agent import PlayerAgent
 from src.providers.base import InvalidResponseError, ProviderError, RetryExhausted
 from src.schemas import ActionType, GameState, PlayerMemory
+from tests.sgr_helpers import (
+    make_investigation_response,
+    make_night_kill_response,
+    make_speak_response,
+    make_vote_response,
+)
 
 
 class TestActionHandler:
@@ -283,18 +289,14 @@ class TestPlayerAgent:
     ):
         """Agent returns PlayerResponse with output and updated memory."""
         mock_provider.act = AsyncMock(
-            return_value={
-                "new_events": ["Day started"],
-                "notable_changes": [],
-                "suspicion_updates": {"Bob": "slightly suspicious"},
-                "pattern_notes": [],
-                "current_goal": "survive",
-                "reasoning": "No information yet",
-                "information_to_share": [],
-                "information_to_hide": [],
-                "speech": "Hello everyone, let's discuss.",
-                "nomination": "Bob",
-            }
+            return_value=make_speak_response(
+                observations="Day started.",
+                suspicions="Bob seems slightly suspicious.",
+                strategy="Stay cautious and gather information.",
+                reasoning="No information yet.",
+                speech="Hello everyone, let's discuss.",
+                nomination="Bob",
+            )
         )
 
         response = await agent.act(game_state, [], memory, ActionType.SPEAK)
@@ -308,24 +310,24 @@ class TestPlayerAgent:
     ):
         """Agent extracts beliefs from SGR output."""
         mock_provider.act = AsyncMock(
-            return_value={
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {"Bob": "very suspicious"},
-                "pattern_notes": ["Bob avoided questions"],
-                "current_goal": "find Mafia",
-                "reasoning": "Bob deflected",
-                "information_to_share": [],
-                "information_to_hide": [],
-                "speech": "I suspect Bob.",
-                "nomination": "Bob",
-            }
+            return_value=make_speak_response(
+                observations="No major changes since last turn.",
+                suspicions="Bob is very suspicious because he avoided questions.",
+                strategy="Find Mafia by pressing on evasive players.",
+                reasoning="Bob deflected when challenged.",
+                speech="I suspect Bob.",
+                nomination="Bob",
+            )
         )
 
         response = await agent.act(game_state, [], memory, ActionType.SPEAK)
 
-        assert response.updated_memory.beliefs.get("suspicions") == {"Bob": "very suspicious"}
-        assert "Bob avoided questions" in response.updated_memory.beliefs.get("patterns", [])
+        assert response.updated_memory.beliefs.get("suspicions") == (
+            "Bob is very suspicious because he avoided questions."
+        )
+        assert response.updated_memory.beliefs.get("strategy") == (
+            "Find Mafia by pressing on evasive players."
+        )
 
     async def test_act_retries_on_invalid_output(
         self, agent, mock_provider, game_state, memory
@@ -334,30 +336,22 @@ class TestPlayerAgent:
         # First call returns invalid nomination, second is valid
         mock_provider.act = AsyncMock(
             side_effect=[
-                {
-                    "speech": "Hello",
-                    "nomination": "DeadPlayer",  # Invalid
-                    "new_events": [],
-                    "notable_changes": [],
-                    "suspicion_updates": {},
-                    "pattern_notes": [],
-                    "current_goal": "survive",
-                    "reasoning": "test",
-                    "information_to_share": [],
-                    "information_to_hide": [],
-                },
-                {
-                    "speech": "Hello again",
-                    "nomination": "Bob",  # Valid
-                    "new_events": [],
-                    "notable_changes": [],
-                    "suspicion_updates": {},
-                    "pattern_notes": [],
-                    "current_goal": "survive",
-                    "reasoning": "test",
-                    "information_to_share": [],
-                    "information_to_hide": [],
-                },
+                make_speak_response(
+                    speech="Hello",
+                    nomination="DeadPlayer",  # Invalid
+                    observations="No changes.",
+                    suspicions="No strong suspicions.",
+                    strategy="Stay safe.",
+                    reasoning="test",
+                ),
+                make_speak_response(
+                    speech="Hello again",
+                    nomination="Bob",  # Valid
+                    observations="No changes.",
+                    suspicions="No strong suspicions.",
+                    strategy="Stay safe.",
+                    reasoning="test",
+                ),
             ]
         )
 
@@ -372,18 +366,14 @@ class TestPlayerAgent:
         """Agent uses default action after exhausting retries."""
         # All calls return invalid output
         mock_provider.act = AsyncMock(
-            return_value={
-                "speech": "Hello",
-                "nomination": "InvalidPlayer",  # Always invalid
-                "new_events": [],
-                "notable_changes": [],
-                "suspicion_updates": {},
-                "pattern_notes": [],
-                "current_goal": "survive",
-                "reasoning": "test",
-                "information_to_share": [],
-                "information_to_hide": [],
-            }
+            return_value=make_speak_response(
+                speech="Hello",
+                nomination="InvalidPlayer",  # Always invalid
+                observations="No changes.",
+                suspicions="No strong suspicions.",
+                strategy="Stay safe.",
+                reasoning="test",
+            )
         )
 
         response = await agent.act(game_state, [], memory, ActionType.SPEAK)
@@ -400,18 +390,14 @@ class TestPlayerAgent:
         mock_provider.act = AsyncMock(
             side_effect=[
                 InvalidResponseError("bad response"),
-                {
-                    "speech": "Hello again",
-                    "nomination": "Bob",
-                    "new_events": [],
-                    "notable_changes": [],
-                    "suspicion_updates": {},
-                    "pattern_notes": [],
-                    "current_goal": "survive",
-                    "reasoning": "test",
-                    "information_to_share": [],
-                    "information_to_hide": [],
-                },
+                make_speak_response(
+                    speech="Hello again",
+                    nomination="Bob",
+                    observations="No changes.",
+                    suspicions="No strong suspicions.",
+                    strategy="Stay safe.",
+                    reasoning="test",
+                ),
             ]
         )
 
@@ -453,7 +439,15 @@ class TestPlayerAgent:
             dead_players=[],
             nominated_players=["Bob"],
         )
-        mock_provider.act = AsyncMock(return_value={"vote": "Bob"})
+        mock_provider.act = AsyncMock(
+            return_value=make_vote_response(
+                observations="Discussion complete.",
+                suspicions="Bob seems most suspicious.",
+                strategy="Vote to remove top suspect.",
+                reasoning="Bob's answers were evasive.",
+                vote="Bob",
+            )
+        )
 
         response = await agent.act(game_state, [], memory, ActionType.VOTE)
 
@@ -468,7 +462,15 @@ class TestPlayerAgent:
             dead_players=[],
             nominated_players=[],
         )
-        mock_provider.act = AsyncMock(return_value={"target": "Bob"})
+        mock_provider.act = AsyncMock(
+            return_value=make_investigation_response(
+                observations="Night phase with limited info.",
+                suspicions="Bob is a candidate.",
+                strategy="Gather information for town.",
+                reasoning="Investigate Bob to confirm suspicions.",
+                target="Bob",
+            )
+        )
 
         response = await agent.act(game_state, [], memory, ActionType.INVESTIGATION)
 
@@ -491,7 +493,15 @@ class TestPlayerAgent:
             dead_players=[],
             nominated_players=[],
         )
-        mock_provider.act = AsyncMock(return_value={"target": "Charlie"})
+        mock_provider.act = AsyncMock(
+            return_value=make_night_kill_response(
+                observations="Night phase after a tense day.",
+                suspicions="Charlie is influential.",
+                strategy="Remove a strong town voice.",
+                reasoning="Charlie could be leading town.",
+                target="Charlie",
+            )
+        )
 
         response = await agent.act(game_state, [], memory, ActionType.NIGHT_KILL)
 

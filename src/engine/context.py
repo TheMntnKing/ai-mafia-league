@@ -443,8 +443,8 @@ It's your turn to speak in the discussion.
 {day_one_note}
 Valid nomination targets: {nomination_targets}
 
-Fill out ALL fields in the schema. The reasoning fields come first to help you think,
-then your actual speech and nomination.""",
+ Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
+ then your actual speech and nomination.""",
 
             ActionType.VOTE: f"""[YOUR TASK: VOTE]
 Discussion is complete. Time to vote.
@@ -455,7 +455,8 @@ Discussion is complete. Time to vote.
 {vote_day_one_note}
 Valid vote options: {vote_options}
 
-Fill out ALL fields in the schema, then provide your vote.""",
+ Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
+ then provide your vote.""",
 
             ActionType.NIGHT_KILL: f"""[YOUR TASK: MAFIA NIGHT KILL]
 It's night. Choose a target to kill.
@@ -466,7 +467,8 @@ It's night. Choose a target to kill.
 
 Valid targets: {living_except_self}
 
-Fill out ALL fields in the schema, then provide your target.""",
+ Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
+ then provide your target.""",
 
             ActionType.INVESTIGATION: f"""[YOUR TASK: DETECTIVE INVESTIGATION]
 It's night. Choose someone to investigate.
@@ -477,7 +479,8 @@ It's night. Choose someone to investigate.
 
 Valid targets: {living_except_self}
 
-Fill out ALL fields in the schema, then provide your target.""",
+ Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
+ then provide your target.""",
 
             ActionType.LAST_WORDS: f"""[YOUR TASK: LAST WORDS]
 You have been eliminated from the game. This is your final statement.
@@ -489,7 +492,8 @@ You may:
 - Say goodbye in your persona's style
 {last_words_role_note}
 
-Keep it brief and impactful. Fill out the schema with your final message.""",
+ Keep it brief and impactful. Fill out all fields, including your reasoning,
+ then provide your final message.""",
 
             ActionType.DEFENSE: """[YOUR TASK: DEFENSE]
 You are tied in the vote and must defend yourself.
@@ -498,8 +502,8 @@ You are tied in the vote and must defend yourself.
 2. Make your case for why you should stay
 3. Redirect suspicion if appropriate
 
-Give a brief but compelling defense speech in your persona's style.
-Fill out ALL fields in the schema, then provide your defense.""",
+ Give a brief but compelling defense speech in your persona's style.
+ Fill out ALL fields in the schema, including your reasoning, then provide your defense.""",
         }
 
         return prompts.get(action_type, "[YOUR TASK]\nTake your action.")

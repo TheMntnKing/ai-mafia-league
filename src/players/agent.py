@@ -225,14 +225,11 @@ class PlayerAgent:
         new_beliefs = dict(memory.beliefs)
 
         # Extract SGR analysis fields
-        if "suspicion_updates" in output:
-            new_beliefs["suspicions"] = output["suspicion_updates"]
+        if "suspicions" in output:
+            new_beliefs["suspicions"] = output["suspicions"]
 
-        if "pattern_notes" in output:
-            new_beliefs["patterns"] = output["pattern_notes"]
-
-        if "current_goal" in output:
-            new_beliefs["current_goal"] = output["current_goal"]
+        if "strategy" in output:
+            new_beliefs["strategy"] = output["strategy"]
 
         # Record the action taken
         action_key = f"last_{action_type.value}"

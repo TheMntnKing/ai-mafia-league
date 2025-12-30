@@ -13,6 +13,7 @@ from src.providers import (
     retry_with_backoff,
 )
 from src.schemas import ActionType
+from tests.sgr_helpers import make_speak_response
 
 
 class TestRetryDecorator:
@@ -96,18 +97,14 @@ class TestAnthropicProvider:
         """Sample tool use response from Claude."""
         tool_use = MagicMock()
         tool_use.type = "tool_use"
-        tool_use.input = {
-            "new_events": ["Day started"],
-            "notable_changes": [],
-            "suspicion_updates": {},
-            "pattern_notes": [],
-            "current_goal": "survive",
-            "reasoning": "No information yet",
-            "information_to_share": [],
-            "information_to_hide": [],
-            "speech": "Hello everyone, let's discuss.",
-            "nomination": "Bob",
-        }
+        tool_use.input = make_speak_response(
+            observations="Day started.",
+            suspicions="No strong suspicions yet.",
+            strategy="Gather information.",
+            reasoning="No information yet.",
+            speech="Hello everyone, let's discuss.",
+            nomination="Bob",
+        )
 
         response = MagicMock()
         response.content = [tool_use]
@@ -263,7 +260,7 @@ class TestAnthropicProvider:
         assert tool["name"] == "vote"
         schema = tool["input_schema"]
         assert "vote" in schema["properties"]
-        assert "vote_reasoning" in schema["properties"]
+        assert "reasoning" in schema["properties"]
 
     def test_build_tool_for_last_words(self, provider):
         """Provider builds correct tool schema for last words (simple)."""
@@ -272,5 +269,4 @@ class TestAnthropicProvider:
         assert tool["name"] == "last_words"
         schema = tool["input_schema"]
         assert "text" in schema["properties"]
-        # LastWordsOutput is simpler, doesn't have reasoning fields
-        assert "reasoning" not in schema["properties"]
+        assert "reasoning" in schema["properties"]

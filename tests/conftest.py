@@ -85,7 +85,7 @@ def sample_memory() -> PlayerMemory:
         },
         beliefs={
             "suspicions": {"Bob": "slightly suspicious", "Charlie": "trustworthy"},
-            "current_goal": "find the Mafia",
+            "strategy": "find the Mafia",
         },
     )
 
