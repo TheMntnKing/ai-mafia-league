@@ -751,12 +751,14 @@ class TestMafiaCoordination:
         runner.state.advance_phase()  # day_1 -> night_1
 
         call_count = [0]
+        round1_contexts = []
 
         async def mock_act(action_type, _context_string):
             call_count[0] += 1
 
             if action_type.value == "night_kill":
                 # Both agree on same target
+                round1_contexts.append(_context_string)
                 return make_night_kill_response(
                     observations="Night phase begins.",
                     suspicions="Town targets identified.",
@@ -791,6 +793,9 @@ class TestMafiaCoordination:
         # Should have 2 Mafia calls (Round 1 only) + 1 Detective = 3
         # If Round 2 happened, would be 4 Mafia + 1 Detective = 5
         assert call_count[0] == 3
+        assert len(round1_contexts) == 2
+        assert "[COORDINATION ROUND 1]" in round1_contexts[1]
+        assert "Partner's message" in round1_contexts[1]
 
     async def test_round2_on_disagreement(self, personas, mock_provider):
         """Round 2 occurs when Mafia disagree in Round 1."""
@@ -811,12 +816,15 @@ class TestMafiaCoordination:
 
         mafia_call_count = [0]
         round2_context_strings = []
+        round1_context_strings = []
 
         async def mock_act(action_type, context_string):
             if action_type.value == "night_kill":
                 mafia_call_count[0] += 1
                 # Check if this is Round 2 by looking for COORDINATION ROUND 2 in context
                 is_round2 = "[COORDINATION ROUND 2]" in context_string
+                if not is_round2:
+                    round1_context_strings.append(context_string)
                 if is_round2:
                     round2_context_strings.append(context_string)
                     # In Round 2, both agree on Alice
@@ -876,6 +884,10 @@ class TestMafiaCoordination:
         for ctx in round2_context_strings:
             # Context should contain info about partner's R1 proposal
             assert "Partner's Round 1 proposal" in ctx
+            assert "Partner's Round 1 message" in ctx
+        # Second Mafia should see partner proposal in Round 1
+        assert len(round1_context_strings) == 2
+        assert "[COORDINATION ROUND 1]" in round1_context_strings[1]
 
     async def test_first_mafia_decides_on_continued_disagreement(self, personas, mock_provider):
         """First Mafia (by seat) decides if still disagree after Round 2."""

@@ -50,6 +50,7 @@ def make_night_kill_response(**overrides) -> dict:
         "suspicions": "Uncertain who poses the biggest threat.",
         "strategy": "Remove a key town voice.",
         "reasoning": "Default reasoning.",
+        "message": "Default message to partner.",
         "target": "skip",
     }
     return _validate(NightKillOutput, {**data, **overrides})

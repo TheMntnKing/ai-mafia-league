@@ -35,6 +35,7 @@ class VotingOutput(BaseThinking):
 class NightKillOutput(BaseThinking):
     """Night phase: Mafia kill target."""
 
+    message: str
     target: str  # player name or "skip"
 
 

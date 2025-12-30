@@ -460,27 +460,50 @@ class NightPhase:
         # Sort by seat for deterministic order
         mafia_agents.sort(key=lambda a: a.seat)
 
-        # Round 1: Both propose independently
+        # Round 1: Sequential proposals
         proposals_r1 = {}
         proposals_r1_details: dict[str, dict] = {}
-        for agent in mafia_agents:
-            game_state = state.get_public_state()
-            # Filter out self and partner
-            game_state.living_players = [
-                p for p in game_state.living_players
-                if p != agent.name and p != agent.partner
-            ]
 
-            response = await agent.act(
-                game_state,
-                [],
-                memories[agent.name],
-                ActionType.NIGHT_KILL,
-                recent_events=_get_recent_events(event_log, event_cursors, agent.name),
-            )
-            memories[agent.name] = response.updated_memory
-            proposals_r1[agent.name] = response.output.get("target", "skip")
-            proposals_r1_details[agent.name] = response.output
+        first_mafia = mafia_agents[0]
+        game_state = state.get_public_state()
+        game_state.living_players = [
+            p for p in game_state.living_players
+            if p != first_mafia.name and p != first_mafia.partner
+        ]
+
+        first_response = await first_mafia.act(
+            game_state,
+            [],
+            memories[first_mafia.name],
+            ActionType.NIGHT_KILL,
+            recent_events=_get_recent_events(event_log, event_cursors, first_mafia.name),
+        )
+        memories[first_mafia.name] = first_response.updated_memory
+        proposals_r1[first_mafia.name] = first_response.output.get("target", "skip")
+        proposals_r1_details[first_mafia.name] = first_response.output
+
+        second_mafia = mafia_agents[1]
+        game_state = state.get_public_state()
+        game_state.living_players = [
+            p for p in game_state.living_players
+            if p != second_mafia.name and p != second_mafia.partner
+        ]
+
+        second_response = await second_mafia.act(
+            game_state,
+            [],
+            memories[second_mafia.name],
+            ActionType.NIGHT_KILL,
+            recent_events=_get_recent_events(event_log, event_cursors, second_mafia.name),
+            action_context={
+                "round": 1,
+                "partner_proposal": proposals_r1[first_mafia.name],
+                "partner_message": proposals_r1_details[first_mafia.name].get("message", ""),
+            },
+        )
+        memories[second_mafia.name] = second_response.updated_memory
+        proposals_r1[second_mafia.name] = second_response.output.get("target", "skip")
+        proposals_r1_details[second_mafia.name] = second_response.output
 
         targets = list(proposals_r1.values())
 
@@ -529,6 +552,8 @@ class NightPhase:
                     "round": 2,
                     "partner_proposal": partner_proposal,
                     "my_r1_proposal": proposals_r1[agent.name],
+                    "partner_message": proposals_r1_details[agent.partner].get("message", ""),
+                    "my_r1_message": proposals_r1_details[agent.name].get("message", ""),
                 },
             )
             memories[agent.name] = response.updated_memory

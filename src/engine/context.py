@@ -197,13 +197,26 @@ Nominated for vote: {nominated_str}"""
             lines.append(f"Your partner said: \"{extra['partner_strategy']}\"")
             lines.append("Consider this when formulating your response.")
 
+        # Night Round 1: Second Mafia sees first Mafia's proposal
+        if extra.get("round") == 1 and "partner_proposal" in extra:
+            lines.append("[COORDINATION ROUND 1]")
+            lines.append(f"Partner's proposal: {extra['partner_proposal']}")
+            partner_message = extra.get("partner_message")
+            if partner_message:
+                lines.append(f"Partner's message: {partner_message}")
+            lines.append("Respond with your own proposal and reasoning.")
+
         # Night Round 2: Both Mafia see partner's R1 proposal
-        if "partner_proposal" in extra or "my_r1_proposal" in extra:
+        if extra.get("round") == 2 or "my_r1_proposal" in extra:
             lines.append("[COORDINATION ROUND 2]")
             if "my_r1_proposal" in extra:
                 lines.append(f"Your Round 1 proposal: {extra['my_r1_proposal']}")
             if "partner_proposal" in extra:
                 lines.append(f"Partner's Round 1 proposal: {extra['partner_proposal']}")
+            if extra.get("my_r1_message"):
+                lines.append(f"Your Round 1 message: {extra['my_r1_message']}")
+            if extra.get("partner_message"):
+                lines.append(f"Partner's Round 1 message: {extra['partner_message']}")
             lines.append("You disagreed in Round 1. Try to reach consensus.")
 
         return "\n".join(lines) if lines else None
@@ -463,12 +476,13 @@ It's night. Choose a target to kill.
 
 1. Consider who threatens your team (Detective suspects, strong Town leaders)
 2. Coordinate with your partner's suggestion if provided
-3. Choose a target or "skip" to spare everyone tonight
+3. Provide a message to your partner explaining your reasoning
+4. Choose a target or "skip" to spare everyone tonight
 
 Valid targets: {living_except_self}
 
- Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
- then provide your target.""",
+Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
+then provide your target.""",
 
             ActionType.INVESTIGATION: f"""[YOUR TASK: DETECTIVE INVESTIGATION]
 It's night. Choose someone to investigate.

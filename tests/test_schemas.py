@@ -198,6 +198,7 @@ class TestSGROutputs:
             suspicions="Alice is dangerous and influential.",
             strategy="Reduce town leadership.",
             reasoning="Eliminate the strongest town voice.",
+            message="Alice is leading town; we should remove her.",
             target="Alice",
         )
         assert output.target == "Alice"

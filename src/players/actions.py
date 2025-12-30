@@ -200,6 +200,7 @@ class ActionHandler:
                 "suspicions": "Uncertain who poses the biggest threat.",
                 "strategy": "Minimize risk with a safe pick.",
                 "reasoning": "No clear target identified.",
+                "message": "No clear target identified; suggesting a safe pick.",
                 "target": random.choice(kill_targets),
             },
             ActionType.INVESTIGATION: {
