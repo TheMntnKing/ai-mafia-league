@@ -65,6 +65,8 @@ Thumbs.db
 /logs/*.json
 !/logs/.gitkeep
 !/data/.gitkeep
+/viewer/node_modules/
+/viewer/dist/
 
 # Langfuse
 .langfuse/
