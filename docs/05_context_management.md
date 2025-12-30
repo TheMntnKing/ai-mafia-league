@@ -34,6 +34,7 @@ Engine provides ground truth facts. Players build interpretations.
 ## Event Format
 
 Events are structured facts, not narrative.
+EventLog exists for replay/persistence; player context uses transcript + memory.
 Only **public** information is reflected in player context via the transcript; private fields
 never appear in LLM prompts.
 

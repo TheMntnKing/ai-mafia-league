@@ -173,12 +173,13 @@ Players define and update their state each turn. Engine persists it between call
 
 ## Event Log
 
-The engine maintains a single event stream throughout the game. This log serves both runtime context management and post-game persistence.
+The engine maintains a single event stream throughout the game for replay and
+persistence. It is not used to build player prompts during runtime.
 
-**During game (context management):**
+**During game (runtime):**
 - Events appended as they occur (speeches, votes, deaths, night actions)
-- When a player is called, engine builds their context from this log
-- Private fields filtered out—players only see public information
+- ContextBuilder uses transcript + memory; EventLog is not read for prompts
+- Private fields are kept for replay but are not sent to other players
 - Recent rounds provided verbatim, older rounds compressed (see [05_context_management.md](05_context_management.md))
 
 **After game (persistence):**
@@ -186,7 +187,8 @@ The engine maintains a single event stream throughout the game. This log serves 
 - Viewer view includes private reasoning (creates dramatic irony)
 - Analysis view adds timestamps for debugging and metrics
 
-See [schemas.py](schemas.py) for `Event`, `DayRoundTranscript`, and `CompressedRoundSummary` definitions.
+See `src/schemas/core.py` for `Event` and `src/schemas/transcript.py` for
+`DayRoundTranscript` and `CompressedRoundSummary` definitions.
 
 ## What Is Fixed vs Customizable
 

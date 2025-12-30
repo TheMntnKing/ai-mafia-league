@@ -1,10 +1,13 @@
-# Phase 7: Quality, Observability, and Replay
+# Phase 7: Quality and Observability
 
-**Goal:** Improve coordination logic, simplify context/data flow, abstract prompts, and enhance replay UX.
+**Goal:** Improve coordination logic, simplify context/data flow, abstract prompts, and tighten
+runtime quality.
+
+**Status:** ✅ COMPLETE (replay viewer moved to Phase 8)
 
 ---
 
-## Completed
+## Deliverables
 
 ### Pre-Phase 7 Bug Fixes ✅
 
@@ -17,7 +20,7 @@
 
 ### 1. Sequential Mafia Coordination ✅
 
-**Problem:** R1 proposals were blind - both Mafia submitted independently.
+**Problem:** R1 proposals were blind; both Mafia submitted independently.
 
 **Solution:** Sequential R1 with message passing:
 ```
@@ -32,6 +35,22 @@ R2: If disagree, both see each other's R1 message + proposal
 - `src/engine/phases.py` - Sequential R1, pass `partner_message` in action_context
 - `src/engine/context.py` - Render partner's message in coordination sections, prompt asks for message
 - `src/players/actions.py` - Default `message` value
+
+### 2. Context Simplification ✅
+
+**Problem:** `[RECENT EVENTS]` section is redundant with transcript.
+
+**Solution:** Remove `_build_recent_events_section()` entirely and drop `recent_events` plumbing.
+Remove redundant memory facts (`last_speak`, `last_vote`).
+
+**Files modified:**
+- `src/engine/context.py` - Remove `[RECENT EVENTS]` section
+- `src/engine/phases.py` - Remove `recent_events` and event cursor usage
+- `src/players/agent.py` - Remove `recent_events`, stop storing `last_speak`/`last_vote`
+- `src/engine/game.py` - Remove `event_cursors`
+- `tests/test_context.py` - Remove recent_events tests
+- `tests/test_player.py` - Adjust memory assertions
+- `tests/test_game.py` - Update phase signatures in tests
 
 ### 3. SGR Schema Simplification ✅
 
@@ -65,21 +84,6 @@ class DefenseOutput(BaseModel):
 - `src/engine/context.py` - Updated prompts
 - `tests/sgr_helpers.py` - New helper builders with Pydantic validation
 
-### 2. Context Simplification ✅
-
-**Problem:** `[RECENT EVENTS]` section is redundant with transcript.
-
-**Solution:** Remove `_build_recent_events_section()` entirely and drop `recent_events` plumbing. Remove redundant memory facts (`last_speak`, `last_vote`).
-
-**Files modified:**
-- `src/engine/context.py` - Remove `[RECENT EVENTS]` section
-- `src/engine/phases.py` - Remove `recent_events` and event cursor usage
-- `src/players/agent.py` - Remove `recent_events`, stop storing `last_speak`/`last_vote`
-- `src/engine/game.py` - Remove `event_cursors`
-- `tests/test_context.py` - Remove recent_events tests
-- `tests/test_player.py` - Adjust memory assertions
-- `tests/test_game.py` - Update phase signatures in tests
-
 ### 4. Prompt Abstraction ✅
 
 **Problem:** Prompts embedded in `ContextBuilder._build_action_prompt()` make tuning difficult.
@@ -90,7 +94,7 @@ class DefenseOutput(BaseModel):
 - `src/engine/prompts.py` - New prompt templates/builders
 - `src/engine/context.py` - Import and use prompts
 
-### 6. Persona Modularization ✅
+### 5. Persona Modularization ✅
 
 **Problem:** All personas lived in a single file, making it harder to add or swap personas.
 
@@ -104,31 +108,6 @@ class DefenseOutput(BaseModel):
 - Roster now includes `Bombardiro Crocodilo` and `Tralalero Tralala` (7 total)
 
 ---
-## Remaining
-
-### 5. Replay Viewer Enhancement
-
-**Current:** Basic HTML viewer with event filtering.
-
-**Target:**
-- Phase-by-phase navigation
-- Show private reasoning → then public speech
-- Player focus mode
-- Side-by-side private vs public
-
-**File:** `scripts/replay_viewer.html`
-
----
-
-## Implementation Order
-
-1. ~~Sequential R1 Coordination~~ ✅
-2. ~~Context Simplification~~ ✅
-3. ~~SGR Schema Simplification~~ ✅
-4. ~~Prompt Abstraction~~ ✅
-5. Replay Viewer
-
----
 
 ## Testing
 
@@ -139,34 +118,31 @@ class DefenseOutput(BaseModel):
 
 ---
 
-## Future Considerations
-
-### 3+ Mafia Support
-
-The current coordination logic in `src/engine/phases.py` assumes exactly 2 Mafia:
-- `NightZeroPhase`: First/second sequential pattern
-- `NightPhase._run_mafia_coordination()`: R1→R2 protocol designed for pairs
-
-**To support 3+ Mafia** (e.g., 10-player games), would need:
-- Round-robin proposals or Mafia voting
-- Designated leader who decides after hearing all
-- Significant refactor of coordination logic
-
-**Current scope:** 7 players, 2 Mafia. Expansion deferred until needed.
-
-### Dynamic Role Counts
-
-Adding new roles (Doctor, Jester, etc.) would require:
-- New action types in `src/schemas/`
-- New phase methods or hooks
-- Role-specific context sections
-
-Not planned for Phase 7.
+## Files Created/Modified
+```
+src/schemas/actions.py
+src/engine/phases.py
+src/engine/context.py
+src/engine/prompts.py
+src/engine/game.py
+src/players/actions.py
+src/players/agent.py
+tests/sgr_helpers.py
+tests/test_context.py
+tests/test_player.py
+tests/test_game.py
+src/personas/alice.py
+src/personas/bob.py
+src/personas/charlie.py
+src/personas/diana.py
+src/personas/eve.py
+src/personas/bombardiro.py
+src/personas/tralalero.py
+src/personas/initial.py
+```
 
 ---
 
-## Open Questions
+## Deferred
 
-1. ~~SGR field names~~ **Resolved:** `observations`, `suspicions`, `strategy`, `reasoning`
-2. ~~Prompt format~~ **Resolved:** constants + template builders
-3. **Replay viewer:** Standalone HTML or need server for file listing?
+Replay viewer + log schema updates moved to Phase 8 (see `tasks/phase8.md`).
