@@ -381,7 +381,11 @@ class TestGameIntegration:
                 )
             elif action_name == "night_kill":
                 living = runner.state.get_living_players()
-                town = [p for p in living if runner.state.get_player_role(p) in ("town", "detective")]
+                town = [
+                    p
+                    for p in living
+                    if runner.state.get_player_role(p) in ("town", "detective")
+                ]
                 target = town[0] if town else "skip"
                 return make_night_kill_response(
                     observations="Discussion ongoing.",
@@ -506,9 +510,8 @@ class TestNightZeroCoordination:
 
     async def test_night_zero_stores_strategies_in_memory(self, personas, mock_provider):
         """Night Zero stores both Mafia strategies in their memories."""
-        from src.engine.phases import NightZeroPhase
         from src.engine.events import EventLog
-        from src.engine.state import GameStateManager
+        from src.engine.phases import NightZeroPhase
 
         config = GameConfig(
             player_names=list(personas.keys()),
@@ -574,8 +577,8 @@ class TestNightZeroCoordination:
 
     async def test_second_mafia_sees_first_strategy(self, personas, mock_provider):
         """Second Mafia in speaking order sees first Mafia's strategy."""
-        from src.engine.phases import NightZeroPhase
         from src.engine.events import EventLog
+        from src.engine.phases import NightZeroPhase
 
         config = GameConfig(
             player_names=list(personas.keys()),
@@ -735,8 +738,8 @@ class TestMafiaCoordination:
 
     async def test_round1_agreement_skips_round2(self, personas, mock_provider):
         """When both Mafia agree in Round 1, Round 2 is skipped."""
-        from src.engine.phases import NightPhase
         from src.engine.events import EventLog
+        from src.engine.phases import NightPhase
 
         config = GameConfig(
             player_names=list(personas.keys()),
@@ -799,8 +802,8 @@ class TestMafiaCoordination:
 
     async def test_round2_on_disagreement(self, personas, mock_provider):
         """Round 2 occurs when Mafia disagree in Round 1."""
-        from src.engine.phases import NightPhase
         from src.engine.events import EventLog
+        from src.engine.phases import NightPhase
 
         config = GameConfig(
             player_names=list(personas.keys()),
@@ -891,8 +894,8 @@ class TestMafiaCoordination:
 
     async def test_first_mafia_decides_on_continued_disagreement(self, personas, mock_provider):
         """First Mafia (by seat) decides if still disagree after Round 2."""
-        from src.engine.phases import NightPhase
         from src.engine.events import EventLog
+        from src.engine.phases import NightPhase
 
         config = GameConfig(
             player_names=list(personas.keys()),

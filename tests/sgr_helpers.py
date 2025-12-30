@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Type
-
 from pydantic import BaseModel
 
 from src.schemas import (
@@ -16,7 +14,7 @@ from src.schemas import (
 )
 
 
-def _validate(model: Type[BaseModel], data: dict) -> dict:
+def _validate(model: type[BaseModel], data: dict) -> dict:
     model(**data)
     return data
 
