@@ -33,7 +33,7 @@
 - `PlayerAgent` class implementing stateless design
 - Constructor: `name`, `persona`, `role`, `seat`, `provider: PlayerProvider`, `partner`
 - **Stateless**: Engine owns `PlayerMemory`, passes it each call, agent returns updated memory
-- Main method: `act(game_state, transcript, memory, action_type, recent_events, action_context) -> PlayerResponse`
+- Main method: `act(game_state, transcript, memory, action_type, action_context) -> PlayerResponse`
 - Retry logic: up to 3 attempts for invalid outputs, with error feedback in context
 - Fallback: defaults applied after validation failures OR provider errors
 - Catches: `InvalidResponseError`, `ActionValidationError`, `ProviderError`, `RetryExhausted`

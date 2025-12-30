@@ -34,7 +34,7 @@ PlayerMemory has two parts: **facts** (what happened) and **beliefs** (interpret
 - Speeches heard (who said what, in order)
 - Nominations and votes
 - Deaths (no role information)
-- Own past reasoning and decisions
+- Own night action decisions (last investigation/kill with brief reasoning)
 - Role-specific private info (partner identity for Mafia, investigation results for Detective)
 
 **When memory updates:** Only when player is called to act. Between turns, engine accumulates events. On player's turn, they receive all new events, process them, reason, and produce action—all in one LLM call.

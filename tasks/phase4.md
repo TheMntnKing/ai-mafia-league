@@ -25,7 +25,6 @@
 | `[CURRENT STATE]` | Phase, round, living/dead players, nominations |
 | `[MAFIA INFO]` | Partner name and alive status (Mafia only) |
 | `[INVESTIGATION RESULTS]` | Investigation history (Detective only) |
-| `[RECENT EVENTS]` | Public events since last turn (private_fields filtered) |
 | `[DEFENSE CONTEXT]` | Tied players, vote counts (Defense only) |
 | `[TRANSCRIPT]` | Game history (full or compressed) |
 | `[YOUR MEMORY]` | Facts and beliefs as JSON |
@@ -40,7 +39,7 @@
 |------------|----------|
 | TestTranscriptManager | Add speech, finalize round, live round with night info, revote data, pending vote_outcome |
 | TestTranscriptCompression | 2-round window, accusations extraction, claims extraction, death capture |
-| TestContextBuilder | All sections, persona info, Mafia partner, Detective results, action prompts, recent events, transcript rendering, memory JSON |
+| TestContextBuilder | All sections, persona info, Mafia partner, Detective results, action prompts, transcript rendering, memory JSON |
 | TestTranscriptFullMode | `full=True` returns uncompressed |
 
 Additional coverage:
@@ -48,7 +47,6 @@ Additional coverage:
 - Detective with empty results
 - Mafia with dead partner
 - INVESTIGATION and LAST_WORDS prompts
-- Recent events private_fields filtering
 
 ## Files Created
 ```
@@ -62,7 +60,6 @@ tests/test_context.py
 - Compression uses simple keyword heuristics (intentionally basic, can improve later)
 - Compression does not cap the number of extracted accusations/claims
 - ContextBuilder trusts caller (engine) to pass correct `extra` data
-- Recent events defensively filter `private_fields` to prevent accidental leaks
 - **Deviation:** Spec says VOTE requires full transcript, but ContextBuilder doesn't enforce this. Engine must pass `full=True` transcript for VOTE actions.
 
 ### Last Words Policy (updated in Phase 6)

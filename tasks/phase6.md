@@ -164,11 +164,6 @@ Round 2 (disagreement only):
   - `_build_mafia_coordination_section()` renders partner_strategy, partner_proposal, my_r1_proposal
 - Final context string passed to `provider.act(action_type, context_string)`
 
-### Event Cursors
-- Each player has an event cursor tracking last-seen event index
-- `_get_recent_events()` returns public events since cursor, advances cursor
-- Ensures players only see events since their last action
-
 ### Memory Ownership
 - Engine owns all `PlayerMemory` instances in `memories: dict[str, PlayerMemory]`
 - Phases update memories in place and return the dict

@@ -58,11 +58,11 @@ Example: Seats are 0-6. Day 1 starts with seat 0. Seat 0 dies Night 1. Day 2's s
 
 ## Speech Length
 
-Speeches should be approximately 80-120 words. This keeps games paced for entertainment while allowing meaningful content. Defense speeches during revote may be shorter.
+Speeches should be approximately 50-100 words. This keeps games paced for entertainment while allowing meaningful content. Defense speeches during revote may be shorter.
 
 ## Nominations
 
-Every player must nominate one player when they speak. Nominations put players on the ballot for voting. A player can be nominated multiple times. You can nominate yourself. Players who receive zero nominations cannot be voted for that round.
+Every player must nominate one player when they speak. On Day 1, a player may nominate "skip" if they have no lean yet. Nominations put players on the ballot for voting. A player can be nominated multiple times. You can nominate yourself. Players who receive zero nominations cannot be voted for that round.
 
 Nomination does not mean accusation. Players may nominate to hear someone's defense, because they have no better candidate, or for strategic reasons. Nomination should not be interpreted as automatic hostility.
 
