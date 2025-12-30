@@ -22,8 +22,8 @@ class VoiceAndBehavior(BaseModel):
     defense_style: str  # how they handle being accused
     trust_disposition: str  # paranoid, neutral, trusting, conditional
     risk_tolerance: str  # aggressive plays vs safe plays
-    signature_phrases: list[str] = Field(default_factory=list, max_length=3)
-    quirks: list[str] = Field(default_factory=list, max_length=3)
+    signature_phrases: list[str] = Field(default_factory=list, max_length=5)
+    quirks: list[str] = Field(default_factory=list, max_length=5)
 
 
 class RoleGuidance(BaseModel):
