@@ -5,11 +5,20 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from src.engine.prompts import (
+    DEFENSE_PROMPT,
+    RULES_SUMMARY,
+    build_investigation_prompt,
+    build_last_words_prompt,
+    build_night_kill_prompt,
+    build_night_zero_prompt,
+    build_speak_prompt,
+    build_vote_prompt,
+)
 from src.schemas import (
     ActionType,
     CompressedRoundSummary,
     DayRoundTranscript,
-    Event,
     GameState,
     Persona,
     PlayerMemory,
@@ -35,24 +44,6 @@ class ContextBuilder:
     - Action-specific prompt
     """
 
-    RULES_SUMMARY = """You are playing Mafia with 7 players: 2 Mafia, 1 Detective, 4 Town.
-
-ROLES:
-- Town: No special abilities. Win by eliminating both Mafia.
-- Detective: Town-aligned. Can investigate one player per night to learn if they are Mafia.
-- Mafia: Know each other. Can kill one player per night. Win when Mafia >= Town-aligned.
-
-GAME FLOW:
-1. Day Phase: All players discuss, each nominates one player. Then vote.
-   - Majority vote eliminates a player. Ties trigger revote with defenses.
-2. Night Phase: Mafia choose a kill target. Detective investigates.
-3. Game ends when all Mafia are dead (Town wins) or Mafia >= Town-aligned (Mafia wins).
-
-RULES:
-- Each speech should be ~80-120 words.
-- Votes must be for a nominated player or "skip".
-- Never reveal other players' hidden information you don't have."""
-
     def build_context(
         self,
         player_name: str,
@@ -63,7 +54,6 @@ RULES:
         memory: PlayerMemory,
         action_type: ActionType,
         extra: dict | None = None,
-        recent_events: list[Event] | None = None,
     ) -> str:
         """
         Assemble full context string for LLM.
@@ -77,7 +67,6 @@ RULES:
             memory: Player's memory state
             action_type: Type of action to take
             extra: Role-specific or action-specific info (partner, defense context)
-            recent_events: Public events since the player's last turn
 
         Returns:
             Complete context string for LLM system prompt
@@ -88,7 +77,6 @@ RULES:
             self._build_game_state_section(game_state),
             self._build_role_specific_section(role, extra),
             self._build_mafia_coordination_section(extra),
-            self._build_recent_events_section(recent_events),
             self._build_defense_context_section(action_type, extra),
             self._build_transcript_section(transcript),
             self._build_memory_section(memory),
@@ -139,7 +127,7 @@ RULES:
 
     def _build_rules_section(self) -> str:
         """Build rules section of context."""
-        return f"[GAME RULES]\n{self.RULES_SUMMARY}"
+        return f"[GAME RULES]\n{RULES_SUMMARY}"
 
     def _build_game_state_section(self, state: GameState) -> str:
         """Build game state section of context."""
@@ -220,27 +208,6 @@ Nominated for vote: {nominated_str}"""
             lines.append("You disagreed in Round 1. Try to reach consensus.")
 
         return "\n".join(lines) if lines else None
-
-    def _build_recent_events_section(
-        self, events: list[Event] | None
-    ) -> str | None:
-        """Build recent public events section.
-
-        Defensively filters private_fields from event.data to prevent
-        accidental leaks if caller passes unfiltered events.
-        """
-        if not events:
-            return None
-
-        lines = ["[RECENT EVENTS]"]
-        for event in events:
-            # Filter out private fields (defense in depth)
-            public_data = {
-                k: v for k, v in event.data.items() if k not in event.private_fields
-            }
-            payload = json.dumps(public_data, ensure_ascii=True)
-            lines.append(f"- {event.type}: {payload}")
-        return "\n".join(lines)
 
     def _build_defense_context_section(
         self, action_type: ActionType, extra: dict | None
@@ -339,34 +306,7 @@ Your current beliefs:
     def _build_night_zero_prompt(self, extra: dict | None) -> str:
         """Build prompt for Night Zero Mafia coordination."""
         partner_strategy = (extra or {}).get("partner_strategy")
-
-        if partner_strategy:
-            # Second Mafia sees first's strategy
-            return f"""[YOUR TASK: NIGHT ZERO COORDINATION]
-Your partner shared their strategy:
----
-{partner_strategy}
----
-
-Now share YOUR strategy. Discuss:
-- Signals or code words to use during day discussion
-- Cover stories if accused
-- Initial suspicion targets to push on Town
-- How you'll coordinate without being obvious
-
-Provide your strategy in the 'speech' field. The 'nomination' field is not used tonight."""
-        else:
-            # First Mafia
-            return """[YOUR TASK: NIGHT ZERO COORDINATION]
-This is Night Zero. No kill tonight - just coordination with your partner.
-
-Share your initial strategy:
-- Signals or code words to use during day discussion
-- Cover stories if accused
-- Initial suspicion targets to push on Town
-- How you'll coordinate without being obvious
-
-Provide your strategy in the 'speech' field. The 'nomination' field is not used tonight."""
+        return build_night_zero_prompt(partner_strategy)
 
     def _build_action_prompt(
         self,
@@ -444,80 +384,16 @@ Provide your strategy in the 'speech' field. The 'nomination' field is not used 
                 "\nAs Town: Share your strongest suspicions and advice for the next vote."
             )
 
-        prompts = {
-            ActionType.SPEAK: f"""[YOUR TASK: SPEAK]
-It's your turn to speak in the discussion.
-
-1. Observe what has happened and update your suspicions
-2. Decide what information to share vs hide
-3. Give a speech (~80-120 words) that fits your persona
-4. You MUST nominate exactly one living player for potential elimination (or "skip" on Day 1)
-5. If you nominate someone, clearly explain why (especially on Day 1)
-{day_one_note}
-Valid nomination targets: {nomination_targets}
-
- Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
- then your actual speech and nomination.""",
-
-            ActionType.VOTE: f"""[YOUR TASK: VOTE]
-Discussion is complete. Time to vote.
-
-1. Review the discussion and your suspicions
-2. Consider who is most likely Mafia
-3. Vote for one nominated player, or "skip" if uncertain
-{vote_day_one_note}
-Valid vote options: {vote_options}
-
- Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
- then provide your vote.""",
-
-            ActionType.NIGHT_KILL: f"""[YOUR TASK: MAFIA NIGHT KILL]
-It's night. Choose a target to kill.
-
-1. Consider who threatens your team (Detective suspects, strong Town leaders)
-2. Coordinate with your partner's suggestion if provided
-3. Provide a message to your partner explaining your reasoning
-4. Choose a target or "skip" to spare everyone tonight
-
-Valid targets: {living_except_self}
-
-Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
-then provide your target.""",
-
-            ActionType.INVESTIGATION: f"""[YOUR TASK: DETECTIVE INVESTIGATION]
-It's night. Choose someone to investigate.
-
-1. Consider who is most suspicious
-2. Think about how you'll use the information
-3. Choose a target to learn if they are Mafia
-
-Valid targets: {living_except_self}
-
- Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
- then provide your target.""",
-
-            ActionType.LAST_WORDS: f"""[YOUR TASK: LAST WORDS]
-You have been eliminated from the game. This is your final statement.
-
-You may:
-- Share your suspicions about who is Mafia
-- Reveal your role if you wish
-- Give advice to remaining players
-- Say goodbye in your persona's style
-{last_words_role_note}
-
- Keep it brief and impactful. Fill out all fields, including your reasoning,
- then provide your final message.""",
-
-            ActionType.DEFENSE: """[YOUR TASK: DEFENSE]
-You are tied in the vote and must defend yourself.
-
-1. Address the accusations against you
-2. Make your case for why you should stay
-3. Redirect suspicion if appropriate
-
- Give a brief but compelling defense speech in your persona's style.
- Fill out ALL fields in the schema, including your reasoning, then provide your defense.""",
-        }
-
-        return prompts.get(action_type, "[YOUR TASK]\nTake your action.")
+        if action_type == ActionType.SPEAK:
+            return build_speak_prompt(nomination_targets, day_one_note)
+        if action_type == ActionType.VOTE:
+            return build_vote_prompt(vote_options, vote_day_one_note)
+        if action_type == ActionType.NIGHT_KILL:
+            return build_night_kill_prompt(living_except_self)
+        if action_type == ActionType.INVESTIGATION:
+            return build_investigation_prompt(living_except_self)
+        if action_type == ActionType.LAST_WORDS:
+            return build_last_words_prompt(last_words_role_note)
+        if action_type == ActionType.DEFENSE:
+            return DEFENSE_PROMPT
+        return "[YOUR TASK]\nTake your action."

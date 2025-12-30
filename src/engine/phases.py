@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from src.engine.voting import VoteResolver
-from src.schemas import ActionType, DefenseSpeech, Event, PlayerMemory
+from src.schemas import ActionType, DefenseSpeech, PlayerMemory, Transcript
 
 if TYPE_CHECKING:
     from src.engine.events import EventLog
@@ -13,17 +13,6 @@ if TYPE_CHECKING:
     from src.engine.transcript import TranscriptManager
     from src.players.agent import PlayerAgent
 
-
-def _get_recent_events(
-    event_log: EventLog,
-    event_cursors: dict[str, int],
-    player_name: str,
-) -> list[Event]:
-    """Return public events since the player's last turn and advance cursor."""
-    start_index = event_cursors.get(player_name, 0)
-    events = event_log.get_public_view(start_index)
-    event_cursors[player_name] = len(event_log.events)
-    return events
 
 
 class NightZeroPhase:
@@ -41,7 +30,6 @@ class NightZeroPhase:
         state: GameStateManager,
         event_log: EventLog,
         memories: dict[str, PlayerMemory],
-        event_cursors: dict[str, int],
     ) -> dict[str, PlayerMemory]:
         """
         Run Night Zero coordination.
@@ -67,7 +55,6 @@ class NightZeroPhase:
             transcript=[],
             memory=memories[first_mafia.name],
             action_type=ActionType.SPEAK,
-            recent_events=_get_recent_events(event_log, event_cursors, first_mafia.name),
             action_context={"night_zero": True},
         )
         memories[first_mafia.name] = response1.updated_memory
@@ -79,7 +66,6 @@ class NightZeroPhase:
             transcript=[],
             memory=memories[second_mafia.name],
             action_type=ActionType.SPEAK,
-            recent_events=_get_recent_events(event_log, event_cursors, second_mafia.name),
             action_context={
                 "night_zero": True,
                 "partner_strategy": first_strategy,
@@ -122,7 +108,6 @@ class DayPhase:
         transcript_manager: TranscriptManager,
         event_log: EventLog,
         memories: dict[str, PlayerMemory],
-        event_cursors: dict[str, int],
         night_kill: str | None = None,
     ) -> tuple[str | None, dict[str, PlayerMemory]]:
         """
@@ -150,7 +135,6 @@ class DayPhase:
                 transcript,
                 memories[speaker_name],
                 ActionType.SPEAK,
-                recent_events=_get_recent_events(event_log, event_cursors, speaker_name),
             )
 
             memories[speaker_name] = response.updated_memory
@@ -179,7 +163,6 @@ class DayPhase:
                 ),
                 memories[voter_name],
                 ActionType.VOTE,
-                recent_events=_get_recent_events(event_log, event_cursors, voter_name),
             )
 
             memories[voter_name] = response.updated_memory
@@ -201,8 +184,6 @@ class DayPhase:
                 agents[eliminated],
                 state,
                 memories[eliminated],
-                event_log,
-                event_cursors,
             )
             event_log.add_vote(
                 votes,
@@ -228,7 +209,6 @@ class DayPhase:
                 transcript_manager,
                 event_log,
                 memories,
-                event_cursors,
                 result.tied_players or [],
                 votes,
                 result.vote_counts,
@@ -276,8 +256,6 @@ class DayPhase:
         agent: PlayerAgent,
         state: GameStateManager,
         memory: PlayerMemory,
-        event_log: EventLog,
-        event_cursors: dict[str, int],
     ) -> str:
         """Get eliminated player's last words."""
         response = await agent.act(
@@ -285,7 +263,6 @@ class DayPhase:
             [],
             memory,
             ActionType.LAST_WORDS,
-            recent_events=_get_recent_events(event_log, event_cursors, agent.name),
         )
         return response.output.get("text", "")
 
@@ -296,7 +273,6 @@ class DayPhase:
         transcript_manager: TranscriptManager,
         event_log: EventLog,
         memories: dict[str, PlayerMemory],
-        event_cursors: dict[str, int],
         tied_players: list[str],
         votes: dict[str, str],
         vote_counts: dict[str, int],
@@ -324,7 +300,6 @@ class DayPhase:
                 transcript_manager.get_transcript_for_player(state.round_number),
                 memories[name],
                 ActionType.DEFENSE,
-                recent_events=_get_recent_events(event_log, event_cursors, name),
                 action_context={"defense_context": defense_context},
             )
             text = response.output.get("text", "")
@@ -347,7 +322,6 @@ class DayPhase:
                 ),
                 memories[voter_name],
                 ActionType.VOTE,
-                recent_events=_get_recent_events(event_log, event_cursors, voter_name),
             )
             revotes[voter_name] = response.output.get("vote", "skip")
             revote_details[voter_name] = response.output
@@ -364,8 +338,6 @@ class DayPhase:
                 agents[eliminated],
                 state,
                 memories[eliminated],
-                event_log,
-                event_cursors,
             )
             event_log.add_last_words(eliminated, last_words)
 
@@ -387,9 +359,9 @@ class NightPhase:
         self,
         agents: dict[str, PlayerAgent],
         state: GameStateManager,
+        transcript_manager: TranscriptManager,
         event_log: EventLog,
         memories: dict[str, PlayerMemory],
-        event_cursors: dict[str, int],
     ) -> tuple[str | None, dict[str, PlayerMemory]]:
         """
         Run night phase.
@@ -399,14 +371,16 @@ class NightPhase:
         """
         event_log.add_phase_start(state.phase, state.round_number)
 
+        transcript = transcript_manager.get_transcript_for_player(state.round_number)
+
         # Mafia coordination
         kill_target = await self._run_mafia_coordination(
-            agents, state, event_log, memories, event_cursors
+            agents, state, transcript, event_log, memories
         )
 
         # Detective investigation
         await self._run_detective_investigation(
-            agents, state, event_log, memories, event_cursors
+            agents, state, transcript, event_log, memories
         )
 
         # Execute kill (no last words - night kills are silent)
@@ -419,9 +393,9 @@ class NightPhase:
         self,
         agents: dict[str, PlayerAgent],
         state: GameStateManager,
+        transcript: Transcript,
         event_log: EventLog,
         memories: dict[str, PlayerMemory],
-        event_cursors: dict[str, int],
     ) -> str | None:
         """Run Mafia kill coordination (2-round protocol)."""
         mafia_agents = [
@@ -443,10 +417,9 @@ class NightPhase:
 
             response = await agent.act(
                 game_state,
-                [],
+                transcript,
                 memories[agent.name],
                 ActionType.NIGHT_KILL,
-                recent_events=_get_recent_events(event_log, event_cursors, agent.name),
             )
             memories[agent.name] = response.updated_memory
             target = response.output.get("target", "skip")
@@ -473,10 +446,9 @@ class NightPhase:
 
         first_response = await first_mafia.act(
             game_state,
-            [],
+            transcript,
             memories[first_mafia.name],
             ActionType.NIGHT_KILL,
-            recent_events=_get_recent_events(event_log, event_cursors, first_mafia.name),
         )
         memories[first_mafia.name] = first_response.updated_memory
         proposals_r1[first_mafia.name] = first_response.output.get("target", "skip")
@@ -491,10 +463,9 @@ class NightPhase:
 
         second_response = await second_mafia.act(
             game_state,
-            [],
+            transcript,
             memories[second_mafia.name],
             ActionType.NIGHT_KILL,
-            recent_events=_get_recent_events(event_log, event_cursors, second_mafia.name),
             action_context={
                 "round": 1,
                 "partner_proposal": proposals_r1[first_mafia.name],
@@ -544,10 +515,9 @@ class NightPhase:
 
             response = await agent.act(
                 game_state,
-                [],
+                transcript,
                 memories[agent.name],
                 ActionType.NIGHT_KILL,
-                recent_events=_get_recent_events(event_log, event_cursors, agent.name),
                 action_context={
                     "round": 2,
                     "partner_proposal": partner_proposal,
@@ -599,9 +569,9 @@ class NightPhase:
         self,
         agents: dict[str, PlayerAgent],
         state: GameStateManager,
+        transcript: Transcript,
         event_log: EventLog,
         memories: dict[str, PlayerMemory],
-        event_cursors: dict[str, int],
     ) -> None:
         """Run Detective investigation."""
         detective_agents = [
@@ -621,10 +591,9 @@ class NightPhase:
 
         response = await agent.act(
             game_state,
-            [],
+            transcript,
             memories[agent.name],
             ActionType.INVESTIGATION,
-            recent_events=_get_recent_events(event_log, event_cursors, agent.name),
         )
         memories[agent.name] = response.updated_memory
 

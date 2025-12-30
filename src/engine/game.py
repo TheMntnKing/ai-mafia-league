@@ -73,9 +73,6 @@ class GameRunner:
             name: PlayerMemory(facts={}, beliefs={})
             for name in config.player_names
         }
-        self.event_cursors: dict[str, int] = {
-            name: 0 for name in config.player_names
-        }
 
         # Phase runners
         self.night_zero = NightZeroPhase()
@@ -122,7 +119,6 @@ class GameRunner:
             self.state,
             self.event_log,
             self.memories,
-            self.event_cursors,
         )
 
         night_kill: str | None = None
@@ -139,7 +135,6 @@ class GameRunner:
                 self.transcript,
                 self.event_log,
                 self.memories,
-                self.event_cursors,
                 night_kill,
             )
 
@@ -164,9 +159,9 @@ class GameRunner:
             night_kill, self.memories = await self.night_phase.run(
                 self.agents,
                 self.state,
+                self.transcript,
                 self.event_log,
                 self.memories,
-                self.event_cursors,
             )
 
             if night_kill:

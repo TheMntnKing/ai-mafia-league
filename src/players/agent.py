@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from src.engine.context import ContextBuilder
 from src.players.actions import ActionHandler, ActionValidationError
 from src.providers.base import InvalidResponseError, ProviderError, RetryExhausted
-from src.schemas import ActionType, Event, GameState, PlayerMemory, PlayerResponse, Transcript
+from src.schemas import ActionType, GameState, PlayerMemory, PlayerResponse, Transcript
 
 if TYPE_CHECKING:
     from src.providers.base import PlayerProvider
@@ -76,7 +76,6 @@ class PlayerAgent:
         transcript: Transcript,
         memory: PlayerMemory,
         action_type: ActionType,
-        recent_events: list[Event] | None = None,
         action_context: dict | None = None,
     ) -> PlayerResponse:
         """
@@ -87,7 +86,6 @@ class PlayerAgent:
             transcript: Game transcript history
             memory: Player's current memory state
             action_type: Type of action to take
-            recent_events: Public events since the player's last turn
             action_context: Action-specific context (e.g., defense info)
 
         Returns:
@@ -108,7 +106,6 @@ class PlayerAgent:
             memory=memory,
             action_type=action_type,
             extra=extra or None,
-            recent_events=recent_events,
         )
 
         # Get valid output with retries and fallback
@@ -231,18 +228,17 @@ class PlayerAgent:
         if "strategy" in output:
             new_beliefs["strategy"] = output["strategy"]
 
-        # Record the action taken
+        # Record the action taken (skip redundant SPEAK/VOTE facts)
         action_key = f"last_{action_type.value}"
-        if action_type == ActionType.SPEAK:
+        if action_type == ActionType.NIGHT_KILL:
             new_facts[action_key] = {
-                "speech": output.get("speech", ""),
-                "nomination": output.get("nomination", ""),
+                "target": output.get("target", "skip"),
+                "reasoning": output.get("reasoning", ""),
             }
-        elif action_type == ActionType.VOTE:
-            new_facts[action_key] = output.get("vote", "skip")
-        elif action_type == ActionType.NIGHT_KILL:
-            new_facts[action_key] = output.get("target", "skip")
         elif action_type == ActionType.INVESTIGATION:
-            new_facts[action_key] = output.get("target", "")
+            new_facts[action_key] = {
+                "target": output.get("target", ""),
+                "reasoning": output.get("reasoning", ""),
+            }
 
         return PlayerMemory(facts=new_facts, beliefs=new_beliefs)
