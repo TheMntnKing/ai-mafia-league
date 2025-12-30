@@ -417,14 +417,99 @@ class TestEventLog:
         assert log.events[3].type == "last_words"
         assert log.events[4].type == "game_end"
 
+    def test_event_metadata_fields(self):
+        """Events store phase/round/stage/state metadata when provided."""
+        log = EventLog()
+        snapshot = {
+            "phase": "day_1",
+            "round_number": 1,
+            "living": ["Alice", "Bob"],
+            "dead": [],
+            "nominated": ["Bob"],
+        }
+        event = log.add_speech(
+            "Alice",
+            "Hello",
+            "Bob",
+            {"thought": "hmm"},
+            phase="day_1",
+            round_number=1,
+            stage="discussion",
+            state_public=snapshot,
+        )
+
+        assert event.data["phase"] == "day_1"
+        assert event.data["round_number"] == 1
+        assert event.data["stage"] == "discussion"
+        assert event.data["state_public"] == snapshot
+
+    def test_event_state_transitions(self):
+        """Events can include state_before/state_after snapshots."""
+        log = EventLog()
+        state_before = {
+            "phase": "day_1",
+            "round_number": 1,
+            "living": ["Alice", "Bob"],
+            "dead": [],
+            "nominated": ["Bob"],
+        }
+        state_after = {
+            "phase": "day_1",
+            "round_number": 1,
+            "living": ["Alice"],
+            "dead": ["Bob"],
+            "nominated": ["Bob"],
+        }
+
+        event = log.add_vote(
+            {"Alice": "Bob"},
+            "eliminated:Bob",
+            "Bob",
+            phase="day_1",
+            round_number=1,
+            state_before=state_before,
+            state_after=state_after,
+        )
+
+        assert event.data["phase"] == "day_1"
+        assert event.data["round_number"] == 1
+        assert event.data["state_before"] == state_before
+        assert event.data["state_after"] == state_after
+
+    def test_stage_defaults(self):
+        """Convenience methods populate stage defaults."""
+        log = EventLog()
+        vote_event = log.add_vote({"Alice": "Bob"}, "eliminated:Bob", "Bob")
+        assert vote_event.data["stage"] == "vote"
+
+        speech_event = log.add_speech(
+            "Alice",
+            "Hello",
+            "Bob",
+            {"thought": "hmm"},
+        )
+        assert speech_event.data["stage"] == "discussion"
+
     def test_investigation_fully_private(self):
         """Investigation events have all fields private."""
         log = EventLog()
-        event = log.add_investigation("Alice", "Mafia", {"thought": "suspicious"})
+        event = log.add_investigation(
+            "Alice",
+            "Mafia",
+            {"thought": "suspicious"},
+            phase="night_1",
+            round_number=1,
+            stage="investigation",
+            state_public={"phase": "night_1"},
+        )
 
         assert "target" in event.private_fields
         assert "result" in event.private_fields
         assert "reasoning" in event.private_fields
+        assert "phase" in event.private_fields
+        assert "round_number" in event.private_fields
+        assert "stage" in event.private_fields
+        assert "state_public" in event.private_fields
 
         public = log.get_public_view()
         assert public == []  # Fully private events should be hidden
@@ -457,7 +542,7 @@ class TestGameLogWriter:
         # Read back
         data = writer.read("test123")
         assert data is not None
-        assert data["schema_version"] == "1.0"
+        assert data["schema_version"] == "1.1"
         assert data["winner"] == "town"
         assert len(data["players"]) == 2
         assert len(data["events"]) == 1
@@ -477,7 +562,7 @@ class TestGameLogWriter:
     async def test_write_game_log(self, tmp_path):
         """Async write_game_log writes to disk."""
         writer = GameLogWriter(str(tmp_path))
-        log_data = {"game_id": "async123", "schema_version": "1.0"}
+        log_data = {"game_id": "async123", "schema_version": "1.1"}
 
         path = await writer.write_game_log(log_data)
         assert (tmp_path / "game_async123.json").exists()

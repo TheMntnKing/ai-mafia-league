@@ -183,7 +183,14 @@ class GameRunner:
     async def _finalize_game(self, winner: str) -> GameResult:
         """Finalize game and write log."""
         final_roles = self.state.get_all_roles()
-        self.event_log.add_game_end(winner, final_roles)
+        self.event_log.add_game_end(
+            winner,
+            final_roles,
+            phase=self.state.phase,
+            round_number=self.state.round_number,
+            stage="game_end",
+            state_public=self.state.get_public_snapshot(),
+        )
 
         # Build log data
         log_data = self._build_log_data(winner)
@@ -201,7 +208,7 @@ class GameRunner:
         )
 
     def _build_log_data(self, winner: str) -> dict:
-        """Build complete game log data per Phase 3 schema."""
+        """Build complete game log data per schema version."""
         timestamp_end = datetime.now(UTC).isoformat()
 
         model = getattr(self.config.provider, "model", "unknown")
@@ -220,7 +227,7 @@ class GameRunner:
 
         return {
             # Required fields per Phase 3 spec
-            "schema_version": "1.0",
+            "schema_version": GameLogWriter.SCHEMA_VERSION,
             "game_id": self.event_log.game_id,
             "timestamp_start": self.timestamp_start,
             "timestamp_end": timestamp_end,

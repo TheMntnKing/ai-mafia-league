@@ -20,10 +20,11 @@ See `tasks/phase1.md` through `tasks/phase6.md` for detailed deliverables.
 
 ## Next Steps (Draft)
 
-Phase 8 focus (see `tasks/phase8.md`):
-- Log schema v1.1 with state snapshots, phase metadata, and Night Zero logging
-- Replay viewer UX upgrades (phase navigation, public vs omniscient, player focus, side-by-side reasoning)
-- CLI progress updates during game runs (phase start, night kill, vote outcome, eliminations)
+Phase 8 focus (see `tasks/phase8.md`) is complete.
+
+Phase 9 focus (see `tasks/phase9.md`):
+- Replay viewer app (React + Vite)
+- Phase navigation + public vs omniscient modes
 
 ## Post-MVP Ideas (Recovered)
 
@@ -36,7 +37,7 @@ Phase 8 focus (see `tasks/phase8.md`):
 ### CLI & Polish
 - Rich console output during game
 - Configuration file support
-- Game replay viewer (Phase 8 scope)
+- Game replay viewer (Phase 9 scope)
 - Better error messages
 
 ### Future Considerations

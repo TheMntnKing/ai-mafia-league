@@ -12,8 +12,34 @@ from rich.panel import Panel
 from src.config import get_settings
 from src.engine.game import GameConfig, GameRunner
 from src.providers.anthropic import AnthropicProvider
+from src.schemas import Event
 
 console = Console()
+
+
+def _cli_event_reporter(console: Console):
+    """Build a lightweight CLI reporter for key game events."""
+    def _report(event: Event) -> None:
+        if event.type == "phase_start":
+            phase = event.data.get("phase", "unknown")
+            console.print(f"[bold]Phase:[/bold] {phase}")
+        elif event.type == "night_kill":
+            target = event.data.get("target") or "none"
+            console.print(f"Night kill: {target}")
+        elif event.type == "vote":
+            outcome = event.data.get("outcome", "unknown")
+            if isinstance(outcome, str) and outcome.startswith("eliminated:"):
+                outcome = outcome.replace("eliminated:", "eliminated ")
+            revote_outcome = event.data.get("revote_outcome")
+            if revote_outcome:
+                console.print(f"Vote: {outcome} (revote -> {revote_outcome})")
+            else:
+                console.print(f"Vote: {outcome}")
+        elif event.type == "game_end":
+            winner = event.data.get("winner", "unknown")
+            console.print(f"[bold]Game end:[/bold] {winner}")
+
+    return _report
 
 
 def parse_args() -> argparse.Namespace:
@@ -94,6 +120,7 @@ async def run_game_cli(args: argparse.Namespace) -> int:
 
     # Run game
     runner = GameRunner(config)
+    runner.event_log.add_observer(_cli_event_reporter(console))
 
     try:
         result = await runner.run()

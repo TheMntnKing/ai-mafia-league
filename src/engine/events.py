@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import logging
+from typing import Callable
 
 from src.schemas import Event
 
 
 class EventLog:
     """
-    Manages game events for both runtime context and persistence.
+    Manages game events for replay and persistence.
 
-    During gameplay, events are used to build player context (filtered public view).
-    After game ends, the full event log is saved to JSON with private reasoning
-    for entertainment value.
+    During gameplay, events are collected for logs and viewer replay but are not
+    used to build player context. After game ends, the full event log is saved
+    to JSON with private reasoning for entertainment value.
     """
 
     def __init__(self, game_id: str | None = None):
@@ -22,9 +24,20 @@ class EventLog:
 
         self.game_id = game_id or str(uuid.uuid4())
         self.events: list[Event] = []
+        self._observers: list[Callable[[Event], None]] = []
 
     def add(
-        self, event_type: str, data: dict, private_fields: list[str] | None = None
+        self,
+        event_type: str,
+        data: dict,
+        private_fields: list[str] | None = None,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+        state_before: dict[str, object] | None = None,
+        state_after: dict[str, object] | None = None,
     ) -> Event:
         """
         Add an event to the log.
@@ -37,14 +50,39 @@ class EventLog:
         Returns:
             The created Event
         """
+        payload = dict(data)
+        if phase is not None:
+            payload["phase"] = phase
+        if round_number is not None:
+            payload["round_number"] = round_number
+        if stage is not None:
+            payload["stage"] = stage
+        if state_public is not None:
+            payload["state_public"] = state_public
+        if state_before is not None:
+            payload["state_before"] = state_before
+        if state_after is not None:
+            payload["state_after"] = state_after
+
         event = Event(
             type=event_type,
             timestamp=datetime.now(UTC).isoformat(),
-            data=data,
+            data=payload,
             private_fields=private_fields or [],
         )
         self.events.append(event)
+        if self._observers:
+            logger = logging.getLogger(__name__)
+            for observer in list(self._observers):
+                try:
+                    observer(event)
+                except Exception:
+                    logger.exception("Event observer failed")
         return event
+
+    def add_observer(self, observer: Callable[[Event], None]) -> None:
+        """Register an observer for new events."""
+        self._observers.append(observer)
 
     def get_public_view(self, since_index: int = 0) -> list[Event]:
         """
@@ -115,15 +153,37 @@ class EventLog:
     # Convenience methods for common event types
     # =========================================================================
 
-    def add_phase_start(self, phase: str, round_number: int) -> Event:
+    def add_phase_start(
+        self,
+        phase: str,
+        round_number: int,
+        *,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+    ) -> Event:
         """Log start of a new phase."""
+        if stage is None:
+            stage = "phase_start"
         return self.add(
             "phase_start",
-            {"phase": phase, "round_number": round_number},
+            {},
+            stage=stage,
+            state_public=state_public,
+            phase=phase,
+            round_number=round_number,
         )
 
     def add_speech(
-        self, speaker: str, text: str, nomination: str, reasoning: dict
+        self,
+        speaker: str,
+        text: str,
+        nomination: str,
+        reasoning: dict,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
     ) -> Event:
         """
         Log a player's speech.
@@ -134,6 +194,8 @@ class EventLog:
             nomination: Who they nominated
             reasoning: Private reasoning (filtered from public view)
         """
+        if stage is None:
+            stage = "discussion"
         return self.add(
             "speech",
             {
@@ -143,6 +205,10 @@ class EventLog:
                 "reasoning": reasoning,
             },
             private_fields=["reasoning"],
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
         )
 
     def add_vote(
@@ -154,6 +220,13 @@ class EventLog:
         revote: dict[str, str] | None = None,
         revote_outcome: str | None = None,
         revote_details: dict[str, dict] | None = None,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+        state_before: dict[str, object] | None = None,
+        state_after: dict[str, object] | None = None,
     ) -> Event:
         """
         Log voting results.
@@ -186,9 +259,32 @@ class EventLog:
             data["revote_details"] = revote_details
             private_fields.append("revote_details")
 
-        return self.add("vote", data, private_fields=private_fields)
+        if stage is None:
+            stage = "vote"
+        return self.add(
+            "vote",
+            data,
+            private_fields=private_fields,
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
+            state_before=state_before,
+            state_after=state_after,
+        )
 
-    def add_night_kill(self, target: str | None, reasoning: dict) -> Event:
+    def add_night_kill(
+        self,
+        target: str | None,
+        reasoning: dict,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+        state_before: dict[str, object] | None = None,
+        state_after: dict[str, object] | None = None,
+    ) -> Event:
         """
         Log Mafia's night kill.
 
@@ -196,14 +292,30 @@ class EventLog:
             target: Name of killed player, or None if no kill
             reasoning: Private reasoning (filtered from public view)
         """
+        if stage is None:
+            stage = "night_kill"
         return self.add(
             "night_kill",
             {"target": target, "reasoning": reasoning},
             private_fields=["reasoning"],
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
+            state_before=state_before,
+            state_after=state_after,
         )
 
     def add_investigation(
-        self, target: str, result: str, reasoning: dict
+        self,
+        target: str,
+        result: str,
+        reasoning: dict,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
     ) -> Event:
         """
         Log Detective's investigation.
@@ -215,27 +327,82 @@ class EventLog:
             result: "Mafia" or "Not Mafia"
             reasoning: Detective's reasoning
         """
+        if stage is None:
+            stage = "investigation"
         return self.add(
             "investigation",
             {"target": target, "result": result, "reasoning": reasoning},
-            private_fields=["target", "result", "reasoning"],
+            private_fields=[
+                "target",
+                "result",
+                "reasoning",
+                "phase",
+                "round_number",
+                "stage",
+                "state_public",
+                "state_before",
+                "state_after",
+            ],
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
         )
 
-    def add_last_words(self, speaker: str, text: str) -> Event:
+    def add_last_words(
+        self,
+        speaker: str,
+        text: str,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+    ) -> Event:
         """Log eliminated player's last words."""
+        if stage is None:
+            stage = "last_words"
         return self.add(
             "last_words",
             {"speaker": speaker, "text": text},
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
         )
 
-    def add_defense(self, speaker: str, text: str) -> Event:
+    def add_defense(
+        self,
+        speaker: str,
+        text: str,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+    ) -> Event:
         """Log defense speech during revote."""
+        if stage is None:
+            stage = "defense"
         return self.add(
             "defense",
             {"speaker": speaker, "text": text},
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
         )
 
-    def add_game_end(self, winner: str, final_roles: dict[str, str]) -> Event:
+    def add_game_end(
+        self,
+        winner: str,
+        final_roles: dict[str, str],
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+    ) -> Event:
         """
         Log game end.
 
@@ -243,7 +410,13 @@ class EventLog:
             winner: "town" or "mafia"
             final_roles: Dict of player name -> role
         """
+        if stage is None:
+            stage = "game_end"
         return self.add(
             "game_end",
             {"winner": winner, "final_roles": final_roles},
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
         )

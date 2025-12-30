@@ -25,11 +25,11 @@ class GameLogWriter:
     """
     Writes complete game logs to JSON files.
 
-    Format follows schema version 1.0 from docs/schemas.py.
+    Format follows schema version 1.1.
     Includes full event history with private reasoning for viewers.
     """
 
-    SCHEMA_VERSION = "1.0"
+    SCHEMA_VERSION = "1.1"
 
     def __init__(self, log_dir: str = "logs"):
         """

@@ -569,6 +569,12 @@ class TestNightZeroCoordination:
             runner.memories,
         )
 
+        # Night Zero strategies are logged and fully private.
+        events = event_log.get_events_of_type("night_zero_strategy")
+        assert len(events) == 2
+        public_types = {event.type for event in event_log.get_public_view()}
+        assert "night_zero_strategy" not in public_types
+
         # Both Mafia should have strategies stored
         for mafia_name in mafia_names:
             assert "night_zero_strategies" in memories[mafia_name].facts

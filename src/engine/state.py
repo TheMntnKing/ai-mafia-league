@@ -89,6 +89,34 @@ class GameStateManager:
             nominated_players=self.nominations.copy(),
         )
 
+    def get_public_snapshot(self) -> dict[str, object]:
+        """Return a lightweight public snapshot for logs and replay."""
+        state = self.get_public_state()
+        return {
+            "phase": state.phase,
+            "round_number": state.round_number,
+            "living": state.living_players,
+            "dead": state.dead_players,
+            "nominated": state.nominated_players,
+        }
+
+    def get_public_snapshot_after_kill(self, target: str | None) -> dict[str, object]:
+        """Return a public snapshot as if target were killed (no state mutation)."""
+        before = self.get_public_snapshot()
+        if not target:
+            return before
+        living = [name for name in before["living"] if name != target]
+        dead = before["dead"] + [target]
+        living.sort(key=lambda name: self.players[name].seat)
+        dead.sort(key=lambda name: self.players[name].seat)
+        return {
+            "phase": before["phase"],
+            "round_number": before["round_number"],
+            "living": living,
+            "dead": dead,
+            "nominated": before["nominated"],
+        }
+
     def get_speaking_order(self) -> list[str]:
         """
         Get speaking order for current day.

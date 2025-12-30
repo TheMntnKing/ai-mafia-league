@@ -1,8 +1,10 @@
-# Phase 8: Replayable Logs + Viewer
+# Phase 8: Replayable Logs + CLI Progress
 
 **Goal:** Make the game replayable phase-by-phase in two modes: public (town view) and
-omniscient (all roles + private reasoning). Achieve this with a log schema upgrade,
-viewer UX improvements, and lightweight CLI progress.
+omniscient (all roles + private reasoning). Achieve this with a log schema upgrade
+and lightweight CLI progress.
+
+**Status:** ✅ COMPLETE
 
 ---
 
@@ -10,7 +12,6 @@ viewer UX improvements, and lightweight CLI progress.
 
 - Log schema v1.1 (state snapshots + phase metadata)
 - Night Zero logging
-- Replay viewer app (React + Vite)
 - CLI progress updates
 
 ---
@@ -39,7 +40,7 @@ viewer UX improvements, and lightweight CLI progress.
 - `speech` → `stage: "discussion"`
 - `vote` → `stage: "vote"`
 - `defense` → `stage: "defense"`
-- `revote` (if separate event type) → `stage: "revote"`
+- `revote` remains inside the `vote` event (no separate event type)
 - `night_kill` → `stage: "night_kill"`
 - `investigation` → `stage: "investigation"`
 - `last_words` → `stage: "last_words"`
@@ -53,7 +54,7 @@ viewer UX improvements, and lightweight CLI progress.
 **Night Zero:**
 - New event type `night_zero_strategy`
 - Data fields: `speaker`, `text`, `reasoning`
-- `reasoning` in `private_fields`
+- **Fully private** (speaker/text/reasoning all in `private_fields`)
 
 **Private/omniscient view:**
 - Roles are static and read from top-level `players`.
@@ -69,25 +70,6 @@ viewer UX improvements, and lightweight CLI progress.
 
 ---
 
-## Viewer Requirements
-
-- Phase-by-phase navigation (optional event-by-event stepping).
-- Public vs omniscient mode toggle.
-- Player focus mode.
-- Side-by-side: private reasoning vs public speech.
-- Round-table layout with player badges; highlight active speaker.
-- Use `state_public` for living/dead; use top-level `players` for roles.
-
-### Viewer App Decisions
-
-- Location: `viewer/` (separate frontend workspace).
-- Framework: React + Vite (JavaScript, not TypeScript).
-- Build output: `viewer/dist` is build-only; do not commit.
-- Remove `scripts/replay_viewer.html` to reduce redundancy.
-- Keep file-drop loading (works with `file://` without a server).
-
----
-
 ## CLI Progress
 
 - Emit progress on `phase_start`, `night_kill`, `vote` outcome, and eliminations.
@@ -97,17 +79,15 @@ viewer UX improvements, and lightweight CLI progress.
 
 ## Implementation Tasks
 
-1. Add a public state snapshot helper in `src/engine/state.py`.
-2. Extend `src/engine/events.py` convenience methods to accept phase/round/stage/state.
-3. Log Night Zero strategies in `src/engine/phases.py`.
-4. Attach phase/round/stage + `state_public` to all events in phases.
-5. Bump `schema_version` to "1.1" in log output (`src/engine/game.py`).
-6. Create `viewer/` React + Vite app and implement replay UI.
-7. Remove `scripts/replay_viewer.html`.
-8. Add CLI progress reporting hook in `src/engine/run.py` (based on event stream).
-9. Update `.gitignore` to exclude `viewer/node_modules/` and `viewer/dist/`.
-10. Remove `scripts/pretty_log.py` (viewer replaces CLI log formatting).
-11. Update tests for event shape and Night Zero logging.
+1. ~~Add a public state snapshot helper in `src/engine/state.py`.~~ ✅
+2. ~~Extend `src/engine/events.py` convenience methods to accept phase/round/stage/state.~~ ✅
+3. ~~Log Night Zero strategies in `src/engine/phases.py`.~~ ✅
+4. ~~Attach phase/round/stage + `state_public` to all events in phases.~~ ✅
+5. ~~Bump `schema_version` to "1.1" in log output (`src/engine/game.py`).~~ ✅
+6. ~~Add CLI progress reporting hook in `src/engine/run.py` (based on event stream).~~ ✅
+7. ~~Update `.gitignore` to exclude `viewer/node_modules/` and `viewer/dist/`.~~ ✅
+8. ~~Remove `scripts/pretty_log.py` (viewer replaces CLI log formatting).~~ ✅
+9. ~~Update tests for event shape and Night Zero logging.~~ ✅
 
 ---
 
@@ -116,3 +96,6 @@ viewer UX improvements, and lightweight CLI progress.
 - **Simplicity choice:** include `state_public` on every event to avoid replay
   state reconstruction in the viewer.
 - **Role visibility:** use top-level `players` for omniscient mode to keep logs small.
+- **Night-kill snapshots:** `state_after` is computed from intended kill target
+  (correct under current rules; when Doctor/blocks exist, emit night_kill after
+  resolution using the resolved target).

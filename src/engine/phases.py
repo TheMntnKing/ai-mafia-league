@@ -37,7 +37,12 @@ class NightZeroPhase:
         Returns:
             Updated memories dict with Mafia strategies stored
         """
-        event_log.add_phase_start("night_zero", 0)
+        event_log.add_phase_start(
+            "night_zero",
+            0,
+            stage="phase_start",
+            state_public=state.get_public_snapshot(),
+        )
 
         mafia_agents = [a for a in agents.values() if a.role == "mafia"]
 
@@ -59,6 +64,29 @@ class NightZeroPhase:
         )
         memories[first_mafia.name] = response1.updated_memory
         first_strategy = response1.output.get("speech", "")
+        event_log.add(
+            "night_zero_strategy",
+            {
+                "speaker": first_mafia.name,
+                "text": first_strategy,
+                "reasoning": response1.output,
+            },
+            private_fields=[
+                "speaker",
+                "text",
+                "reasoning",
+                "phase",
+                "round_number",
+                "stage",
+                "state_public",
+                "state_before",
+                "state_after",
+            ],
+            phase=state.phase,
+            round_number=state.round_number,
+            stage="night_zero",
+            state_public=state.get_public_snapshot(),
+        )
 
         # Second Mafia sees first's strategy and responds
         response2 = await second_mafia.act(
@@ -73,6 +101,29 @@ class NightZeroPhase:
         )
         memories[second_mafia.name] = response2.updated_memory
         second_strategy = response2.output.get("speech", "")
+        event_log.add(
+            "night_zero_strategy",
+            {
+                "speaker": second_mafia.name,
+                "text": second_strategy,
+                "reasoning": response2.output,
+            },
+            private_fields=[
+                "speaker",
+                "text",
+                "reasoning",
+                "phase",
+                "round_number",
+                "stage",
+                "state_public",
+                "state_before",
+                "state_after",
+            ],
+            phase=state.phase,
+            round_number=state.round_number,
+            stage="night_zero",
+            state_public=state.get_public_snapshot(),
+        )
 
         # Store both strategies in both Mafia's memories for future reference
         for agent in mafia_agents:
@@ -116,7 +167,12 @@ class DayPhase:
         Returns:
             (eliminated_player, updated_memories)
         """
-        event_log.add_phase_start(state.phase, state.round_number)
+        event_log.add_phase_start(
+            state.phase,
+            state.round_number,
+            stage="phase_start",
+            state_public=state.get_public_snapshot(),
+        )
         transcript_manager.start_round(state.round_number, night_kill)
 
         # Discussion phase
@@ -142,12 +198,21 @@ class DayPhase:
             speech_text = response.output.get("speech", "")
             nomination = response.output.get("nomination", "")
 
-            transcript_manager.add_speech(speaker_name, speech_text, nomination)
-            event_log.add_speech(speaker_name, speech_text, nomination, response.output)
-
             if nomination and nomination not in nominations and state.is_alive(nomination):
                 nominations.append(nomination)
                 state.add_nomination(nomination)
+
+            transcript_manager.add_speech(speaker_name, speech_text, nomination)
+            event_log.add_speech(
+                speaker_name,
+                speech_text,
+                nomination,
+                response.output,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="discussion",
+                state_public=state.get_public_snapshot(),
+            )
 
         # Voting phase
         votes = {}
@@ -185,14 +250,29 @@ class DayPhase:
                 state,
                 memories[eliminated],
             )
+            state_before = state.get_public_snapshot()
+            state.kill_player(eliminated)
+            state_after = state.get_public_snapshot()
             event_log.add_vote(
                 votes,
                 f"eliminated:{eliminated}",
                 eliminated,
                 vote_details=vote_details,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="vote",
+                state_public=state_after,
+                state_before=state_before,
+                state_after=state_after,
             )
-            event_log.add_last_words(eliminated, last_words)
-            state.kill_player(eliminated)
+            event_log.add_last_words(
+                eliminated,
+                last_words,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="last_words",
+                state_public=state_after,
+            )
 
         elif result.outcome == "revote":
             # Run revote
@@ -213,6 +293,10 @@ class DayPhase:
                 votes,
                 result.vote_counts,
             )
+            state_before = state.get_public_snapshot()
+            if eliminated:
+                state.kill_player(eliminated)
+            state_after = state.get_public_snapshot()
             event_log.add_vote(
                 votes,
                 "revote",
@@ -221,16 +305,36 @@ class DayPhase:
                 revote=revote,
                 revote_outcome=revote_outcome,
                 revote_details=revote_details,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="vote",
+                state_public=state_after,
+                state_before=state_before,
+                state_after=state_after,
             )
             if eliminated:
-                state.kill_player(eliminated)
+                event_log.add_last_words(
+                    eliminated,
+                    last_words,
+                    phase=state.phase,
+                    round_number=state.round_number,
+                    stage="last_words",
+                    state_public=state_after,
+                )
 
         else:
+            state_before = state.get_public_snapshot()
             event_log.add_vote(
                 votes,
                 "no_elimination",
                 None,
                 vote_details=vote_details,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="vote",
+                state_public=state_before,
+                state_before=state_before,
+                state_after=state_before,
             )
 
         # Finalize transcript
@@ -304,7 +408,14 @@ class DayPhase:
             )
             text = response.output.get("text", "")
             defense_speeches.append(DefenseSpeech(speaker=name, text=text))
-            event_log.add_defense(name, text)
+            event_log.add_defense(
+                name,
+                text,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="defense",
+                state_public=state.get_public_snapshot(),
+            )
 
         # Revote
         revotes = {}
@@ -339,7 +450,7 @@ class DayPhase:
                 state,
                 memories[eliminated],
             )
-            event_log.add_last_words(eliminated, last_words)
+            # Last words are logged by the caller (DayPhase) to align with state snapshots.
 
         revote_outcome = result.outcome
         if eliminated:
@@ -369,7 +480,12 @@ class NightPhase:
         Returns:
             (killed_player, updated_memories)
         """
-        event_log.add_phase_start(state.phase, state.round_number)
+        event_log.add_phase_start(
+            state.phase,
+            state.round_number,
+            stage="phase_start",
+            state_public=state.get_public_snapshot(),
+        )
 
         transcript = transcript_manager.get_transcript_for_player(state.round_number)
 
@@ -424,11 +540,20 @@ class NightPhase:
             memories[agent.name] = response.updated_memory
             target = response.output.get("target", "skip")
 
+            target = target if target != "skip" else None
+            state_before = state.get_public_snapshot()
+            state_after = state.get_public_snapshot_after_kill(target)
             event_log.add_night_kill(
-                target if target != "skip" else None,
+                target,
                 response.output,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="night_kill",
+                state_public=state_after,
+                state_before=state_before,
+                state_after=state_after,
             )
-            return target if target != "skip" else None
+            return target
 
         # Sort by seat for deterministic order
         mafia_agents.sort(key=lambda a: a.seat)
@@ -481,6 +606,8 @@ class NightPhase:
         # Check Round 1 agreement
         if targets[0] == targets[1]:
             target = targets[0] if targets[0] != "skip" else None
+            state_before = state.get_public_snapshot()
+            state_after = state.get_public_snapshot_after_kill(target)
             event_log.add_night_kill(
                 target,
                 {
@@ -488,10 +615,17 @@ class NightPhase:
                     "proposals": proposals_r1,
                     "proposal_details": proposals_r1_details,
                 },
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="night_kill",
+                state_public=state_after,
+                state_before=state_before,
+                state_after=state_after,
             )
             return target
 
         if targets[0] == "skip" and targets[1] == "skip":
+            state_before = state.get_public_snapshot()
             event_log.add_night_kill(
                 None,
                 {
@@ -499,6 +633,12 @@ class NightPhase:
                     "proposals": proposals_r1,
                     "proposal_details": proposals_r1_details,
                 },
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="night_kill",
+                state_public=state_before,
+                state_before=state_before,
+                state_after=state_before,
             )
             return None
 
@@ -535,6 +675,8 @@ class NightPhase:
         # Check Round 2 agreement
         if targets_r2[0] == targets_r2[1]:
             target = targets_r2[0] if targets_r2[0] != "skip" else None
+            state_before = state.get_public_snapshot()
+            state_after = state.get_public_snapshot_after_kill(target)
             event_log.add_night_kill(
                 target,
                 {
@@ -544,6 +686,12 @@ class NightPhase:
                     "proposal_details_r1": proposals_r1_details,
                     "proposal_details_r2": proposals_r2_details,
                 },
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="night_kill",
+                state_public=state_after,
+                state_before=state_before,
+                state_after=state_after,
             )
             return target
 
@@ -552,6 +700,8 @@ class NightPhase:
         target = proposals_r2[first_mafia.name]
         target = target if target != "skip" else None
 
+        state_before = state.get_public_snapshot()
+        state_after = state.get_public_snapshot_after_kill(target)
         event_log.add_night_kill(
             target,
             {
@@ -562,6 +712,12 @@ class NightPhase:
                 "proposal_details_r2": proposals_r2_details,
                 "decided_by": first_mafia.name,
             },
+            phase=state.phase,
+            round_number=state.round_number,
+            stage="night_kill",
+            state_public=state_after,
+            state_before=state_before,
+            state_after=state_after,
         )
         return target
 
@@ -610,4 +766,12 @@ class NightPhase:
                 facts=facts,
                 beliefs=dict(memory.beliefs),
             )
-            event_log.add_investigation(target, result, response.output)
+            event_log.add_investigation(
+                target,
+                result,
+                response.output,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="investigation",
+                state_public=state.get_public_snapshot(),
+            )
