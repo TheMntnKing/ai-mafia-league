@@ -7,7 +7,6 @@ from src.engine.transcript import TranscriptManager
 from src.schemas import (
     ActionType,
     DefenseSpeech,
-    Event,
     GameState,
     PlayerMemory,
     Speech,
@@ -344,80 +343,6 @@ class TestContextBuilder:
         assert "Alice" not in context.split("Valid targets:")[1].split("\n")[0]
         # Should list targets excluding partner
         assert "Bob" not in context.split("Valid targets:")[1].split("\n")[0]
-
-    def test_recent_events_section(self, builder, sample_persona, game_state, memory):
-        """Recent events section renders public events."""
-        events = [
-            Event(
-                type="vote",
-                timestamp="2025-01-01T00:00:00Z",
-                data={"outcome": "no_elimination"},
-                private_fields=[],
-            )
-        ]
-
-        context = builder.build_context(
-            player_name="Alice",
-            role="town",
-            persona=sample_persona,
-            game_state=game_state,
-            transcript=[],
-            memory=memory,
-            action_type=ActionType.SPEAK,
-            recent_events=events,
-        )
-
-        assert "[RECENT EVENTS]" in context
-        assert "vote" in context
-        assert "no_elimination" in context
-
-    def test_recent_events_filters_private_fields(
-        self, builder, sample_persona, game_state, memory
-    ):
-        """Recent events section filters out private_fields from event data."""
-        events = [
-            Event(
-                type="investigation",
-                timestamp="2025-01-01T00:00:00Z",
-                data={
-                    "target": "Bob",
-                    "result": "Mafia",
-                    "reasoning": "I suspected Bob because...",
-                },
-                private_fields=["target", "result", "reasoning"],
-            ),
-            Event(
-                type="speech",
-                timestamp="2025-01-01T00:01:00Z",
-                data={
-                    "speaker": "Alice",
-                    "text": "I think Bob is suspicious",
-                    "reasoning": "Private thought process here",
-                },
-                private_fields=["reasoning"],
-            ),
-        ]
-
-        context = builder.build_context(
-            player_name="Charlie",
-            role="town",
-            persona=sample_persona,
-            game_state=game_state,
-            transcript=[],
-            memory=memory,
-            action_type=ActionType.SPEAK,
-            recent_events=events,
-        )
-
-        assert "[RECENT EVENTS]" in context
-        recent_section = context.split("[RECENT EVENTS]")[1].split("[YOUR MEMORY]")[0]
-        # Investigation: all fields private, should render as empty {}
-        assert "investigation: {}" in recent_section
-        assert "Mafia" not in recent_section  # result filtered
-        assert "I suspected Bob because" not in recent_section  # reasoning filtered
-        # Speech: public fields remain, private reasoning filtered
-        assert "I think Bob is suspicious" in recent_section
-        assert "Private thought process" not in recent_section
 
     def test_vote_prompt_does_not_duplicate_skip(
         self, builder, sample_persona, game_state, memory

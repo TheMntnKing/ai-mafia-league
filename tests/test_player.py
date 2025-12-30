@@ -431,7 +431,7 @@ class TestPlayerAgent:
         assert response.output["nomination"] in game_state.living_players
 
     async def test_act_updates_memory_vote(self, agent, mock_provider, memory):
-        """Vote action stores last_vote in memory facts."""
+        """Vote action returns updated memory."""
         game_state = GameState(
             phase="day_1",
             round_number=1,
@@ -450,8 +450,8 @@ class TestPlayerAgent:
         )
 
         response = await agent.act(game_state, [], memory, ActionType.VOTE)
-
-        assert response.updated_memory.facts["last_vote"] == "Bob"
+        assert response.updated_memory.beliefs["suspicions"] == "Bob seems most suspicious."
+        assert response.updated_memory.beliefs["strategy"] == "Vote to remove top suspect."
 
     async def test_act_updates_memory_investigation(self, agent, mock_provider, memory):
         """Investigation action stores last_investigation in memory facts."""
@@ -474,7 +474,10 @@ class TestPlayerAgent:
 
         response = await agent.act(game_state, [], memory, ActionType.INVESTIGATION)
 
-        assert response.updated_memory.facts["last_investigation"] == "Bob"
+        assert response.updated_memory.facts["last_investigation"] == {
+            "target": "Bob",
+            "reasoning": "Investigate Bob to confirm suspicions.",
+        }
 
     async def test_act_updates_memory_night_kill(self, mock_provider, sample_persona, memory):
         """Night kill action stores last_night_kill in memory facts."""
@@ -505,7 +508,10 @@ class TestPlayerAgent:
 
         response = await agent.act(game_state, [], memory, ActionType.NIGHT_KILL)
 
-        assert response.updated_memory.facts["last_night_kill"] == "Charlie"
+        assert response.updated_memory.facts["last_night_kill"] == {
+            "target": "Charlie",
+            "reasoning": "Charlie could be leading town.",
+        }
 
 
 class TestPlayerAgentRoles:

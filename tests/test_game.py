@@ -467,9 +467,16 @@ class TestSpeakingOrder:
         # The rotation should follow seat order
         seat_day1 = runner.state.get_player_seat(first_speaker_day1)
         seat_day2 = runner.state.get_player_seat(first_speaker_day2)
-        # Day 2 should start at seat (day1_seat + 1) % 7
-        expected_seat = (seat_day1 + 1) % 7
-        assert seat_day2 == expected_seat or runner.state.is_alive(first_speaker_day2)
+        # Day 2 should start at the next living seat after (day1_seat + 1) % 7.
+        expected_start_seat = (seat_day1 + 1) % 7
+        next_living_seat = None
+        for offset in range(7):
+            seat = (expected_start_seat + offset) % 7
+            if any(p.seat == seat and p.alive for p in runner.state.players.values()):
+                next_living_seat = seat
+                break
+
+        assert seat_day2 == next_living_seat
 
     def test_dead_players_skipped_in_speaking_order(self, personas, mock_provider):
         """Dead players are not included in speaking order."""
@@ -526,31 +533,27 @@ class TestNightZeroCoordination:
         mafia_agents = [a for a in runner.agents.values() if a.role == "mafia"]
         mafia_names = [a.name for a in mafia_agents]
 
-        # Mock provider to return distinct strategies
-        call_order = []
+        # Mock provider to return distinct strategies by call order.
+        call_count = [0]
 
-        async def mock_act(*args, **kwargs):
-            action_context = kwargs.get("action_context", {})
-            agent_name = args[0].name if args else "unknown"
-            call_order.append(agent_name)
-
-            # Return different strategy based on whether partner's strategy is visible
-            if action_context.get("partner_strategy"):
+        async def mock_act(_action_type, _context_string):
+            call_count[0] += 1
+            if call_count[0] == 1:
                 return make_speak_response(
                     observations="Night zero coordination.",
                     suspicions="No suspicions yet.",
                     strategy="Coordinate signals and cover.",
                     reasoning="Planning.",
-                    speech="I agree with partner. Let's target the detective.",
-                    nomination="Alice",
+                    speech="I suggest we use signal words and target quiet players.",
+                    nomination="Bob",
                 )
             return make_speak_response(
                 observations="Night zero coordination.",
                 suspicions="No suspicions yet.",
                 strategy="Coordinate signals and cover.",
                 reasoning="Planning.",
-                speech="I suggest we use signal words and target quiet players.",
-                nomination="Bob",
+                speech="I agree with partner. Let's target the detective.",
+                nomination="Alice",
             )
 
         mock_provider.act = mock_act
@@ -558,14 +561,12 @@ class TestNightZeroCoordination:
         # Run night zero
         phase = NightZeroPhase()
         event_log = EventLog()
-        event_cursors = {name: 0 for name in config.player_names}
 
         memories = await phase.run(
             runner.agents,
             runner.state,
             event_log,
             runner.memories,
-            event_cursors,
         )
 
         # Both Mafia should have strategies stored
@@ -574,6 +575,10 @@ class TestNightZeroCoordination:
             strategies = memories[mafia_name].facts["night_zero_strategies"]
             assert len(strategies) == 2
             assert all(name in strategies for name in mafia_names)
+            assert set(strategies.values()) == {
+                "I suggest we use signal words and target quiet players.",
+                "I agree with partner. Let's target the detective.",
+            }
 
     async def test_second_mafia_sees_first_strategy(self, personas, mock_provider):
         """Second Mafia in speaking order sees first Mafia's strategy."""
@@ -608,14 +613,12 @@ class TestNightZeroCoordination:
 
         phase = NightZeroPhase()
         event_log = EventLog()
-        event_cursors = {name: 0 for name in config.player_names}
 
         await phase.run(
             runner.agents,
             runner.state,
             event_log,
             runner.memories,
-            event_cursors,
         )
 
         # First Mafia's context should NOT contain partner's strategy section
@@ -740,6 +743,7 @@ class TestMafiaCoordination:
         """When both Mafia agree in Round 1, Round 2 is skipped."""
         from src.engine.events import EventLog
         from src.engine.phases import NightPhase
+        from src.engine.transcript import TranscriptManager
 
         config = GameConfig(
             player_names=list(personas.keys()),
@@ -783,14 +787,14 @@ class TestMafiaCoordination:
 
         phase = NightPhase()
         event_log = EventLog()
-        event_cursors = {name: 0 for name in config.player_names}
+        transcript = TranscriptManager()
 
         await phase.run(
             runner.agents,
             runner.state,
+            transcript,
             event_log,
             runner.memories,
-            event_cursors,
         )
 
         # Should have 2 Mafia calls (Round 1 only) + 1 Detective = 3
@@ -804,6 +808,7 @@ class TestMafiaCoordination:
         """Round 2 occurs when Mafia disagree in Round 1."""
         from src.engine.events import EventLog
         from src.engine.phases import NightPhase
+        from src.engine.transcript import TranscriptManager
 
         config = GameConfig(
             player_names=list(personas.keys()),
@@ -869,14 +874,14 @@ class TestMafiaCoordination:
 
         phase = NightPhase()
         event_log = EventLog()
-        event_cursors = {name: 0 for name in config.player_names}
+        transcript = TranscriptManager()
 
         await phase.run(
             runner.agents,
             runner.state,
+            transcript,
             event_log,
             runner.memories,
-            event_cursors,
         )
 
         # Should have 4 Mafia calls (2 R1 + 2 R2)
@@ -896,6 +901,7 @@ class TestMafiaCoordination:
         """First Mafia (by seat) decides if still disagree after Round 2."""
         from src.engine.events import EventLog
         from src.engine.phases import NightPhase
+        from src.engine.transcript import TranscriptManager
 
         config = GameConfig(
             player_names=list(personas.keys()),
@@ -947,14 +953,14 @@ class TestMafiaCoordination:
 
         phase = NightPhase()
         event_log = EventLog()
-        event_cursors = {name: 0 for name in config.player_names}
+        transcript = TranscriptManager()
 
         kill_target, _ = await phase.run(
             runner.agents,
             runner.state,
+            transcript,
             event_log,
             runner.memories,
-            event_cursors,
         )
 
         # First mafia's R2 choice (Alice) should be used as tiebreaker
