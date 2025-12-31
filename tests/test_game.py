@@ -23,8 +23,8 @@ class TestVoteResolver:
     def resolver(self):
         return VoteResolver()
 
-    def test_majority_eliminates(self, resolver):
-        """Clear majority eliminates the target."""
+    def test_plurality_eliminates(self, resolver):
+        """Clear plurality eliminates the target."""
         votes = {
             "Alice": "Bob",
             "Bob": "Charlie",
@@ -36,8 +36,8 @@ class TestVoteResolver:
         assert result.outcome == "eliminated"
         assert result.eliminated == "Bob"
 
-    def test_plurality_without_majority(self, resolver):
-        """Plurality without majority and no tie doesn't eliminate."""
+    def test_tie_with_skip_single_player_triggers_revote(self, resolver):
+        """Skip tied with a single player triggers revote."""
         votes = {
             "Alice": "Bob",
             "Bob": "Bob",
@@ -45,9 +45,24 @@ class TestVoteResolver:
             "Diana": "skip",
             "Eve": "skip",
         }
-        # Bob has 2 votes, Diana has 1 - not a tie, but not majority (3 needed)
+        # Bob has 2 votes, Diana has 1, skip has 2 -> tie at top with skip + 1 player
         result = resolver.resolve(votes, 5)
-        assert result.outcome == "no_elimination"
+        assert result.outcome == "revote"
+        assert result.tied_players == ["Bob"]
+
+    def test_plurality_eliminates_without_skip_tie(self, resolver):
+        """Plurality eliminates when skip is not tied for top."""
+        votes = {
+            "Alice": "Bob",
+            "Bob": "Bob",
+            "Charlie": "Diana",
+            "Diana": "skip",
+            "Eve": "Bob",
+        }
+        # Bob has 3 votes, skip has 1, Diana has 1
+        result = resolver.resolve(votes, 5)
+        assert result.outcome == "eliminated"
+        assert result.eliminated == "Bob"
 
     def test_tie_triggers_revote(self, resolver):
         """Tie at top triggers revote."""
@@ -71,8 +86,8 @@ class TestVoteResolver:
         result = resolver.resolve(votes, 3)
         assert result.outcome == "no_elimination"
 
-    def test_revote_majority_eliminates(self, resolver):
-        """Revote with majority eliminates."""
+    def test_revote_plurality_eliminates(self, resolver):
+        """Revote plurality eliminates."""
         votes = {
             "Alice": "Bob",
             "Bob": "skip",
@@ -92,6 +107,40 @@ class TestVoteResolver:
             "Diana": "Charlie",
         }
         result = resolver.resolve_revote(votes, 4, ["Bob", "Charlie"])
+        assert result.outcome == "no_elimination"
+
+    def test_revote_skip_wins_no_elimination(self, resolver):
+        """Revote skip plurality means no elimination."""
+        votes = {
+            "Alice": "skip",
+            "Bob": "Bob",
+            "Charlie": "skip",
+            "Diana": "Charlie",
+        }
+        result = resolver.resolve_revote(votes, 4, ["Bob", "Charlie"])
+        assert result.outcome == "no_elimination"
+
+    def test_skip_wins_plurality_no_elimination(self, resolver):
+        """Skip wins plurality means no elimination."""
+        votes = {
+            "Alice": "skip",
+            "Bob": "skip",
+            "Charlie": "skip",
+            "Diana": "Bob",
+            "Eve": "Charlie",
+        }
+        result = resolver.resolve(votes, 5)
+        assert result.outcome == "no_elimination"
+
+    def test_skip_ties_multiple_players_no_elimination(self, resolver):
+        """Skip tied with multiple players means no elimination."""
+        votes = {
+            "Alice": "skip",
+            "Bob": "Bob",
+            "Charlie": "Charlie",
+            "Diana": "skip",
+        }
+        result = resolver.resolve(votes, 4)
         assert result.outcome == "no_elimination"
 
 

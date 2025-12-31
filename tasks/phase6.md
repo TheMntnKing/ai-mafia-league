@@ -10,12 +10,14 @@
 - `VoteResult` dataclass with outcome, eliminated, tied_players, vote_counts
 - `VoteResolver` class for vote resolution logic
 - `resolve(votes, living_count)` method:
-  - Majority (>50% of living) → eliminated
-  - Tie at top (no majority) → revote with tied players
-  - No majority, no tie → no elimination
+  - Plurality winner → eliminated
+  - Tie at top (players only) → revote with tied players
+  - Skip wins plurality → no elimination
+  - Skip ties with exactly one player → revote with that player
+  - Skip ties with 2+ players → no elimination
 - `resolve_revote(votes, living_count, tied_players)` method:
-  - Majority → eliminated
-  - Still no majority → no elimination (no further revotes)
+  - Plurality winner → eliminated
+  - Tie or skip wins → no elimination (no further revotes)
 
 ### Phases (`src/engine/phases.py`) ✅
 
@@ -34,9 +36,9 @@
   2. Discussion: call speakers in order, collect speeches + nominations
   3. Voting: collect votes from all living players
   4. Resolve vote:
-     - Majority → eliminate, collect last words, kill player
-     - Tie → run revote (defenses, revote, resolve)
-     - No majority → no elimination
+     - Plurality → eliminate, collect last words, kill player
+     - Tie (players only) or skip tied with one player → run revote
+     - Skip wins plurality or skip tied with 2+ players → no elimination
   5. Finalize transcript with vote outcome
 
 #### NightPhase ✅
@@ -100,7 +102,7 @@
 
 | Test Class | Tests |
 |------------|-------|
-| TestVoteResolver | `test_majority_eliminates`, `test_plurality_without_majority`, `test_tie_triggers_revote`, `test_all_skip_no_elimination`, `test_revote_majority_eliminates`, `test_revote_tie_no_elimination` |
+| TestVoteResolver | `test_plurality_eliminates`, `test_plurality_eliminates_without_skip_tie`, `test_tie_triggers_revote`, `test_all_skip_no_elimination`, `test_revote_plurality_eliminates`, `test_revote_tie_no_elimination`, `test_tie_with_skip_single_player_triggers_revote`, `test_skip_wins_plurality_no_elimination`, `test_skip_ties_multiple_players_no_elimination` |
 | TestGameRunner | `test_creates_agents`, `test_assigns_roles`, `test_initializes_memories`, `test_mafia_agents_have_partners`, `test_runs_to_completion` |
 | TestGameIntegration | `test_town_wins_when_both_mafia_eliminated`, `test_mafia_wins_when_majority` |
 | TestSpeakingOrder | `test_speaking_order_advances_by_seat`, `test_dead_players_skipped_in_speaking_order` |
@@ -195,3 +197,9 @@ Round 2 (disagreement only):
 - Added `outcome` field per player: "survived", "eliminated" (day vote), or "killed" (night)
 - Renamed `persona_name` to `persona_id`
 - Kept extra fields (metadata, transcript, result) for enrichment
+
+### Plurality Voting Update
+- Switched vote resolution from majority to plurality
+- Skip wins plurality → no elimination
+- Skip ties with exactly one player → defense + revote between that player and skip
+- Skip ties with multiple players → no elimination

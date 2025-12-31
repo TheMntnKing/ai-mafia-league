@@ -20,9 +20,9 @@ class VoteResolver:
     Resolves voting outcomes.
 
     Voting rules:
-    - Majority (>50% of living players) eliminates target
-    - Tie at top with most votes triggers revote
-    - No majority and no tie means no elimination
+    - Plurality winner is eliminated (unless "skip" wins)
+    - Tie at top with most votes triggers revote (skip+single-player tie triggers revote)
+    - If "skip" has the most votes or ties with 2+ players, no elimination
     """
 
     def resolve(self, votes: dict[str, str], living_count: int) -> VoteResult:
@@ -36,8 +36,6 @@ class VoteResolver:
         Returns:
             VoteResult with outcome and details
         """
-        majority_threshold = living_count // 2 + 1
-
         # Count votes
         counts: dict[str, int] = {}
         for target in votes.values():
@@ -50,28 +48,29 @@ class VoteResolver:
             # Everyone skipped
             return VoteResult(outcome="no_elimination", vote_counts=counts)
 
-        max_votes = max(player_counts.values())
-
-        # Check for majority
-        for player, count in player_counts.items():
-            if count >= majority_threshold:
-                return VoteResult(
-                    outcome="eliminated",
-                    eliminated=player,
-                    vote_counts=counts,
-                )
-
-        # Check for tie at top
-        tied = [p for p, c in player_counts.items() if c == max_votes]
+        max_votes = max(counts.values())
+        tied = [p for p, c in counts.items() if c == max_votes]
         if len(tied) > 1:
+            if "skip" in tied:
+                non_skip = [p for p in tied if p != "skip"]
+                if len(non_skip) == 1:
+                    return VoteResult(
+                        outcome="revote",
+                        tied_players=non_skip,
+                        vote_counts=counts,
+                    )
+                return VoteResult(outcome="no_elimination", vote_counts=counts)
             return VoteResult(
                 outcome="revote",
                 tied_players=tied,
                 vote_counts=counts,
             )
 
-        # No majority, no tie - no elimination
-        return VoteResult(outcome="no_elimination", vote_counts=counts)
+        winner = tied[0]
+        if winner == "skip":
+            return VoteResult(outcome="no_elimination", vote_counts=counts)
+
+        return VoteResult(outcome="eliminated", eliminated=winner, vote_counts=counts)
 
     def resolve_revote(
         self, votes: dict[str, str], living_count: int, tied_players: list[str]
@@ -87,8 +86,6 @@ class VoteResolver:
         Returns:
             VoteResult - either eliminated or no_elimination (no second revote)
         """
-        majority_threshold = living_count // 2 + 1
-
         # Count votes only for tied players
         counts: dict[str, int] = {}
         for target in votes.values():
@@ -100,14 +97,13 @@ class VoteResolver:
         if not player_counts:
             return VoteResult(outcome="no_elimination", vote_counts=counts)
 
-        # Check for majority
-        for player, count in player_counts.items():
-            if count >= majority_threshold:
-                return VoteResult(
-                    outcome="eliminated",
-                    eliminated=player,
-                    vote_counts=counts,
-                )
+        max_votes = max(counts.values())
+        tied = [p for p, c in counts.items() if c == max_votes]
+        if len(tied) > 1:
+            return VoteResult(outcome="no_elimination", vote_counts=counts)
 
-        # Still tied or no majority - no elimination (no further revotes)
-        return VoteResult(outcome="no_elimination", vote_counts=counts)
+        winner = tied[0]
+        if winner == "skip":
+            return VoteResult(outcome="no_elimination", vote_counts=counts)
+
+        return VoteResult(outcome="eliminated", eliminated=winner, vote_counts=counts)

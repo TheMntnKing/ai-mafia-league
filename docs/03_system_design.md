@@ -82,15 +82,15 @@ The game engine runs this loop:
    - Append to transcript
 3. Collect votes from all living players
 4. Resolve vote:
-   - If majority: eliminate player, collect last words
-   - If tie for most (no majority): run revote micro-phase (see below)
-   - If no majority and no tie: no elimination
+   - If plurality: eliminate player, collect last words
+   - If tie for most (players only) or skip ties with one player: run revote micro-phase
+   - If "skip" wins plurality or ties with 2+ players: no elimination
 5. Check win condition
 
 **Revote micro-phase** (only if tie):
 1. Call each tied player for defense speech (shorter than regular speech)
 2. Collect revote from all living players (options: tied players + skip)
-3. If majority: eliminate. If still no majority: no elimination.
+3. If plurality: eliminate. If still tied or "skip" wins: no elimination.
 
 **Game End:**
 1. Narrator announces winner

@@ -44,9 +44,9 @@ Day has three parts: Discussion, Voting, and potentially Revote.
 
 **Discussion:** The night kill is announced (no last words - night kills are silent). Then each living player speaks once in rotating order. When speaking, each player must nominate one player for voting consideration.
 
-**Voting:** Players vote simultaneously. Only nominated players can be voted for, plus option to skip. A player is eliminated only if they receive strict majority of votes from living players. If majority is reached, that player gives last words and is eliminated.
+**Voting:** Players vote simultaneously. Only nominated players can be voted for, plus option to skip. A player is eliminated if they receive the most votes (plurality). If "skip" receives the most votes, no one is eliminated.
 
-**Revote (if tied):** If two or more players tie for most votes without majority, each tied player speaks in their defense. A revote happens with only the tied players as options plus skip. If still no majority after revote, no one is eliminated.
+**Revote (if tied):** If two or more players tie for most votes, each tied player speaks in their defense. A revote happens with only the tied players as options plus skip. If still tied after revote or "skip" wins, no one is eliminated.
 
 After voting resolves, night begins.
 
@@ -70,18 +70,19 @@ Nomination does not mean accusation. Players may nominate to hear someone's defe
 
 Only nominated players can receive votes. Players may vote for any nominated player, including themselves if they were nominated. Players may also vote skip.
 
-**Majority required:** Strict majority (more than half) of living players is required for elimination. With 7 alive, majority is 4. With 5 alive, majority is 3.
+**Plurality required:** The player with the most votes is eliminated. If "skip" has the most votes, no elimination occurs. If "skip" ties with exactly one player, a revote happens between that player and skip.
 
 **Vote outcomes:**
-- **Majority reached:** Player with majority is eliminated immediately.
-- **Tie for most votes, no majority:** Revote between tied players (see below).
-- **No majority, no tie:** (e.g., 3-2-1-1 with 7 alive) No elimination. Day ends, night begins.
+- **Plurality reached:** Player with most votes is eliminated immediately.
+- **Tie for most votes (players only):** Revote between tied players (see below).
+- **Skip wins plurality:** No elimination. Day ends, night begins.
+- **Skip ties with one player:** Revote between that player and skip.
 
-**Revote process:** When two or more players tie for most votes without majority:
+**Revote process:** When two or more players tie for most votes (excluding "skip"), or when "skip" ties with exactly one player:
 1. Each tied player gives a defense speech (separate from regular discussion).
 2. All living players vote again. Only tied players plus skip are options.
-3. If a player receives majority, they are eliminated.
-4. If still no majority after revote, no elimination occurs.
+3. If a player receives the most votes, they are eliminated.
+4. If still tied after revote or "skip" wins, no elimination occurs.
 
 ## Last Words
 

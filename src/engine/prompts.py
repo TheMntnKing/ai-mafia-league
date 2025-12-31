@@ -11,7 +11,7 @@ ROLES:
 
 GAME FLOW:
 1. Day Phase: All players discuss, each nominates one player. Then vote.
-   - Majority vote eliminates a player. Ties trigger revote with defenses.
+   - Plurality vote eliminates a player. Skip wins mean no elimination. Player ties (or skip tied with one player) trigger revote.
 2. Night Phase: Mafia choose a kill target. Detective investigates.
 3. Game ends when all Mafia are dead (Town wins) or Mafia >= Town-aligned (Mafia wins).
 
