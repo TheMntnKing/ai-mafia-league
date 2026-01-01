@@ -26,15 +26,14 @@ def _cli_event_reporter(console: Console):
         elif event.type == "night_kill":
             target = event.data.get("target") or "none"
             console.print(f"Night kill: {target}")
-        elif event.type == "vote":
+        elif event.type == "vote_round":
             outcome = event.data.get("outcome", "unknown")
-            if isinstance(outcome, str) and outcome.startswith("eliminated:"):
-                outcome = outcome.replace("eliminated:", "eliminated ")
-            revote_outcome = event.data.get("revote_outcome")
-            if revote_outcome:
-                console.print(f"Vote: {outcome} (revote -> {revote_outcome})")
-            else:
-                console.print(f"Vote: {outcome}")
+            round_number = event.data.get("round")
+            label = f"Vote round {round_number}" if round_number else "Vote"
+            console.print(f"{label}: {outcome}")
+        elif event.type == "elimination":
+            eliminated = event.data.get("eliminated", "unknown")
+            console.print(f"Eliminated: {eliminated}")
         elif event.type == "game_end":
             winner = event.data.get("winner", "unknown")
             console.print(f"[bold]Game end:[/bold] {winner}")

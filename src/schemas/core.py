@@ -48,7 +48,7 @@ class PlayerResponse(BaseModel):
 class Event(BaseModel):
     """Single game event in the log."""
 
-    type: str  # phase_start, speech, vote, night_kill, investigation, last_words, defense, game_end
+    type: str  # phase_start, speech, vote_round, defense, elimination, night_kill, investigation, last_words, game_end
     timestamp: str  # ISO8601
     data: dict  # Type-specific fields
     private_fields: list[str] = Field(default_factory=list)  # Fields to filter for public view

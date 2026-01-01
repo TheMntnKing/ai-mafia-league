@@ -10,16 +10,16 @@ and lightweight CLI progress.
 
 ## Scope
 
-- Log schema v1.1 (state snapshots + phase metadata)
+- Log schema v1.2 (state snapshots + phase metadata)
 - Night Zero logging
 - CLI progress updates
 
 ---
 
-## Log Schema v1.1
+## Log Schema v1.2
 
 **Top-level:**
-- `schema_version`: "1.1"
+- `schema_version`: "1.2"
 - `game_id`: unique game identifier
 - `timestamp_start`: ISO8601
 - `timestamp_end`: ISO8601
@@ -28,7 +28,7 @@ and lightweight CLI progress.
 - `events`: list of Event objects
 
 **Event envelope:**
-- `type`: "speech", "vote", "night_kill", etc.
+- `type`: "speech", "vote_round", "elimination", "night_kill", etc.
 - `timestamp`: ISO8601
 - `data`: event-specific payload (includes phase metadata)
 - `private_fields`: list of keys in `data` hidden in public view; if it covers all keys, the event is omitted
@@ -37,7 +37,7 @@ and lightweight CLI progress.
 These fields live inside `event.data`.
 - `phase`: e.g., "night_zero", "day_1", "night_1"
 - `round_number`: integer (0 for night_zero)
-- `stage`: e.g., "night_zero", "discussion", "vote", "defense", "revote",
+- `stage`: e.g., "night_zero", "discussion", "vote", "defense", "elimination",
   "night_kill", "investigation", "last_words", "game_end"
 - `state_public`:
   - `phase`
@@ -49,14 +49,17 @@ These fields live inside `event.data`.
 **Stage mapping (expected):**
 - `phase_start` → `stage: "phase_start"`
 - `speech` → `stage: "discussion"`
-- `vote` → `stage: "vote"`
+- `vote_round` → `stage: "vote"` (data includes `round: 1 | 2`)
 - `defense` → `stage: "defense"`
-- `revote` remains inside the `vote` event (no separate event type)
+- `elimination` → `stage: "elimination"`
 - `night_kill` → `stage: "night_kill"`
 - `investigation` → `stage: "investigation"`
 - `last_words` → `stage: "last_words"`
 - `night_zero_strategy` → `stage: "night_zero"`
 - `game_end` → `stage: "game_end"`
+
+**Vote outcomes:**
+- `vote_round.data.outcome`: `"eliminated"`, `"no_elimination"`, or `"tie"` (round 1 only)
 
 **State transitions (for events that change roster):**
 - `state_before`
@@ -74,6 +77,18 @@ These fields live inside `event.data`.
 **Investigation events:**
 - Remain fully private (target/result/reasoning hidden in public view).
 - Phase/round/state metadata can be included but remain private if needed.
+
+**Reasoning payloads (omniscient only):**
+Per-event sources for full SGR output:
+- `speech.data.reasoning`: full `SpeakingOutput`
+- `vote_round.data.vote_details[<voter>]`: full `VotingOutput` (per voter)
+- `defense.data.reasoning`: full `DefenseOutput`
+- `last_words.data.reasoning`: full `LastWordsOutput`
+- `night_kill.data.reasoning`: full `NightKillOutput` or coordination bundle
+  (`proposals*`, `proposal_details*`, optional `decided_by`)
+- `investigation.data.reasoning`: full `InvestigationOutput`
+- `night_zero_strategy.data.reasoning`: full `SpeakingOutput` (night_zero context; nomination ignored)
+- These fields are listed in `private_fields` so public mode drops them.
 
 **Context alignment:**
 - Event log changes are for replay/visibility only.
@@ -94,7 +109,7 @@ These fields live inside `event.data`.
 2. ~~Extend `src/engine/events.py` convenience methods to accept phase/round/stage/state.~~ ✅
 3. ~~Log Night Zero strategies in `src/engine/phases.py`.~~ ✅
 4. ~~Attach phase/round/stage + `state_public` to all events in phases.~~ ✅
-5. ~~Bump `schema_version` to "1.1" in log output (`src/engine/game.py`).~~ ✅
+5. ~~Bump `schema_version` to "1.2" in log output (`src/engine/game.py`).~~ ✅
 6. ~~Add CLI progress reporting hook in `src/engine/run.py` (based on event stream).~~ ✅
 7. ~~Update `.gitignore` to exclude `viewer/node_modules/` and `viewer/dist/`.~~ ✅
 8. ~~Remove `scripts/pretty_log.py` (viewer replaces CLI log formatting).~~ ✅

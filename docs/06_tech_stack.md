@@ -29,7 +29,7 @@ See `src/schemas/actions.py` for action schema definitions.
 
 **SQLite:** Personas, games, participants, tournaments. See [database.sql](database.sql).
 
-**JSON logs:** Complete game records in `logs/`. Schema versioned. Event types: `phase_start`, `speech`, `vote`, `night_kill`, `investigation`, `last_words`, `defense`, `game_end`.
+**JSON logs:** Complete game records in `logs/`. Schema versioned. Event types: `phase_start`, `speech`, `vote_round`, `elimination`, `night_kill`, `investigation`, `last_words`, `defense`, `game_end`.
 
 ## Observability
 

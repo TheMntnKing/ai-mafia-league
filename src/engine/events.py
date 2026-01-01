@@ -43,7 +43,7 @@ class EventLog:
         Add an event to the log.
 
         Args:
-            event_type: Type of event (phase_start, speech, vote, etc.)
+            event_type: Type of event (phase_start, speech, vote_round, etc.)
             data: Event-specific data
             private_fields: Fields in data to filter for public view
 
@@ -211,15 +211,53 @@ class EventLog:
             state_public=state_public,
         )
 
-    def add_vote(
+    def add_vote_round(
         self,
         votes: dict[str, str],
         outcome: str,
-        eliminated: str | None,
+        round: int,
         vote_details: dict[str, dict] | None = None,
-        revote: dict[str, str] | None = None,
-        revote_outcome: str | None = None,
-        revote_details: dict[str, dict] | None = None,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+    ) -> Event:
+        """
+        Log a single voting round.
+
+        Args:
+            votes: Dict of voter -> target or "skip"
+            outcome: "eliminated", "no_elimination", or "tie"
+            round: Vote round number (1 or 2)
+            vote_details: Full per-voter output (private)
+        """
+        data: dict[str, object] = {
+            "votes": votes,
+            "outcome": outcome,
+            "round": round,
+        }
+        private_fields: list[str] = []
+
+        if vote_details:
+            data["vote_details"] = vote_details
+            private_fields.append("vote_details")
+
+        if stage is None:
+            stage = "vote"
+        return self.add(
+            "vote_round",
+            data,
+            private_fields=private_fields,
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
+        )
+
+    def add_elimination(
+        self,
+        eliminated: str,
         *,
         phase: str | None = None,
         round_number: int | None = None,
@@ -228,43 +266,12 @@ class EventLog:
         state_before: dict[str, object] | None = None,
         state_after: dict[str, object] | None = None,
     ) -> Event:
-        """
-        Log voting results.
-
-        Args:
-            votes: Dict of voter -> target or "skip"
-            outcome: "eliminated", "no_elimination", or "revote"
-            eliminated: Name of eliminated player if any
-            vote_details: Full per-voter output (private)
-            revote: Revote ballot if a revote occurred
-            revote_outcome: Final outcome after revote
-            revote_details: Full per-voter revote output (private)
-        """
-        data: dict[str, object] = {
-            "votes": votes,
-            "outcome": outcome,
-            "eliminated": eliminated,
-        }
-        private_fields: list[str] = []
-
-        if vote_details:
-            data["vote_details"] = vote_details
-            private_fields.append("vote_details")
-
-        if revote is not None:
-            data["revote"] = revote
-        if revote_outcome is not None:
-            data["revote_outcome"] = revote_outcome
-        if revote_details:
-            data["revote_details"] = revote_details
-            private_fields.append("revote_details")
-
+        """Log a day elimination event."""
         if stage is None:
-            stage = "vote"
+            stage = "elimination"
         return self.add(
-            "vote",
-            data,
-            private_fields=private_fields,
+            "elimination",
+            {"eliminated": eliminated},
             phase=phase,
             round_number=round_number,
             stage=stage,
@@ -297,7 +304,16 @@ class EventLog:
         return self.add(
             "night_kill",
             {"target": target, "reasoning": reasoning},
-            private_fields=["reasoning"],
+            private_fields=[
+                "target",
+                "reasoning",
+                "phase",
+                "round_number",
+                "stage",
+                "state_public",
+                "state_before",
+                "state_after",
+            ],
             phase=phase,
             round_number=round_number,
             stage=stage,
@@ -353,6 +369,7 @@ class EventLog:
         self,
         speaker: str,
         text: str,
+        reasoning: dict | None = None,
         *,
         phase: str | None = None,
         round_number: int | None = None,
@@ -362,9 +379,15 @@ class EventLog:
         """Log eliminated player's last words."""
         if stage is None:
             stage = "last_words"
+        data: dict[str, object] = {"speaker": speaker, "text": text}
+        private_fields: list[str] = []
+        if reasoning is not None:
+            data["reasoning"] = reasoning
+            private_fields.append("reasoning")
         return self.add(
             "last_words",
-            {"speaker": speaker, "text": text},
+            data,
+            private_fields=private_fields,
             phase=phase,
             round_number=round_number,
             stage=stage,
@@ -375,6 +398,7 @@ class EventLog:
         self,
         speaker: str,
         text: str,
+        reasoning: dict | None = None,
         *,
         phase: str | None = None,
         round_number: int | None = None,
@@ -384,9 +408,15 @@ class EventLog:
         """Log defense speech during revote."""
         if stage is None:
             stage = "defense"
+        data: dict[str, object] = {"speaker": speaker, "text": text}
+        private_fields: list[str] = []
+        if reasoning is not None:
+            data["reasoning"] = reasoning
+            private_fields.append("reasoning")
         return self.add(
             "defense",
-            {"speaker": speaker, "text": text},
+            data,
+            private_fields=private_fields,
             phase=phase,
             round_number=round_number,
             stage=stage,

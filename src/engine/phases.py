@@ -238,36 +238,49 @@ class DayPhase:
         # Resolve vote
         result = self.vote_resolver.resolve(votes, len(speaking_order))
         eliminated = None
-        last_words: str | None = None
+        last_words_text: str | None = None
+        last_words_output: dict[str, object] | None = None
         defense_speeches: list[DefenseSpeech] | None = None
         revote: dict[str, str] | None = None
         revote_outcome: str | None = None
+        state_snapshot = state.get_public_snapshot()
 
         if result.outcome == "eliminated":
             eliminated = result.eliminated
-            last_words = await self._get_last_words(
-                agents[eliminated],
-                state,
-                memories[eliminated],
-            )
-            state_before = state.get_public_snapshot()
-            state.kill_player(eliminated)
-            state_after = state.get_public_snapshot()
-            event_log.add_vote(
+            event_log.add_vote_round(
                 votes,
-                f"eliminated:{eliminated}",
-                eliminated,
+                "eliminated",
+                round=1,
                 vote_details=vote_details,
                 phase=state.phase,
                 round_number=state.round_number,
                 stage="vote",
+                state_public=state_snapshot,
+            )
+            last_words_output = await self._get_last_words(
+                agents[eliminated],
+                state,
+                memories[eliminated],
+            )
+            last_words_text = ""
+            if last_words_output:
+                last_words_text = str(last_words_output.get("text", ""))
+            state_before = state_snapshot
+            state.kill_player(eliminated)
+            state_after = state.get_public_snapshot()
+            event_log.add_elimination(
+                eliminated,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="elimination",
                 state_public=state_after,
                 state_before=state_before,
                 state_after=state_after,
             )
             event_log.add_last_words(
                 eliminated,
-                last_words,
+                last_words_text or "",
+                last_words_output,
                 phase=state.phase,
                 round_number=state.round_number,
                 stage="last_words",
@@ -275,10 +288,20 @@ class DayPhase:
             )
 
         elif result.outcome == "revote":
+            event_log.add_vote_round(
+                votes,
+                "tie",
+                round=1,
+                vote_details=vote_details,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="vote",
+                state_public=state_snapshot,
+            )
             # Run revote
             (
                 eliminated,
-                last_words,
+                last_words_output,
                 defense_speeches,
                 revote,
                 revote_outcome,
@@ -293,29 +316,42 @@ class DayPhase:
                 votes,
                 result.vote_counts,
             )
-            state_before = state.get_public_snapshot()
-            if eliminated:
-                state.kill_player(eliminated)
-            state_after = state.get_public_snapshot()
-            event_log.add_vote(
-                votes,
-                "revote",
-                None,
-                vote_details=vote_details,
-                revote=revote,
-                revote_outcome=revote_outcome,
-                revote_details=revote_details,
+            event_outcome = "no_elimination"
+            if revote_outcome:
+                if revote_outcome.startswith("eliminated:"):
+                    event_outcome = "eliminated"
+                else:
+                    event_outcome = revote_outcome
+            event_log.add_vote_round(
+                revote,
+                event_outcome,
+                round=2,
+                vote_details=revote_details,
                 phase=state.phase,
                 round_number=state.round_number,
                 stage="vote",
-                state_public=state_after,
-                state_before=state_before,
-                state_after=state_after,
+                state_public=state_snapshot,
             )
+            state_before = state_snapshot
             if eliminated:
+                state.kill_player(eliminated)
+                state_after = state.get_public_snapshot()
+                event_log.add_elimination(
+                    eliminated,
+                    phase=state.phase,
+                    round_number=state.round_number,
+                    stage="elimination",
+                    state_public=state_after,
+                    state_before=state_before,
+                    state_after=state_after,
+                )
+                last_words_text = ""
+                if last_words_output:
+                    last_words_text = str(last_words_output.get("text", ""))
                 event_log.add_last_words(
                     eliminated,
-                    last_words,
+                    last_words_text or "",
+                    last_words_output,
                     phase=state.phase,
                     round_number=state.round_number,
                     stage="last_words",
@@ -323,18 +359,15 @@ class DayPhase:
                 )
 
         else:
-            state_before = state.get_public_snapshot()
-            event_log.add_vote(
+            event_log.add_vote_round(
                 votes,
                 "no_elimination",
-                None,
+                round=1,
                 vote_details=vote_details,
                 phase=state.phase,
                 round_number=state.round_number,
                 stage="vote",
-                state_public=state_before,
-                state_before=state_before,
-                state_after=state_before,
+                state_public=state_snapshot,
             )
 
         # Finalize transcript
@@ -347,7 +380,7 @@ class DayPhase:
             night_kill=night_kill,
             votes=votes,
             vote_outcome=vote_outcome,
-            last_words=last_words,
+            last_words=last_words_text,
             defense_speeches=defense_speeches,
             revote=revote,
             revote_outcome=revote_outcome,
@@ -360,15 +393,15 @@ class DayPhase:
         agent: PlayerAgent,
         state: GameStateManager,
         memory: PlayerMemory,
-    ) -> str:
-        """Get eliminated player's last words."""
+    ) -> dict[str, object]:
+        """Get eliminated player's last words output."""
         response = await agent.act(
             state.get_public_state(),
             [],
             memory,
             ActionType.LAST_WORDS,
         )
-        return response.output.get("text", "")
+        return response.output
 
     async def _run_revote(
         self,
@@ -382,7 +415,7 @@ class DayPhase:
         vote_counts: dict[str, int],
     ) -> tuple[
         str | None,
-        str | None,
+        dict[str, object] | None,
         list[DefenseSpeech],
         dict[str, str],
         str,
@@ -411,6 +444,7 @@ class DayPhase:
             event_log.add_defense(
                 name,
                 text,
+                response.output,
                 phase=state.phase,
                 round_number=state.round_number,
                 stage="defense",
@@ -442,10 +476,10 @@ class DayPhase:
         )
 
         eliminated = None
-        last_words: str | None = None
+        last_words_output: dict[str, object] | None = None
         if result.outcome == "eliminated":
             eliminated = result.eliminated
-            last_words = await self._get_last_words(
+            last_words_output = await self._get_last_words(
                 agents[eliminated],
                 state,
                 memories[eliminated],
@@ -456,7 +490,14 @@ class DayPhase:
         if eliminated:
             revote_outcome = f"eliminated:{eliminated}"
 
-        return eliminated, last_words, defense_speeches, revotes, revote_outcome, revote_details
+        return (
+            eliminated,
+            last_words_output,
+            defense_speeches,
+            revotes,
+            revote_outcome,
+            revote_details,
+        )
 
 
 class NightPhase:
@@ -549,7 +590,7 @@ class NightPhase:
                 phase=state.phase,
                 round_number=state.round_number,
                 stage="night_kill",
-                state_public=state_after,
+                state_public=state_before,
                 state_before=state_before,
                 state_after=state_after,
             )
@@ -618,7 +659,7 @@ class NightPhase:
                 phase=state.phase,
                 round_number=state.round_number,
                 stage="night_kill",
-                state_public=state_after,
+                state_public=state_before,
                 state_before=state_before,
                 state_after=state_after,
             )
@@ -689,7 +730,7 @@ class NightPhase:
                 phase=state.phase,
                 round_number=state.round_number,
                 stage="night_kill",
-                state_public=state_after,
+                state_public=state_before,
                 state_before=state_before,
                 state_after=state_after,
             )
@@ -715,7 +756,7 @@ class NightPhase:
             phase=state.phase,
             round_number=state.round_number,
             stage="night_kill",
-            state_public=state_after,
+            state_public=state_before,
             state_before=state_before,
             state_after=state_after,
         )

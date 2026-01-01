@@ -407,15 +407,19 @@ class TestEventLog:
 
         log.add_phase_start("day_1", 1)
         log.add_speech("Alice", "Hello", "Bob", {"thought": "hmm"})
-        log.add_vote({"Alice": "Bob"}, "eliminated", "Bob")
+        log.add_vote_round({"Alice": "Bob"}, "eliminated", round=1)
+        log.add_elimination("Bob")
         log.add_last_words("Bob", "Goodbye")
         log.add_game_end("town", {"Alice": "town", "Bob": "mafia"})
 
         assert log.events[0].type == "phase_start"
         assert log.events[1].type == "speech"
-        assert log.events[2].type == "vote"
-        assert log.events[3].type == "last_words"
-        assert log.events[4].type == "game_end"
+        assert log.events[2].type == "vote_round"
+        assert log.events[2].data["round"] == 1
+        assert log.events[3].type == "elimination"
+        assert log.events[3].data["eliminated"] == "Bob"
+        assert log.events[4].type == "last_words"
+        assert log.events[5].type == "game_end"
 
     def test_event_metadata_fields(self):
         """Events store phase/round/stage/state metadata when provided."""
@@ -461,9 +465,7 @@ class TestEventLog:
             "nominated": ["Bob"],
         }
 
-        event = log.add_vote(
-            {"Alice": "Bob"},
-            "eliminated:Bob",
+        event = log.add_elimination(
             "Bob",
             phase="day_1",
             round_number=1,
@@ -479,8 +481,11 @@ class TestEventLog:
     def test_stage_defaults(self):
         """Convenience methods populate stage defaults."""
         log = EventLog()
-        vote_event = log.add_vote({"Alice": "Bob"}, "eliminated:Bob", "Bob")
+        vote_event = log.add_vote_round({"Alice": "Bob"}, "eliminated", round=1)
         assert vote_event.data["stage"] == "vote"
+
+        elimination_event = log.add_elimination("Bob")
+        assert elimination_event.data["stage"] == "elimination"
 
         speech_event = log.add_speech(
             "Alice",
@@ -542,7 +547,7 @@ class TestGameLogWriter:
         # Read back
         data = writer.read("test123")
         assert data is not None
-        assert data["schema_version"] == "1.1"
+        assert data["schema_version"] == "1.2"
         assert data["winner"] == "town"
         assert len(data["players"]) == 2
         assert len(data["events"]) == 1
@@ -562,7 +567,7 @@ class TestGameLogWriter:
     async def test_write_game_log(self, tmp_path):
         """Async write_game_log writes to disk."""
         writer = GameLogWriter(str(tmp_path))
-        log_data = {"game_id": "async123", "schema_version": "1.1"}
+        log_data = {"game_id": "async123", "schema_version": "1.2"}
 
         path = await writer.write_game_log(log_data)
         assert (tmp_path / "game_async123.json").exists()

@@ -40,6 +40,10 @@ npm install three @react-three/fiber @react-three/drei zustand @react-spring/thr
 
 **Log-driven:** Viewer consumes logs, doesn't simulate game rules.
 
+**Default mode:** Omniscient. During development and content review, seeing all information
+(roles, reasoning, Mafia coordination) is essential. Public mode exists for "mystery" YouTube
+cuts but is secondary—most viewers want the full drama, not the puzzle.
+
 ```
 Game Log (JSON) → Log Parser → Timeline Store (Zustand) → Scene Renderer (R3F)
 ```
@@ -220,10 +224,19 @@ Keep one palette, one material model, and consistent scale.
   - Mafia lair (red, fog)
   - Detective office (blue/noir)
 - [ ] Scene switching based on phase
+- [ ] Scene roster filtering:
+  - Mafia lair shows ONLY Mafia
+  - Detective office shows ONLY Detective
+  - Town square shows ALL living players
+- [ ] Night kill is a target-marking beat (no death yet)
+- [ ] Death animation triggers at day start after dawn/announcement
 - [ ] Public/Omniscient toggle (core):
   - Public: hide roles, reasoning, Mafia scenes
   - Omniscient: show everything
-- [ ] Role badges (Mafia gun, Detective badge)
+- [ ] Character name labels (floating above head, always visible)
+- [ ] Role indicators (omniscient only):
+  - Color-coded badge or underline (red=Mafia, blue=Detective, gray=Villager)
+  - Optional: role icon (gun, magnifying glass)
 
 **Deliverable:** All characters modeled. Scene changes work. Mode toggle works.
 
@@ -272,7 +285,7 @@ Keep one palette, one material model, and consistent scale.
 
 ---
 
-## Log Schema (v1.1)
+## Log Schema (v1.2)
 
 Required fields:
 
@@ -285,7 +298,7 @@ log.winner
 log.players           // [{seat, persona_id, name, role, outcome}]
 log.events            // [{type, timestamp, data, private_fields}]
 
-event.type            // "speech", "vote", "night_kill", etc.
+event.type            // "speech", "vote_round", "elimination", "night_kill", etc.
 event.timestamp       // ISO8601
 event.data.phase      // "day_1", "night_1", etc.
 event.data.round_number
@@ -298,8 +311,33 @@ event.data.reasoning // present in omniscient view when not filtered
 Notes:
 - `state_before`/`state_after` live inside `event.data` for roster-changing events.
 - Private reasoning is in `event.data.reasoning` and listed in `event.private_fields`.
+- `vote_round` includes `data.round`, `data.outcome`, and `data.votes`.
+- `vote_round.data.outcome`: `"eliminated"`, `"no_elimination"`, or `"tie"` (round 1 only).
+- `elimination` includes `data.eliminated`.
 
-No log changes needed.
+**Reasoning payloads (viewer mapping):**
+Use `thought` for internal monologue TTS (plays before spoken line) and `subtitle` for the
+spoken line. Many events have no subtitle.
+
+| event.type | thought source | subtitle source | notes |
+|-----------|----------------|-----------------|-------|
+| `speech` | `data.reasoning.reasoning` | `data.text` | `data.reasoning` is full `SpeakingOutput`. |
+| `defense` | `data.reasoning.reasoning` | `data.text` | `data.reasoning` is full `DefenseOutput`. |
+| `last_words` | `data.reasoning.reasoning` | `data.text` | `data.reasoning` is full `LastWordsOutput`. |
+| `night_zero_strategy` | `data.reasoning.reasoning` | `data.text` | `data.reasoning` is full `SpeakingOutput` (night_zero context). |
+| `vote_round` | `data.vote_details[<voter>].reasoning` | none | Per-voter `VotingOutput`. Use selectively. |
+| `night_kill` | see notes | `proposal_details*[*].message` (optional) | Reasoning is a coordination bundle. |
+| `investigation` | `data.reasoning.reasoning` | none | `data.reasoning` is full `InvestigationOutput`. |
+| `elimination` | none | none | Use UI + day announcement, not log text. |
+
+**Night kill bundle details:**
+- Round 1: `reasoning.proposals` + `reasoning.proposal_details`
+- Round 2: `reasoning.proposals_r1`, `reasoning.proposals_r2`,
+  `reasoning.proposal_details_r1`, `reasoning.proposal_details_r2`, optional `decided_by`
+- Each entry in `proposal_details*` is a full `NightKillOutput` (includes `message` and
+  `reasoning`). Viewer must parse these; do not assume `data.text` exists.
+
+Viewer should handle `vote_round` + `elimination` events (schema v1.2).
 
 ---
 
@@ -337,7 +375,7 @@ No log changes needed.
 
 Phase 10 complete when:
 
-1. Loads any v1.1 game log
+1. Loads any v1.2 game log
 2. 7 characters rendered (3+ real models)
 3. Camera cuts to active speaker
 4. Subtitles display speech

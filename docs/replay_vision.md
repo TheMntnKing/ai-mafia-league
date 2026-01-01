@@ -35,16 +35,22 @@ Using Roblox-adjacent stylized mesh characters with blocky proportions.
 
 ## Viewing Modes
 
+**Default: Omniscient.** Most viewers want the full drama—seeing who's lying, watching
+Mafia coordinate, feeling the Detective's uncertainty. Public mode is for rare "mystery"
+cuts where the audience guesses along.
+
+### Omniscient Mode (Drama) — Default
+- Shows: everything—roles, curated reasoning, Mafia night scenes, Detective investigations
+- Night: full scenes (Mafia lair, Detective office)
+- Hook: "Watch the perfect lie unfold."
+- Character labels: name + role indicator (color-coded)
+
 ### Public Mode (Mystery)
 - Shows: speeches, nominations, votes, deaths
 - Hides: roles, reasoning, Mafia coordination, investigation results
 - Night: quick fade transition only
 - Hook: "Who is Mafia? Figure it out before the reveal."
-
-### Omniscient Mode (Drama)
-- Shows: everything public + roles, curated reasoning, Mafia night scenes, Detective investigations
-- Night: full scenes (Mafia lair, Detective office)
-- Hook: "Watch the perfect lie unfold."
+- Character labels: name only (no role)
 
 ---
 
@@ -74,11 +80,11 @@ Brief transition only:
 
 ### Omniscient Mode
 Full scenes:
-1. "Night falls" transition
-2. Mafia lair - red lighting, show coordination, target highlight
+1. Night falls transition
+2. Mafia lair - red lighting, show coordination, target highlight (target is marked, not dead)
 3. Detective scene - investigation target and result
-4. Kill animation (if applicable)
-5. Dawn transition
+4. Dawn transition (return to town square)
+5. Day announcement: "X was killed" → death animation plays now
 
 ### Night Zero
 Mafia coordinate but don't kill. Detective doesn't act.
@@ -89,6 +95,26 @@ Mafia coordinate but don't kill. Detective doesn't act.
 **Recommendation:** Keep in engine for gameplay. Viewer can skip or minimize.
 **Log note:** Night Zero emits `night_zero_strategy` events with private fields; public mode can
 ignore these, omniscient can optionally show a short Mafia scene.
+
+---
+
+## Scene Visibility & Death Timing (Viewer Rules)
+
+**Scene roster:**
+- Mafia lair: ONLY Mafia visible
+- Detective office: ONLY Detective visible
+- Town square (day): ALL living players visible
+
+**Night events do NOT kill the target.** The target is only marked during night scenes.
+
+**Death timing:** Death animation happens at **day start** (after dawn transition and announcement),
+not during `night_kill` events.
+
+**Scene switching logic (omniscient):**
+- `phase = night_*` → transition to night scene
+- `night_zero_strategy` / `night_kill` → Mafia lair
+- `investigation` → Detective office
+- `phase = day_*` → town square (announce kill, then play death animation)
 
 ---
 

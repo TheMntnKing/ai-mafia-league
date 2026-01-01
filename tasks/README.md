@@ -18,7 +18,7 @@ Single source of truth for delivery status and next steps.
 | Phase 5 | Player agent | ✅ |
 | Phase 6 | Game loop (first runnable game) | ✅ |
 | Phase 7 | Quality and observability | ✅ |
-| Phase 8 | Replayable logs (schema v1.1) | ✅ |
+| Phase 8 | Replayable logs (schema v1.2) | ✅ |
 | Phase 9 | 2.5D CSS Viewer | ⚠️ ARCHIVED |
 | **Phase 10** | **3D Voxel Viewer** | 🚧 IN PROGRESS |
 
