@@ -13,21 +13,23 @@ debugging code or reading transcripts.
 
 ---
 
-## Visual Style: 3D Voxel
+## Visual Style: Stylized Mesh (Roblox-Adjacent)
 
-Using Minecraft/Roblox-style 3D voxel characters.
+Using Roblox-adjacent stylized mesh characters with blocky proportions.
 
 **Rationale:**
-- Universal character system - voxel blocks work for any persona (memes, presidents, historical figures)
+- Universal character system - blocky silhouettes work for any persona (memes, presidents, historical figures)
 - Scene variety - distinct environments for day/night/Mafia lair
 - YouTube-ready - strong thumbnails, animation capability, premium feel
 - Meme culture native - familiar aesthetic to target audience
 
 ### Asset Pipeline (Practical)
-- **Characters (brainrot):** Meshy (text/image → 3D) → export `.glb`
-- **Scenes/Props:** Sloyd (template-based 3D) → export `.glb`
+- **API:** fal.ai pay-per-use (~$0.25-0.35/generation)
+- **Characters (brainrot):** Hunyuan3D v2 (image → 3D) → download `.glb`
+- **Scenes/Props:** Trellis 2 or Hunyuan3D → download `.glb`
 - **Runtime format:** `.glb` for easy loading in R3F
 - **Style lock:** override materials + palette in-engine for consistency
+- **Cost estimate:** ~$5-10 total for all assets (vs $17+/month subscriptions)
 
 ---
 
@@ -157,7 +159,7 @@ Game length: 7 players ~15-20 min, 10 players ~30-45 min.
 
 ## Character Design
 
-Each persona = voxel humanoid + 2-3 iconic features:
+Each persona = stylized mesh humanoid + 2-3 iconic features:
 - **Head shape:** Round, animal snout, cube, etc.
 - **Hair/headwear:** Distinctive silhouette element
 - **Accessories:** Glasses, props, badges
@@ -167,11 +169,6 @@ Each persona = voxel humanoid + 2-3 iconic features:
 
 **Dead state:** Grayscale, X eyes, sink below stage. Stay visible (ghosted).
 
-**Asset pipeline:**
-1. Create in MagicaVoxel (~30 min per character)
-2. Export as .glb
-3. Import with `useGLTF` in React Three Fiber
-4. Hot-swap: placeholder cubes until real models ready
 
 ---
 
@@ -197,7 +194,7 @@ Each persona = voxel humanoid + 2-3 iconic features:
 | Helpers | @react-three/drei |
 | State | Zustand |
 | Animation | React Spring |
-| Assets | MagicaVoxel → .glb |
+| Assets | fal.ai (Hunyuan3D, Trellis 2) → .glb |
 | Debug | Leva |
 
 ---

@@ -1,13 +1,19 @@
-# Phase 10: 3D Voxel Replay Viewer
+# Phase 10: 3D Replay Viewer (Roblox-Adjacent, Stylized Mesh)
 
-**Goal:** Build a 3D voxel-style replay viewer using React Three Fiber that transforms game logs
-into cinematic, YouTube-ready content.
+**Goal:** Build a 3D voxel-style replay viewer using React Three Fiber that transforms game logs into cinematic, YouTube-ready content.
 
 **Status:** 🚧 IN PROGRESS
 
 **Predecessor:** Phase 9 (2.5D CSS viewer) - ARCHIVED
 
 See `docs/replay_vision.md` for visual style rationale and detailed specs.
+
+## Locked Style Decisions
+
+- **Visual target:** Roblox-adjacent, stylized plastic look (not full voxel).
+- **Environment:** low-poly/blocky town square with clean materials and serious lighting.
+- **Characters:** stylized mesh avatars with simple proportions and bold silhouettes.
+- **Consistency rules:** unified palette, unified material model, consistent scale.
 
 ---
 
@@ -20,7 +26,7 @@ See `docs/replay_vision.md` for visual style rationale and detailed specs.
 | Helpers | @react-three/drei |
 | State | Zustand |
 | Animation | React Spring |
-| Assets | MagicaVoxel → .glb |
+| Assets | fal.ai API (Hunyuan3D, Trellis 2) → .glb |
 | Debug | Leva |
 
 ```bash
@@ -48,7 +54,7 @@ viewer/src/
 ├── components/
 │   ├── Scene.jsx           # R3F Canvas wrapper
 │   ├── Stage.jsx           # Floor, table geometry
-│   ├── Character.jsx       # Single voxel character
+│   ├── Character.jsx       # Single stylized character
 │   ├── Characters.jsx      # All characters positioned in arc
 │   ├── Subtitles.jsx       # Speech text display
 │   ├── VoteTokens.jsx      # Vote visualization
@@ -59,30 +65,85 @@ viewer/src/
 ├── utils/
 │   └── logParser.js        # Parse log JSON into timeline
 └── assets/
-    └── models/             # .glb voxel models
+    └── models/             # .glb models
 ```
 
 ---
 
+## Asset Strategy (AI-Generated via API)
+
+**Goal:** Fast iteration with a consistent, meme-friendly visual style.
+
+**Style target:** Stylized plastic/low-poly town + stylized mesh characters (Roblox-adjacent).
+Keep one palette, one material model, and consistent scale.
+
+### Primary Tools (fal.ai Pay-Per-Use)
+
+| Tool | Use Case | Cost | Link |
+|------|----------|------|------|
+| **Hunyuan3D v2** | Characters, complex props | ~$0.20-0.30/gen | [fal.ai](https://fal.ai/models/fal-ai/hunyuan3d/v2) |
+| **Trellis 2** | Props, scene elements | $0.25-0.35/gen | [fal.ai](https://fal.ai/models/fal-ai/trellis-2) |
+
+**Why API over SaaS subscriptions:**
+- Pay-per-use (~$5-10 for all assets) vs $17+/month subscriptions
+- Same underlying models
+- No commitment, scale as needed
+
+### Prompt Rules (Apply to All AI Assets)
+
+**Characters (Hunyuan3D)**
+- Style: "stylized plastic", "blocky", "toy-like", "clean silhouette"
+- Proportions: big head, chunky limbs, minimal facial detail
+- Materials: solid colors, no photo textures, no micro-detail
+- Pose: A-pose for potential rigging
+- Input: Reference image + style keywords (models don't know meme names)
+
+**Props/Scenes (Trellis 2 or Hunyuan3D)**
+- Style: low-poly, clean shapes, simple forms
+- Materials: flat colors or minimal gradients, no noisy textures
+- Modularity: separate props (lamps, benches, signs) for reuse
+
+**Consistency Pass (Required)**
+- Override all materials to the project palette in-engine
+- Normalize scale (target ~1.7m for humanoid height)
+- Center/pivot at feet for characters, base for props
+
+---
+
 ## Implementation Phases
+
+### Phase 10.0: Art Direction + Asset Plan
+
+**Goal:** Lock the style and asset pipeline before heavy implementation.
+
+**Tasks:**
+- [x] Define a style bible (palette, materials, lighting rules, scale) in `docs/style_bible.md`
+- [x] Lock AI tools (fal.ai: Hunyuan3D for characters, Trellis 2 for props)
+- [x] Draft prompt rules for town assets + character silhouettes
+- [x] Draft a town square blockout (houses, lamps, round table)
+- [ ] Smoke test: generate 1 character + 1 prop via fal.ai, verify GLB loads in R3F
+
+**Deliverable:** Style bible + AI prompt rules + blockout scene + verified pipeline.
+
+---
 
 ### Phase 10.1: Foundation
 
 **Goal:** Basic 3D scene that responds to log events.
 
 **Tasks:**
-- [ ] Clean up `viewer/` - remove Phase 9 bloat
-- [ ] Install R3F dependencies
-- [ ] Create `Scene.jsx` with R3F Canvas
-- [ ] Create `Stage.jsx` with floor plane
-- [ ] Create `Character.jsx` rendering colored cubes (placeholders)
-- [ ] Create `Characters.jsx` positioning players in a semi-arc based on `log.players.length`
-- [ ] Create `gameStore.js`:
+- [x] Clean up `viewer/` - remove Phase 9 bloat
+- [x] Install R3F dependencies
+- [x] Create `Scene.jsx` with R3F Canvas
+- [x] Create `Stage.jsx` with floor plane (town square placeholder)
+- [x] Create `Character.jsx` rendering colored placeholders (meshes or cubes)
+- [x] Create `Characters.jsx` positioning players in a semi-arc based on `log.players.length`
+- [x] Create `gameStore.js`:
   - `log`, `eventIndex`, `playing`
   - `nextEvent()`, `prevEvent()`, `setIndex()`
-- [ ] Create `logParser.js` to extract timeline (handle `night_zero_strategy`: skip in public, optional omniscient stub)
-- [ ] Basic prev/next buttons
-- [ ] Load log via file input
+- [x] Create `logParser.js` to extract timeline (handle `night_zero_strategy`: skip in public, short scene in omniscient)
+- [x] Basic prev/next buttons
+- [x] Load log via file input
 
 **Deliverable:** N colored cubes. Stepping through events highlights active speaker.
 
@@ -93,14 +154,14 @@ viewer/src/
 **Goal:** Cinematic camera and speech display.
 
 **Tasks:**
-- [ ] Create `Camera.jsx` with drei's `PerspectiveCamera`
-- [ ] Camera presets:
+- [x] Create `Camera.jsx` with drei's `PerspectiveCamera`
+- [x] Camera presets:
   - Wide shot (all visible)
   - Speaker focus (zoom on active)
   - Vote tension (slow pan)
-- [ ] Animate transitions with React Spring
-- [ ] Create `Subtitles.jsx` for speech text
-- [ ] Create `Lighting.jsx`:
+- [x] Animate transitions with React Spring
+- [x] Create `Subtitles.jsx` for speech text
+- [x] Create `Lighting.jsx`:
   - Day: warm directional + ambient
   - Night: cool blue + low ambient
 
@@ -128,21 +189,23 @@ viewer/src/
 
 ---
 
-### Phase 10.4: Voxel Characters
+### Phase 10.4: Character Models (Stylized Mesh)
 
-**Goal:** Replace cubes with real voxel models.
+**Goal:** Replace placeholders with real character meshes.
 
 **Tasks:**
-- [ ] Create 3 initial models in MagicaVoxel:
-  - Bombardiro Crocodilo
-  - Tralalero Tralala
-  - Generic humanoid
-- [ ] Export as .glb
+- [ ] Generate a base humanoid via fal.ai Hunyuan3D (blocky, stylized plastic)
+- [ ] Create 3 initial hero characters via fal.ai:
+  - Bombardiro Crocodilo (use reference image + style prompt)
+  - Tralalero Tralala (use reference image + style prompt)
+  - Generic humanoid (text prompt only)
+- [ ] Apply unified materials/palette (override textures if needed)
+- [ ] Download .glb files
 - [ ] Model loading with `useGLTF`
 - [ ] Hot-swap fallback: `MODELS[persona] || MODELS.placeholder`
 - [ ] Simple idle animation (bobbing)
 
-**Deliverable:** 3 voxel models, others cubes. Dynamic loading works.
+**Deliverable:** 3 character models, others placeholders. Dynamic loading works.
 
 ---
 
@@ -153,11 +216,11 @@ viewer/src/
 **Tasks:**
 - [ ] Create remaining character models
 - [ ] Scene variations:
-  - Day (warm parlor)
+  - Day town square (warm)
   - Mafia lair (red, fog)
   - Detective office (blue/noir)
 - [ ] Scene switching based on phase
-- [ ] Public/Omniscient toggle:
+- [ ] Public/Omniscient toggle (core):
   - Public: hide roles, reasoning, Mafia scenes
   - Omniscient: show everything
 - [ ] Role badges (Mafia gun, Detective badge)
@@ -250,12 +313,11 @@ No log changes needed.
 | Tralalero Tralala | Blue shark, cheerful |
 | Generic humanoid | Placeholder for others |
 
-### Props
+### Scene Targets (Town)
 
 | Prop | Scene |
 |------|-------|
 | Round table | Day + Mafia |
-| Chairs | All |
 | Fog particles | Mafia lair |
 
 ---
