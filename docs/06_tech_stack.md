@@ -23,7 +23,7 @@ Single LLM call per action. Schema field order forces reasoning flow: observe â†
 
 Action-specific schemas: `SpeakingOutput`, `VotingOutput`, `NightKillOutput`, `InvestigationOutput`, `LastWordsOutput`, `DefenseOutput`.
 
-See [schemas.py](schemas.py) for full definitions.
+See `src/schemas/actions.py` for action schema definitions.
 
 ## Storage
 

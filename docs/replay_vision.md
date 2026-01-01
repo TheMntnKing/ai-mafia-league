@@ -1,0 +1,274 @@
+# Replay Vision
+
+Source of truth for the AI Mafia replay viewer.
+
+## Goal
+
+Transform raw game logs into a **cinematic, TV-quality narrative**. The replay should feel like
+watching a mystery thriller (Public Mode) or a psychological drama (Omniscient Mode) - not like
+debugging code or reading transcripts.
+
+**Target platform:** YouTube (15-30 minute episodes)
+**Target feel:** Entertainment first, strategic depth optional
+
+---
+
+## Visual Style: 3D Voxel
+
+Using Minecraft/Roblox-style 3D voxel characters.
+
+**Rationale:**
+- Universal character system - voxel blocks work for any persona (memes, presidents, historical figures)
+- Scene variety - distinct environments for day/night/Mafia lair
+- YouTube-ready - strong thumbnails, animation capability, premium feel
+- Meme culture native - familiar aesthetic to target audience
+
+### Asset Pipeline (Practical)
+- **Characters (brainrot):** Meshy (text/image → 3D) → export `.glb`
+- **Scenes/Props:** Sloyd (template-based 3D) → export `.glb`
+- **Runtime format:** `.glb` for easy loading in R3F
+- **Style lock:** override materials + palette in-engine for consistency
+
+---
+
+## Viewing Modes
+
+### Public Mode (Mystery)
+- Shows: speeches, nominations, votes, deaths
+- Hides: roles, reasoning, Mafia coordination, investigation results
+- Night: quick fade transition only
+- Hook: "Who is Mafia? Figure it out before the reveal."
+
+### Omniscient Mode (Drama)
+- Shows: everything public + roles, curated reasoning, Mafia night scenes, Detective investigations
+- Night: full scenes (Mafia lair, Detective office)
+- Hook: "Watch the perfect lie unfold."
+
+---
+
+## Day Phase Flow
+
+1. **Night kill announced** (if any) - no last words for night kills
+2. **Discussion** - each player speaks in seat order (rotating each day)
+   - Camera focuses on speaker
+   - TTS audio with subtitles
+   - Omniscient: reasoning shown before speech for featured players
+   - Each player nominates someone
+3. **Voting** - sequential reveal, one vote at a time with running count
+   - Shows who voted for who, not just totals
+4. **Tie resolution** (if needed) - defense speeches, then revote
+5. **Elimination** (if any) - last words, then death animation
+6. **Transition to night**
+
+---
+
+## Night Phase Flow
+
+### Public Mode
+Brief transition only:
+1. "Night falls" fade (2-3 sec)
+2. Optional sleeping town shot (2-3 sec)
+3. Dawn transition
+
+### Omniscient Mode
+Full scenes:
+1. "Night falls" transition
+2. Mafia lair - red lighting, show coordination, target highlight
+3. Detective scene - investigation target and result
+4. Kill animation (if applicable)
+5. Dawn transition
+
+### Night Zero
+Mafia coordinate but don't kill. Detective doesn't act.
+
+- **Public:** Skip entirely or brief title card
+- **Omniscient:** Optional Mafia planning scene
+
+**Recommendation:** Keep in engine for gameplay. Viewer can skip or minimize.
+**Log note:** Night Zero emits `night_zero_strategy` events with private fields; public mode can
+ignore these, omniscient can optionally show a short Mafia scene.
+
+---
+
+## Voting Display
+
+Sequential reveal with running count:
+```
+Alice votes for Bob → Bob: 1
+Charlie votes for Bob → Bob: 2
+Diana votes Skip → Bob: 2, Skip: 1
+Eve votes for Bob → Bob: 3 - ELIMINATED
+```
+
+Shows social dynamics and builds tension.
+
+---
+
+## Reasoning Display
+
+Don't show everyone - cognitive overload. Feature selectively:
+
+| Player | When |
+|--------|------|
+| Detective | Always (they're solving the puzzle) |
+| Mafia | Before day speech (the lie reveal) |
+| Most nominated | Before defense speech |
+| About to die | Final thoughts |
+
+**3+ Mafia:** Rotate which Mafia is featured each day.
+
+**Log note:** In omniscient mode, reasoning text should be sourced from
+`event.data.reasoning` (it appears in `event.private_fields` for public filtering).
+Public mode ignores private fields.
+
+**Visual treatment:**
+1. Background dims to ~30%
+2. Role-colored glow pulses under character (red=Mafia, blue=Detective)
+3. Thought text overlay
+4. 2-3 seconds, then transition to speech
+
+---
+
+## Pacing
+
+Target word counts (vary with player count):
+
+| Action | Words |
+|--------|-------|
+| Day Speech | 50-80 |
+| Reasoning | 30-50 |
+| Defense | 30-50 |
+| Last Words | 40-80 |
+| Mafia Night Chat | 30-50 |
+
+Game length: 7 players ~15-20 min, 10 players ~30-45 min.
+
+---
+
+## Audio
+
+**TTS:** Part of game engine. Each speech generates audio file. Each persona has distinct voice.
+
+**Subtitles:** Rendered in viewer or added in editing. No 3D speech bubbles.
+
+**Music/SFX:** Added in editing.
+
+---
+
+## Character Design
+
+Each persona = voxel humanoid + 2-3 iconic features:
+- **Head shape:** Round, animal snout, cube, etc.
+- **Hair/headwear:** Distinctive silhouette element
+- **Accessories:** Glasses, props, badges
+- **Color scheme:** Recognizable at thumbnail size
+
+**Expression:** Large eyes that change shape. Simple geometry lets viewers project emotion.
+
+**Dead state:** Grayscale, X eyes, sink below stage. Stay visible (ghosted).
+
+**Asset pipeline:**
+1. Create in MagicaVoxel (~30 min per character)
+2. Export as .glb
+3. Import with `useGLTF` in React Three Fiber
+4. Hot-swap: placeholder cubes until real models ready
+
+---
+
+## Scenes
+
+| Scene | Lighting | Usage |
+|-------|----------|-------|
+| Day (Town Square) | Warm, golden hour | Discussion + voting |
+| Night (Sleeping) | Blue/dark, moonlight | Transition (public mode) |
+| Mafia Lair | Red underglow, fog | Night coordination (omniscient) |
+| Detective Office | Blue/noir | Investigation (omniscient) |
+
+**Layout:** Characters in semi-circle arc facing camera. Table/podium in foreground.
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Framework | React + Vite |
+| 3D Engine | React Three Fiber |
+| Helpers | @react-three/drei |
+| State | Zustand |
+| Animation | React Spring |
+| Assets | MagicaVoxel → .glb |
+| Debug | Leva |
+
+---
+
+## Architecture
+
+**Log-driven:** Viewer consumes events, doesn't simulate game rules. Engine changes don't break viewer.
+
+**Privacy filtering:**
+- Public mode: hide `private_fields`, don't show roles until game end
+- Omniscient mode: show everything
+- Roles from top-level `players` array
+
+**Hot-swap assets:** Ship with placeholder cubes, add real models incrementally.
+
+**Extensibility:**
+
+| Game Change | Viewer Impact |
+|-------------|---------------|
+| 10 players | Seat layout config |
+| 3 Mafia | No change |
+| Add Doctor | New role color, event handler |
+| New voting rules | No change (outcome from log) |
+
+---
+
+## Viewer vs Editing Split (70/30 Rule)
+
+The viewer should produce **70% watchable content** out of the box. Editing adds the final 30%
+that makes it great.
+
+### Built Into Viewer (Automated)
+
+| Element | Purpose |
+|---------|---------|
+| Event sequencing | Correct order of all game actions |
+| Character states | Alive/dead, spotlight on speaker |
+| Speech bubbles | Text with TTS sync |
+| Vote tokens | Sequential vote placement |
+| Day/night atmosphere | Scene + lighting shifts |
+| Reasoning panel | Private thoughts (omniscient) |
+| Role badges | Who is what (omniscient) |
+| Camera presets | Wide shot, speaker focus, vote tension |
+
+### Added in Editing (Human Narration)
+
+| Element | Purpose |
+|---------|---------|
+| Cold open hook | 10-second betrayal/twist teaser |
+| Character intros | "Meet the players" segment |
+| Music/SFX | Tension building, stingers |
+| Commentary voiceover | Strategic analysis, "watch this..." |
+| Boring part cuts | Skip uneventful Day 1 |
+| Zoom/slow-mo | Emphasize betrayal moments |
+| End analysis | "Here's where Town lost..." |
+| Meme inserts | Reaction images for virality |
+
+---
+
+## Open Questions
+
+- **Night Zero:** Skip in viewer, or show Mafia planning in omniscient?
+- **Camera:** Scripted presets or dynamic "director"?
+- **Subtitles:** Render in viewer or leave for editing?
+- **Live mode:** Future streaming support needed?
+- **Animation depth:** Simple idle or expressive reactions?
+
+---
+
+## References
+
+- **Turing Games:** 3D Roblox-style, scene variety, selective reasoning
+- **Neurotoster:** 2D circles, sequential voting, clean UI
+- **Town of Salem:** Role iconography, death states

@@ -20,10 +20,21 @@ and lightweight CLI progress.
 
 **Top-level:**
 - `schema_version`: "1.1"
-- `players`: unchanged (static roster with roles)
-- `events`: enriched with phase metadata and state snapshots
+- `game_id`: unique game identifier
+- `timestamp_start`: ISO8601
+- `timestamp_end`: ISO8601
+- `winner`: "town" or "mafia"
+- `players`: list of `{seat, persona_id, name, role, outcome}`
+- `events`: list of Event objects
 
-**Event data (standard fields for all event types, always present):**
+**Event envelope:**
+- `type`: "speech", "vote", "night_kill", etc.
+- `timestamp`: ISO8601
+- `data`: event-specific payload (includes phase metadata)
+- `private_fields`: list of keys in `data` hidden in public view; if it covers all keys, the event is omitted
+
+**Event data (standard fields added by phases):**
+These fields live inside `event.data`.
 - `phase`: e.g., "night_zero", "day_1", "night_1"
 - `round_number`: integer (0 for night_zero)
 - `stage`: e.g., "night_zero", "discussion", "vote", "defense", "revote",
@@ -54,7 +65,7 @@ and lightweight CLI progress.
 **Night Zero:**
 - New event type `night_zero_strategy`
 - Data fields: `speaker`, `text`, `reasoning`
-- **Fully private** (speaker/text/reasoning all in `private_fields`)
+- **Fully private** (all fields, including phase metadata, are in `private_fields`)
 
 **Private/omniscient view:**
 - Roles are static and read from top-level `players`.

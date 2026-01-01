@@ -10,7 +10,7 @@ Games produce watchable content where viewers see both public speech and private
 
 ## Status
 
-**Current: MVP implemented (Phases 1-6)**
+**Current: Game engine complete through Phase 8; Phase 9 archived; Phase 10 in progress**
 
 Core game loop, providers, and tests are implemented.
 

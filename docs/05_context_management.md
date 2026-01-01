@@ -129,7 +129,7 @@ Fixed 2-round window for full detail:
 **Compressed summary includes:** deaths, major accusations, vote outcomes, role claims.
 No hard cap on the number of extracted accusations or claims.
 
-See [schemas.py](schemas.py) for `DayRoundTranscript` and `CompressedRoundSummary`.
+See `src/schemas/transcript.py` for `DayRoundTranscript` and `CompressedRoundSummary`.
 
 ## Memory Format
 

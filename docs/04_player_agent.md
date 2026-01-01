@@ -22,7 +22,7 @@ All players share the same structural design but differ only by persona, which i
 
 We use Schema-Guided Reasoning (SGR). The LLM fills a structured schema where field order matters: earlier fields become context for later fields. This forces a deliberate flow: observe → analyze → strategize → decide → output.
 
-See [schemas.py](schemas.py) for schema definitions.
+See `src/schemas/actions.py` for action schema definitions.
 
 **Private vs Public:** Reasoning is private, output is public. A Mafia player might reason "deflect suspicion from partner" but say "Player 5's silence concerns me." Viewers see both (dramatic irony). Other players see only the speech.
 
@@ -65,7 +65,7 @@ Personas are the primary differentiator between agents and the main creative dim
 
 ### Persona Structure
 
-All fields are sent to the LLM prompt. See `Persona` schema in [schemas.py](schemas.py).
+All fields are sent to the LLM prompt. See `src/schemas/persona.py` for the `Persona` schema.
 
 ```yaml
 persona:
