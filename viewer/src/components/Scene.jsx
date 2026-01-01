@@ -5,22 +5,40 @@ import Stage from './Stage'
 import Characters from './Characters'
 import { getArcPositions } from '../utils/layout'
 
-function Scene({ players, activeSpeaker, living, phase, focusMode, subtitle }) {
+const SCENE_LABELS = {
+  mafia: 'Mafia Lair',
+  detective: 'Detective Office',
+  night: 'Night Falls',
+}
+
+function Scene({
+  players,
+  activeSpeaker,
+  living,
+  phase,
+  focusMode,
+  subtitle,
+  voteOverlay,
+  sceneKind,
+}) {
   const positions = getArcPositions(players.length)
   const speakerIndex = activeSpeaker
     ? players.findIndex((player) => player.name === activeSpeaker)
     : -1
   const speakerPosition = speakerIndex >= 0 ? positions[speakerIndex] : null
+  const sceneLabel = SCENE_LABELS[sceneKind] || ''
 
   return (
     <div className="scene">
       <Canvas shadows>
         <Camera mode={focusMode} speakerPosition={speakerPosition} />
-        <Lighting phase={phase} />
-        <Stage />
+        <Lighting phase={phase} scene={sceneKind} />
+        <Stage sceneKind={sceneKind} />
         <Characters players={players} activeSpeaker={activeSpeaker} living={living} />
       </Canvas>
+      {sceneLabel && <div className="scene-label">{sceneLabel}</div>}
       {subtitle}
+      {voteOverlay}
     </div>
   )
 }

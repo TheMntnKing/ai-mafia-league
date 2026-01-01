@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { parseLog } from '../utils/logParser'
 
-const DEFAULT_MODE = 'public'
+const DEFAULT_MODE = 'omniscient'
 
 const clampIndex = (index, length) => {
   if (length <= 0) return 0

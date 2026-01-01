@@ -1,3 +1,6 @@
+import { animated, useSpring } from '@react-spring/three'
+import { useEffect } from 'react'
+
 const DEAD_COLOR = '#9AA3AF'
 const PLASTIC = {
   metalness: 0,
@@ -10,12 +13,22 @@ function Character({ color, position, rotation, isActive, isAlive }) {
   const baseColor = isAlive ? color : DEAD_COLOR
   const emissive = isActive ? '#F2C94C' : '#000000'
   const scale = isActive ? 1.08 : 1
-  const sinkOffset = isAlive ? 0 : -0.6
   const [x, y, z] = position
-  const anchoredPosition = [x, y + sinkOffset, z]
+  const [{ yOffset }, api] = useSpring(() => ({
+    yOffset: 0,
+    config: { tension: 120, friction: 18 },
+  }))
+
+  useEffect(() => {
+    api.start({ yOffset: isAlive ? 0 : -0.6 })
+  }, [isAlive, api])
 
   return (
-    <group position={anchoredPosition} rotation={rotation} scale={scale}>
+    <animated.group
+      position={yOffset.to((offset) => [x, y + offset, z])}
+      rotation={rotation}
+      scale={scale}
+    >
       <mesh castShadow>
         <boxGeometry args={[0.7, 0.9, 0.45]} />
         <meshPhysicalMaterial
@@ -58,7 +71,7 @@ function Character({ color, position, rotation, isActive, isAlive }) {
           </mesh>
         </group>
       )}
-    </group>
+    </animated.group>
   )
 }
 

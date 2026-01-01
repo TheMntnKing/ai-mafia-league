@@ -8,6 +8,10 @@ const WIDE = {
   position: new Vector3(0, 3.5, 9),
   target: new Vector3(0, 0.8, 0),
 }
+const ELIMINATION = {
+  position: new Vector3(0, 2.2, 4.6),
+  target: new Vector3(0, 0.9, 0),
+}
 
 function Camera({ mode, speakerPosition }) {
   const cameraRef = useRef(null)
@@ -28,7 +32,16 @@ function Camera({ mode, speakerPosition }) {
 
   useEffect(() => {
     if (mode === 'vote') return
-    const preset = mode === 'speaker' && speakerPreset ? speakerPreset : WIDE
+    let preset = WIDE
+    if (mode === 'speaker' && speakerPreset) {
+      preset = speakerPreset
+    }
+    if (mode === 'elimination' && speakerPreset) {
+      preset = {
+        position: speakerPreset.position.clone().multiplyScalar(0.82).setY(2.1),
+        target: speakerPreset.target.clone().setY(0.85),
+      }
+    }
     api.start({
       position: preset.position.toArray(),
       target: preset.target.toArray(),

@@ -265,6 +265,15 @@ class DayPhase:
             last_words_text = ""
             if last_words_output:
                 last_words_text = str(last_words_output.get("text", ""))
+            event_log.add_last_words(
+                eliminated,
+                last_words_text or "",
+                last_words_output,
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="last_words",
+                state_public=state_snapshot,
+            )
             state_before = state_snapshot
             state.kill_player(eliminated)
             state_after = state.get_public_snapshot()
@@ -276,15 +285,6 @@ class DayPhase:
                 state_public=state_after,
                 state_before=state_before,
                 state_after=state_after,
-            )
-            event_log.add_last_words(
-                eliminated,
-                last_words_text or "",
-                last_words_output,
-                phase=state.phase,
-                round_number=state.round_number,
-                stage="last_words",
-                state_public=state_after,
             )
 
         elif result.outcome == "revote":
@@ -334,17 +334,6 @@ class DayPhase:
             )
             state_before = state_snapshot
             if eliminated:
-                state.kill_player(eliminated)
-                state_after = state.get_public_snapshot()
-                event_log.add_elimination(
-                    eliminated,
-                    phase=state.phase,
-                    round_number=state.round_number,
-                    stage="elimination",
-                    state_public=state_after,
-                    state_before=state_before,
-                    state_after=state_after,
-                )
                 last_words_text = ""
                 if last_words_output:
                     last_words_text = str(last_words_output.get("text", ""))
@@ -355,7 +344,18 @@ class DayPhase:
                     phase=state.phase,
                     round_number=state.round_number,
                     stage="last_words",
+                    state_public=state_snapshot,
+                )
+                state.kill_player(eliminated)
+                state_after = state.get_public_snapshot()
+                event_log.add_elimination(
+                    eliminated,
+                    phase=state.phase,
+                    round_number=state.round_number,
+                    stage="elimination",
                     state_public=state_after,
+                    state_before=state_before,
+                    state_after=state_after,
                 )
 
         else:
