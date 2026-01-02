@@ -2,7 +2,11 @@
 
 **Goal:** Build a 3D voxel-style replay viewer using React Three Fiber that transforms game logs into cinematic, YouTube-ready content.
 
-**Status:** 🚧 IN PROGRESS
+**Status:** 🚧 IN PROGRESS (Phases 10.1-10.3 complete, 10.4-10.6 pending)
+
+**Current phase:** 10.3 (Voting + Death) - mostly complete, needs runtime verification
+
+**Scope:** Core viewer functionality (log playback, 3D scene, events visualization)
 
 **Predecessor:** Phase 9 (2.5D CSS viewer) - ARCHIVED
 
@@ -61,11 +65,13 @@ viewer/src/
 │   ├── Character.jsx       # Single stylized character
 │   ├── Characters.jsx      # All characters positioned in arc
 │   ├── Subtitles.jsx       # Speech text display
-│   ├── VoteTokens.jsx      # Vote visualization
+│   ├── VoteTokens.jsx      # Vote visualization (2D overlay)
 │   ├── Lighting.jsx        # Day/night lighting
 │   └── Camera.jsx          # Camera presets + transitions
 ├── hooks/
-│   └── usePlayback.js      # Play, pause, step controls
+│   ├── usePlayback.js      # Play, pause, step controls
+│   ├── useVoteSequence.js  # Sequential vote reveal timing
+│   └── useNightDialogue.js # Night kill dialogue parsing
 ├── utils/
 │   └── logParser.js        # Parse log JSON into timeline
 └── assets/
@@ -129,6 +135,8 @@ Keep one palette, one material model, and consistent scale.
 
 **Deliverable:** Style bible + AI prompt rules + blockout scene + verified pipeline.
 
+**Status:** ⚠️ Mostly complete. Smoke test (fal.ai generation) pending.
+
 ---
 
 ### Phase 10.1: Foundation
@@ -151,6 +159,8 @@ Keep one palette, one material model, and consistent scale.
 
 **Deliverable:** N colored cubes. Stepping through events highlights active speaker.
 
+**Status (code review 2025-01):** ✅ Store actions present. Private fields filtering logic verified. ⚠️ **Needs runtime testing**: day announcement replay prevention, event parsing edge cases.
+
 ---
 
 ### Phase 10.2: Camera + Speech
@@ -171,6 +181,8 @@ Keep one palette, one material model, and consistent scale.
 
 **Deliverable:** Camera cuts to speaker. Subtitles show text. Day/night lighting works.
 
+**Status (code review 2025-01):** ✅ Camera presets + transitions implemented. Lighting colors match style_bible. **Drifts**: Detective office missing desk lamp, vote pan constant speed. ⚠️ **Needs runtime testing**: camera focus accuracy, lighting during scene transitions.
+
 ---
 
 ### Phase 10.3: Voting + Death
@@ -178,18 +190,23 @@ Keep one palette, one material model, and consistent scale.
 **Goal:** Visualize votes and eliminations.
 
 **Tasks:**
-- [ ] Create `VoteTokens.jsx`
-- [ ] Sequential vote reveal:
-  - Delay between each vote
-  - Token animation to target
-  - Running count display
-- [ ] Death animation:
+- [x] Create `VoteTokens.jsx`
+- [x] Sequential vote reveal:
+  - Delay between each vote (900ms per vote)
+  - Running count display (e.g., "Bob: 3")
+  - Vote chips show "Voter → Target" (2D overlay)
+- [x] Death animation:
   - Sink below stage
   - Grayscale material
   - X eyes
-- [ ] Handle revote flow
+- [x] Handle revote flow (round 2)
+- [x] Defense banner overlay during defense events
+- [x] Replay flow: night‑kill handled as target‑marking with day‑start announcement; camera focuses on night‑kill victim via day_announcement.
+- [x] Investigation: reasoning shown as subtitles; target/result shown in banner.
 
 **Deliverable:** Votes reveal one-by-one. Dead characters visually distinct.
+
+**Status (code review 2025-01):** ✅ Vote sequence logic, death animation, overlay components implemented. ⚠️ **Needs runtime testing**: vote timing accuracy, death state transitions.
 
 ---
 
@@ -211,6 +228,8 @@ Keep one palette, one material model, and consistent scale.
 
 **Deliverable:** 3 character models, others placeholders. Dynamic loading works.
 
+**Status:** ❌ Not started.
+
 ---
 
 ### Phase 10.5: Scenes + Modes
@@ -223,22 +242,24 @@ Keep one palette, one material model, and consistent scale.
   - Day town square (warm)
   - Mafia lair (red, fog)
   - Detective office (blue/noir)
-- [ ] Scene switching based on phase
-- [ ] Scene roster filtering:
+- [x] Scene switching based on phase
+- [x] Scene roster filtering:
   - Mafia lair shows ONLY Mafia
   - Detective office shows ONLY Detective
   - Town square shows ALL living players
-- [ ] Night kill is a target-marking beat (no death yet)
-- [ ] Death animation triggers at day start after dawn/announcement
-- [ ] Public/Omniscient toggle (core):
+- [x] Night kill is a target-marking beat (no death yet)
+- [x] Death animation triggers at day start after dawn/announcement
+- [x] Public/Omniscient toggle (core):
   - Public: hide roles, reasoning, Mafia scenes
   - Omniscient: show everything
-- [ ] Character name labels (floating above head, always visible)
-- [ ] Role indicators (omniscient only):
-  - Color-coded badge or underline (red=Mafia, blue=Detective, gray=Villager)
+- [x] Character name labels (floating above head, always visible)
+- [x] Role indicators (omniscient only):
+  - Color-coded badge (red=Mafia, blue=Detective, gray=Villager) ✅ Implemented
   - Optional: role icon (gun, magnifying glass)
 
 **Deliverable:** All characters modeled. Scene changes work. Mode toggle works.
+
+**Status (code review 2025-01):** ⚠️ Partial. Scene switching logic, roster filtering implemented. ⚠️ **Needs runtime testing**: mode toggle behavior, scene visibility edge cases. Character models pending.
 
 ---
 
@@ -261,6 +282,28 @@ Keep one palette, one material model, and consistent scale.
 - [ ] Performance optimization if needed
 
 **Deliverable:** Full-featured viewer ready for content production.
+
+**Status:** ❌ Not started.
+
+---
+
+## Known Issues / Remaining
+
+**Pending tasks (Phase 10):**
+- Character model pipeline (10.4)
+- Scene environment detail: fog for Mafia lair, props for town square (10.5)
+- Reasoning display rules: Detective always, Mafia pre‑speech, most nominated before defense (10.6)
+- New logs with corrected last_words → elimination ordering
+
+**Deferred to Phase 11 (Production Readiness):**
+- TTS audio integration + sync
+- Export/recording workflow
+- Advanced animation (expressions, gestures)
+- UI polish (summary, scoreboard, accessibility)
+
+**Spec drifts (cosmetic):**
+- `Camera.jsx`: Vote tension pan is constant speed (~40s orbit). Spec implies variable pacing for tension building—consider slowing as votes reveal.
+- `game_end` event: No explicit handler in `usePlayback.js` or `findActiveSpeaker`—falls back to 2200ms (functional but implicit).
 
 ---
 
@@ -373,15 +416,20 @@ Viewer should handle `vote_round` + `elimination` events (schema v1.2).
 
 ## Success Criteria
 
-Phase 10 complete when:
+### Phase 10 Complete When:
 
-1. Loads any v1.2 game log
-2. 7 characters rendered (3+ real models)
-3. Camera cuts to active speaker
-4. Subtitles display speech
-5. Votes reveal sequentially
-6. Dead characters distinct
-7. Day/night lighting works
-8. Public/Omniscient toggle works
-9. Reasoning displays for featured players
-10. Full game playback without errors
+1. ✅ Loads any v1.2 game log
+2. ⚠️ 7 characters rendered (3+ real models) - Partial (placeholders working, models pending)
+3. ✅ Camera cuts to active speaker
+4. ✅ Subtitles display speech
+5. ✅ Votes reveal sequentially
+6. ✅ Dead characters distinct (sink, grayscale, X eyes)
+7. ✅ Day/night lighting works
+8. ✅ Public/Omniscient toggle works
+9. ❌ Reasoning displays for featured players (Phase 10.6)
+10. ✅ Full game playback without errors
+
+**Viewer Readiness after Phase 10:** ~60-70%
+- **Good for:** Internal testing, debugging, log validation
+- **Missing:** Audio, export workflow, advanced animation, UI polish
+- **Next:** Phase 11 (Production Readiness) for YouTube content

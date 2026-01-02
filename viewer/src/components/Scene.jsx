@@ -20,6 +20,7 @@ function Scene({
   subtitle,
   voteOverlay,
   sceneKind,
+  showRoles,
 }) {
   const positions = getArcPositions(players.length)
   const speakerIndex = activeSpeaker
@@ -34,7 +35,12 @@ function Scene({
         <Camera mode={focusMode} speakerPosition={speakerPosition} />
         <Lighting phase={phase} scene={sceneKind} />
         <Stage sceneKind={sceneKind} />
-        <Characters players={players} activeSpeaker={activeSpeaker} living={living} />
+        <Characters
+          players={players}
+          activeSpeaker={activeSpeaker}
+          living={living}
+          showRoles={showRoles}
+        />
       </Canvas>
       {sceneLabel && <div className="scene-label">{sceneLabel}</div>}
       {subtitle}

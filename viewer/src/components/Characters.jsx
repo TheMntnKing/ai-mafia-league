@@ -3,7 +3,7 @@ import { getArcPositions, getFacingRotation } from '../utils/layout'
 
 const COLORS = ['#2F7AE5', '#E54B4B', '#F2C94C', '#2ECC71', '#F2994A', '#8E44AD', '#3D4350']
 
-function Characters({ players, activeSpeaker, living }) {
+function Characters({ players, activeSpeaker, living, showRoles }) {
   const positions = getArcPositions(players.length)
 
   return (
@@ -23,6 +23,9 @@ function Characters({ players, activeSpeaker, living }) {
             color={color}
             isActive={isActive}
             isAlive={isAlive}
+            label={player.name}
+            role={player.role}
+            showRole={showRoles}
           />
         )
       })}

@@ -15,6 +15,7 @@ function Lighting({ phase, scene }) {
       <>
         <ambientLight intensity={0.3} color="#15254A" />
         <directionalLight position={[5, 7, 4]} intensity={1.05} color="#4DA3FF" castShadow />
+        <pointLight position={[-1.2, 1.1, 1.2]} intensity={0.65} color="#FFC857" />
       </>
     )
   }

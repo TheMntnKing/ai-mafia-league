@@ -210,6 +210,7 @@ function App() {
             )
           }
           sceneKind={sceneKind}
+          showRoles={mode === 'omniscient'}
         />
         <aside className="event-panel">
           <div className="event-panel__label">{eventLabel}</div>
