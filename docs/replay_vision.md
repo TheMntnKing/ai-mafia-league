@@ -13,9 +13,9 @@ debugging code or reading transcripts.
 
 ---
 
-## Visual Style: Stylized Mesh (Roblox-Adjacent)
+## Visual Style: Stylized Mesh (Not Voxel)
 
-Using Roblox-adjacent stylized mesh characters with blocky proportions.
+Stylized mesh humanoids with blocky proportions. Roblox-adjacent silhouette, not voxel.
 
 **Rationale:**
 - Universal character system - blocky silhouettes work for any persona (memes, presidents, historical figures)
@@ -24,12 +24,9 @@ Using Roblox-adjacent stylized mesh characters with blocky proportions.
 - Meme culture native - familiar aesthetic to target audience
 
 ### Asset Pipeline (Practical)
-- **API:** fal.ai pay-per-use (~$0.25-0.35/generation)
-- **Characters (brainrot):** Hunyuan3D v2 (image → 3D) → download `.glb`
-- **Scenes/Props:** Trellis 2 or Hunyuan3D → download `.glb`
-- **Runtime format:** `.glb` for easy loading in R3F
-- **Style lock:** override materials + palette in-engine for consistency
-- **Cost estimate:** ~$5-10 total for all assets (vs $17+/month subscriptions)
+- Character workflow: `docs/character_pipeline.md`
+- Props generation: Trellis 2 (fal.ai), guided by `docs/style_bible.md`
+- Output: `.glb` for R3F (scale normalized, pivot at feet, materials optionally overridden)
 
 ---
 
@@ -191,7 +188,8 @@ Each persona = stylized mesh humanoid + 2-3 iconic features:
 - **Accessories:** Glasses, props, badges
 - **Color scheme:** Recognizable at thumbnail size
 
-**Expression:** Large eyes that change shape. Simple geometry lets viewers project emotion.
+Material and pose rules live in `docs/character_pipeline.md`. Palette and lighting live in
+`docs/style_bible.md`.
 
 **Dead state:** Grayscale, X eyes, sink below stage. Stay visible (ghosted).
 
@@ -211,72 +209,20 @@ Each persona = stylized mesh humanoid + 2-3 iconic features:
 
 ---
 
-## Tech Stack
+## Implementation Notes
 
-| Component | Technology |
-|-----------|------------|
-| Framework | React + Vite |
-| 3D Engine | React Three Fiber |
-| Helpers | @react-three/drei |
-| State | Zustand |
-| Animation | React Spring |
-| Assets | fal.ai (Hunyuan3D, Trellis 2) → .glb |
-| Debug | Leva |
-
----
-
-## Architecture
-
-**Log-driven:** Viewer consumes events, doesn't simulate game rules. Engine changes don't break viewer.
-
-**Privacy filtering:**
-- Public mode: hide `private_fields`, don't show roles until game end
-- Omniscient mode: show everything
-- Roles from top-level `players` array
-
-**Hot-swap assets:** Ship with placeholder cubes, add real models incrementally.
-
-**Extensibility:**
-
-| Game Change | Viewer Impact |
-|-------------|---------------|
-| 10 players | Seat layout config |
-| 3 Mafia | No change |
-| Add Doctor | New role color, event handler |
-| New voting rules | No change (outcome from log) |
+- Log-driven playback; no rules simulation.
+- Public mode hides `private_fields`; omniscient shows all roles and reasoning.
+- Component/stack details live in `tasks/phase10.md`.
 
 ---
 
 ## Viewer vs Editing Split (70/30 Rule)
 
-The viewer should produce **70% watchable content** out of the box. Editing adds the final 30%
-that makes it great.
+**Viewer (automated):** sequencing + camera focus, subtitles, vote reveal, deaths, lighting,
+role badges + selective reasoning.
 
-### Built Into Viewer (Automated)
-
-| Element | Purpose |
-|---------|---------|
-| Event sequencing | Correct order of all game actions |
-| Character states | Alive/dead, spotlight on speaker |
-| Speech bubbles | Text with TTS sync |
-| Vote tokens | Sequential vote placement |
-| Day/night atmosphere | Scene + lighting shifts |
-| Reasoning panel | Private thoughts (omniscient) |
-| Role badges | Who is what (omniscient) |
-| Camera presets | Wide shot, speaker focus, vote tension |
-
-### Added in Editing (Human Narration)
-
-| Element | Purpose |
-|---------|---------|
-| Cold open hook | 10-second betrayal/twist teaser |
-| Character intros | "Meet the players" segment |
-| Music/SFX | Tension building, stingers |
-| Commentary voiceover | Strategic analysis, "watch this..." |
-| Boring part cuts | Skip uneventful Day 1 |
-| Zoom/slow-mo | Emphasize betrayal moments |
-| End analysis | "Here's where Town lost..." |
-| Meme inserts | Reaction images for virality |
+**Editing (human):** cold open, commentary, music/SFX, cuts, zooms/slow-mo, memes, end analysis.
 
 ---
 

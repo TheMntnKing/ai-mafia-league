@@ -75,52 +75,13 @@ Top-down plan, centered at (0,0):
 - Small trees/props between buildings
 - Characters stand in a semi-circle arc behind the table (no chairs, no sitting)
 
-## Character Rules
-- Big head, chunky limbs, minimal facial detail
-- Keep silhouettes bold and readable
-- No photo textures or micro-detail
-- All characters use the same plastic material
+## Character Styling
 
-## fal.ai Prompt Pack (Characters via Hunyuan3D)
-Use reference images for brainrot memes + these style modifiers. A-pose recommended.
-
-**Base humanoid** (text-only)
-```
-stylized plastic toy humanoid, blocky proportions, big head, chunky limbs,
-minimal facial features, solid colors, clean silhouette, no textures
-```
-
-**Bombardiro Crocodilo** (use reference image +)
-```
-stylized plastic, blocky proportions, toy-like, clean silhouette, solid colors, no textures
-```
-
-**Tralalero Tralala** (use reference image +)
-```
-stylized plastic, blocky proportions, toy-like, clean silhouette, solid colors, no textures
-```
-
-## fal.ai Prompt Pack (Props via Trellis 2 or Hunyuan3D)
-**House (modular)**
-```
-low-poly house, clean boxy shape, simple windows, no textures,
-separate roof and body, solid colors
-```
-
-**Street lamp**
-```
-low-poly street lamp, clean silhouette, simple geometry, no textures,
-separate lamp head and pole
-```
-
-**Round table**
-```
-low-poly round table, simple legs, clean silhouette, no textures,
-separate tabletop and base
-```
+See `docs/character_pipeline.md` for character identity, pose, and stylization rules.
 
 ## Consistency Checklist (Required)
-- Override all materials to palette in-engine
+- Keep generated textures (Textured Mesh = Enabled in Hunyuan3D preserves colors)
+- Override material properties in code: metalness=0, roughness=0.5, clearcoat=0.05 (fixes Hunyuan3D's metallic defaults)
 - Normalize scale (humanoids ~1.7m)
 - Pivot at feet (characters) and base (props)
 - Re-center models to origin

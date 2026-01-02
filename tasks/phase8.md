@@ -18,33 +18,32 @@ and lightweight CLI progress.
 
 ## Log Schema v1.2
 
-**Top-level:**
-- `schema_version`: "1.2"
-- `game_id`: unique game identifier
-- `timestamp_start`: ISO8601
-- `timestamp_end`: ISO8601
-- `winner`: "town" or "mafia"
-- `players`: list of `{seat, persona_id, name, role, outcome}`
-- `events`: list of Event objects
+Required fields:
+```javascript
+log.schema_version
+log.game_id
+log.timestamp_start
+log.timestamp_end
+log.winner
+log.players           // [{seat, persona_id, name, role, outcome}]
+log.events            // [{type, timestamp, data, private_fields}]
 
-**Event envelope:**
-- `type`: "speech", "vote_round", "elimination", "night_kill", etc.
-- `timestamp`: ISO8601
-- `data`: event-specific payload (includes phase metadata)
-- `private_fields`: list of keys in `data` hidden in public view; if it covers all keys, the event is omitted
+event.type            // "speech", "vote_round", "elimination", "night_kill", etc.
+event.timestamp       // ISO8601
+event.data.phase      // "day_1", "night_1", etc.
+event.data.round_number
+event.data.stage
+event.data.state_public    // {phase, round_number, living, dead, nominated}
+event.private_fields // list of data keys hidden in public mode
+event.data.reasoning // present in omniscient view when not filtered
+```
 
-**Event data (standard fields added by phases):**
-These fields live inside `event.data`.
-- `phase`: e.g., "night_zero", "day_1", "night_1"
-- `round_number`: integer (0 for night_zero)
-- `stage`: e.g., "night_zero", "discussion", "vote", "defense", "elimination",
-  "night_kill", "investigation", "last_words", "game_end"
-- `state_public`:
-  - `phase`
-  - `round_number`
-  - `living`: list of player names
-  - `dead`: list of player names
-  - `nominated`: list of player names
+Notes:
+- `state_before`/`state_after` live inside `event.data` for roster-changing events.
+- Private reasoning is in `event.data.reasoning` and listed in `event.private_fields`.
+- `vote_round` includes `data.round`, `data.outcome`, and `data.votes`.
+- `vote_round.data.outcome`: `"eliminated"`, `"no_elimination"`, or `"tie"` (round 1 only).
+- `elimination` includes `data.eliminated`.
 
 **Stage mapping (expected):**
 - `phase_start` → `stage: "phase_start"`
@@ -57,13 +56,6 @@ These fields live inside `event.data`.
 - `last_words` → `stage: "last_words"`
 - `night_zero_strategy` → `stage: "night_zero"`
 - `game_end` → `stage: "game_end"`
-
-**Vote outcomes:**
-- `vote_round.data.outcome`: `"eliminated"`, `"no_elimination"`, or `"tie"` (round 1 only)
-
-**State transitions (for events that change roster):**
-- `state_before`
-- `state_after`
 
 **Night Zero:**
 - New event type `night_zero_strategy`
@@ -78,17 +70,29 @@ These fields live inside `event.data`.
 - Remain fully private (target/result/reasoning hidden in public view).
 - Phase/round/state metadata can be included but remain private if needed.
 
-**Reasoning payloads (omniscient only):**
-Per-event sources for full SGR output:
-- `speech.data.reasoning`: full `SpeakingOutput`
-- `vote_round.data.vote_details[<voter>]`: full `VotingOutput` (per voter)
-- `defense.data.reasoning`: full `DefenseOutput`
-- `last_words.data.reasoning`: full `LastWordsOutput`
-- `night_kill.data.reasoning`: full `NightKillOutput` or coordination bundle
-  (`proposals*`, `proposal_details*`, optional `decided_by`)
-- `investigation.data.reasoning`: full `InvestigationOutput`
-- `night_zero_strategy.data.reasoning`: full `SpeakingOutput` (night_zero context; nomination ignored)
-- These fields are listed in `private_fields` so public mode drops them.
+**Reasoning payloads (viewer mapping):**
+Use `thought` for internal monologue TTS (plays before spoken line) and `subtitle` for the
+spoken line. Many events have no subtitle.
+
+| event.type | thought source | subtitle source | notes |
+|-----------|----------------|-----------------|-------|
+| `speech` | `data.reasoning.reasoning` | `data.text` | `data.reasoning` is full `SpeakingOutput`. |
+| `defense` | `data.reasoning.reasoning` | `data.text` | `data.reasoning` is full `DefenseOutput`. |
+| `last_words` | `data.reasoning.reasoning` | `data.text` | `data.reasoning` is full `LastWordsOutput`. |
+| `night_zero_strategy` | `data.reasoning.reasoning` | `data.text` | `data.reasoning` is full `SpeakingOutput` (night_zero context). |
+| `vote_round` | `data.vote_details[<voter>].reasoning` | none | Per-voter `VotingOutput`. Use selectively. |
+| `night_kill` | see notes | `proposal_details*[*].message` (optional) | Reasoning is a coordination bundle. |
+| `investigation` | `data.reasoning.reasoning` | none | `data.reasoning` is full `InvestigationOutput`. |
+| `elimination` | none | none | Use UI + day announcement, not log text. |
+
+**Night kill bundle details:**
+- Round 1: `reasoning.proposals` + `reasoning.proposal_details`
+- Round 2: `reasoning.proposals_r1`, `reasoning.proposals_r2`,
+  `reasoning.proposal_details_r1`, `reasoning.proposal_details_r2`, optional `decided_by`
+- Each entry in `proposal_details*` is a full `NightKillOutput` (includes `message` and
+  `reasoning`). Viewer must parse these; do not assume `data.text` exists.
+
+Viewer should handle `vote_round` + `elimination` events (schema v1.2).
 
 **Context alignment:**
 - Event log changes are for replay/visibility only.
