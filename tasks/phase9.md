@@ -1,33 +1,38 @@
-# Phase 9: Replay Viewer (React + Vite)
+# Phase 9: Roster + Role Expansion (Engine)
 
-> **STATUS: ARCHIVED**
->
-> This phase has been superseded by Phase 10 (3D Voxel Viewer). The 2.5D CSS approach
-> proved too static for YouTube content. We're starting fresh with React Three Fiber.
-> See `tasks/phase10.md` and `docs/replay_vision.md` for the new direction.
->
-> The code in `viewer/` will be cleaned up and rebuilt.
+**Goal:** Expand the game engine to a 10-player roster with Doctor support and updated logs,
+so the viewer can render full games.
 
----
+**Status:** 🚧 IN PROGRESS
 
-**Original Goal:** Transform the basic React viewer into the **2.5D Cinematic Stage** described in `docs/replay_vision.md`. The viewer will act as a visual "Director," interpreting the game log into a watchable, TV-style show.
+**Prerequisites:** Phase 1-8 complete
 
 ---
 
 ## Scope
 
-- **Core:** React + Vite app in `viewer/`.
-- **Layout:** "Talk-Show" stage (semi-arc seating) with 2.5D depth.
-- **Visuals:** "Digital Tabletop" aesthetic (circular character portraits, wood textures).
-- **Logic:** Phase navigation, event stepping, public/omniscient modes.
-- **UI:** Cinematic speech bubbles, vote tokens, and dynamic lighting.
+- **Roster:** Expand default player count from 7 to 10.
+- **Roles:** Add Doctor + extra Mafia (3 Mafia total).
+- **Night flow:** Mafia kill → Doctor save → Detective investigate.
+- **Logs:** Emit doctor protection events and state changes in replay logs.
+- **Assets:** Define prompt pack for 10-player character roster (for GLB generation).
 
 ---
 
-## Viewer App Decisions
+## Tasks
 
-- **Location:** `viewer/` (separate frontend workspace).
-- **Framework:** React + Vite (JavaScript).
-- **Build output:** `viewer/dist` (build-only; do not commit).
-- **Data Source:** File-drop JSON loading (no backend server required).
-- **Architecture:** "Headless" state management (logic decoupled from the 2.5D renderer).
+- [ ] Add Doctor role:
+  - Night action: choose a player to protect
+  - If protected target = Mafia kill target, cancel death
+  - Log event for protection outcome
+- [ ] Add 3 players to default roster (10 total)
+- [ ] Add 3rd Mafia role (balance update)
+- [ ] Update night resolution ordering and public/private log fields
+- [ ] Update log schema + parser to include Doctor events
+- [ ] Update tests for new roles and night flow
+- [ ] Create 10-player character prompt pack (reference + style prompts)
+- [ ] Generate a sample 10-player game log
+
+---
+
+**Deliverable:** 10-player games with Doctor role, updated logs, and a full roster prompt pack.

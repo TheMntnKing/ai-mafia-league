@@ -1,13 +1,13 @@
 # Phase 10: 3D Replay Viewer (Roblox-Adjacent, Stylized Mesh)
 **Goal:** Build a 3D stylized mesh replay viewer using React Three Fiber that transforms game logs into cinematic, YouTube-ready content.
 
-**Status:** 🚧 IN PROGRESS (Phases 10.1-10.3 complete, 10.4-10.6 pending)
+**Status:** 🚧 IN PROGRESS (Phases 10.1-10.3 complete, 10.4-10.5 in progress, 10.6 pending)
 
-**Current phase:** 10.3 (Voting + Death) - mostly complete, needs runtime verification
+**Current phase:** 10.4-10.5 (Characters + Scenes) - in progress
 
 **Scope:** Core viewer functionality (log playback, 3D scene, events visualization)
 
-**Predecessor:** Phase 9 (2.5D CSS viewer) - ARCHIVED
+**Predecessor:** Phase 9 (Roster + Role Expansion)
 
 See `docs/replay_vision.md` for visual style rationale and detailed specs.
 
@@ -111,7 +111,7 @@ viewer/src/
 **Goal:** Basic 3D scene that responds to log events.
 
 **Tasks:**
-- [x] Clean up `viewer/` - remove Phase 9 bloat
+- [x] Clean up `viewer/` - remove legacy 2.5D viewer bloat
 - [x] Install R3F dependencies
 - [x] Create `Scene.jsx` with R3F Canvas
 - [x] Create `Stage.jsx` with floor plane (town square placeholder)
@@ -184,19 +184,21 @@ viewer/src/
 
 **Tasks:**
 - [ ] Generate a base humanoid via fal.ai Hunyuan3D (blocky, stylized plastic)
-- [ ] Create 3 initial hero characters via fal.ai:
-  - Bombardiro Crocodilo (use reference image + style prompt)
+- [x] Create 2 initial hero characters via fal.ai:
   - Tralalero Tralala (use reference image + style prompt)
+  - Brbrpatapim (use reference image + style prompt)
+- [ ] Create remaining hero characters:
+  - Bombardiro Crocodilo (use reference image + style prompt)
   - Generic humanoid (text prompt only)
-- [ ] Apply unified material properties; keep textures only if flat/clean (otherwise palette)
-- [ ] Download .glb files
-- [ ] Model loading with `useGLTF`
-- [ ] Hot-swap fallback: `MODELS[persona] || MODELS.placeholder`
+- [x] Apply unified material properties; keep textures only if flat/clean (otherwise palette)
+- [x] Download initial .glb files
+- [x] Model loading with `useGLTF`
+- [x] Hot-swap fallback: `MODELS[persona] || placeholder mesh`
 - [ ] Simple idle animation (bobbing)
 
 **Deliverable:** 3 character models, others placeholders. Dynamic loading works.
 
-**Status:** ❌ Not started.
+**Status:** ⚠️ In progress. 2 models loaded; remaining characters pending.
 
 ---
 
@@ -209,7 +211,12 @@ viewer/src/
 - [ ] Scene variations (scene GLBs per `docs/scene_pipeline.md`):
   - Day town square (warm)
   - Mafia lair (red, fog)
-  - Detective office (blue/noir)
+  - Detective office (neutral + warm accent)
+- [x] Detective office scene GLB loaded + auto-scaled + offset
+- [x] Detective scene tuning: camera preset, neutral lighting, character face-camera
+- [ ] Scene GLB scaling/centering rules applied for all scenes
+- [ ] Camera presets per scene (day/night/mafia/detective)
+- [ ] Lighting tuning per scene (day/night/mafia/detective)
 - [x] Scene switching based on phase
 - [x] Scene roster filtering:
   - Mafia lair shows ONLY Mafia
@@ -227,7 +234,7 @@ viewer/src/
 
 **Deliverable:** All characters modeled. Scene changes work. Mode toggle works.
 
-**Status (code review 2025-01):** ⚠️ Partial. Scene switching logic, roster filtering implemented. ⚠️ **Needs runtime testing**: mode toggle behavior, scene visibility edge cases. Character models pending.
+**Status (code review 2025-01):** ⚠️ Partial. Scene switching logic, roster filtering implemented. Detective office scene loaded + tuned. ⚠️ **Needs runtime testing**: mode toggle behavior, scene visibility edge cases. Character models pending.
 
 ---
 
@@ -259,7 +266,8 @@ viewer/src/
 
 **Pending tasks (Phase 10):**
 - Character model pipeline (10.4)
-- Scene GLB assembly: fog for Mafia lair, props from asset packs (10.5)
+- Scene GLB assembly: town square + Mafia lair (10.5)
+- Camera presets per scene (day/night/mafia/detective) + offsets tuning
 - Reasoning display rules: Detective always, Mafia pre‑speech, most nominated before defense (10.6)
 - New logs with corrected last_words → elimination ordering
 

@@ -4,8 +4,8 @@ Single source of truth for delivery status and next steps.
 
 ## Status
 
-**Game Engine:** Complete (Phases 1-8)
-**Replay Viewer:** In Progress (Phase 10 - 3D Voxel)
+**Game Engine:** Core complete (Phases 1-8), Phase 9 role + roster expansion in progress
+**Replay Viewer:** In Progress (Phase 10 - Stylized Mesh)
 
 ### Completed Phases
 
@@ -19,36 +19,41 @@ Single source of truth for delivery status and next steps.
 | Phase 6 | Game loop (first runnable game) | ✅ |
 | Phase 7 | Quality and observability | ✅ |
 | Phase 8 | Replayable logs (schema v1.2) | ✅ |
-| Phase 9 | 2.5D CSS Viewer | ⚠️ ARCHIVED |
-| **Phase 10** | **3D Voxel Viewer** | 🚧 IN PROGRESS |
+| **Phase 9** | **Roster + Role Expansion (Engine)** | 🚧 IN PROGRESS |
+| **Phase 10** | **3D Stylized Mesh Viewer** | 🚧 IN PROGRESS |
 
-### Phase 9 Archived
+## Current Focus: Phase 9 + Phase 10
 
-The 2.5D CSS-based viewer (Phase 9) has been archived. We're starting fresh with a 3D voxel
-approach using React Three Fiber. See `docs/replay_vision.md` for rationale.
-
-The `viewer/` directory will be cleaned up and rebuilt for Phase 10.
-
----
-
-## Current Focus: Phase 10
-
-Building a 3D voxel-style replay viewer. See `tasks/phase10.md` for detailed plan.
+Expanding the engine roster/roles (Phase 9) and building the stylized mesh viewer (Phase 10).
+See `tasks/phase9.md` and `tasks/phase10.md` for detailed plans.
 
 **Key decisions:**
-- Visual style: 3D Voxel (Minecraft/Roblox aesthetic)
+- Visual style: Stylized mesh, Roblox-adjacent (not voxel)
 - Tech stack: React Three Fiber + drei + Zustand
-- Character system: Voxel blocks with iconic accessories
+- Character system: Stylized mesh characters (GLB), 2-3 iconic features
 - Voting display: Sequential, show who voted for who
 - Reasoning: Curated (Detective always, Mafia rotating)
 
-**Milestones:**
-1. Foundation: Cubes + event playback (Week 1-2)
-2. Camera + Speech bubbles (Week 2-3)
-3. Voting + Death animations (Week 3-4)
-4. First voxel character models (Week 4-5)
-5. Full character set + scenes (Week 5-6)
-6. Polish + reasoning display (Week 6+)
+---
+
+## Priorities (P0 / P1 / P2)
+
+**P0 — Essentials (Week 1)**
+- Finish character roster (8 more + generic) and load GLBs in viewer
+- Add Doctor + extra Mafia + 3 players in engine; ensure logs align with viewer
+- Build town square + mafia lair scene GLBs; load in viewer
+- Apply scene scaling/centering + offsets to all scenes
+- Camera presets + lighting tuning per scene (day/night/mafia/detective)
+
+**P1 — Watchability (Week 1.5-2)**
+- Basic TTS playback with 10 unique voices + volume/speed controls
+- Reasoning display (10.6) + timeline scrubber + keyboard shortcuts
+- Scene atmosphere pass (fog, lamps/props) where needed
+
+**P2 — Polish (Week 2+)**
+- Character reactions/gestures + idle variation
+- Timeline/cut-point exports + editor workflow docs
+- Accessibility + performance tuning
 
 ---
 
@@ -72,7 +77,7 @@ Building a 3D voxel-style replay viewer. See `tasks/phase10.md` for detailed pla
 - Narrator system
 
 ### Viewer Enhancements
-- TTS integration (ElevenLabs)
+- TTS integration (per-provider)
 - Video export directly from viewer
 - Timeline markers for "high drama" moments
 - Live streaming mode

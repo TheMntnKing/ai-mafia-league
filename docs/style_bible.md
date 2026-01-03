@@ -66,10 +66,9 @@ All scenes use a **3-point setup**: ambient + key directional + fill directional
 - Fill: neutral directional `#ffffff`, intensity `0.4` (preserves character colors)
 
 **Detective Office**
-- Ambient: dark blue `#15254A`, intensity `0.25`
-- Key: blue directional `#4DA3FF`, intensity `1.0`
-- Fill: neutral directional `#ffffff`, intensity `0.3`
-- Accent: warm point light `#FFC857`, intensity `0.65`
+- Ambient: neutral `#D9DDE3`, intensity `0.35`
+- Key: warm directional `#FFE6C7`, intensity `0.9`
+- Fill: neutral directional `#ffffff`, intensity `0.6`
 
 ## Scene Pipeline
 

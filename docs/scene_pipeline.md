@@ -50,7 +50,7 @@ Download packs (free) → Assemble in Blender → Export GLB → Load in R3F
 1. **Import assets** (GLB/FBX)
 2. **Arrange scene** - position props, set scale
 3. **Adjust materials** - match style_bible.md (plastic look, palette colors)
-4. **Set origin** - scene center at (0, 0, 0)
+4. **Set origin** - scene center at (0, 0, 0), floor at y=0
 5. **Export GLB** - include materials, no animations
 
 ### Export Settings
@@ -74,6 +74,10 @@ Scenes load in `Stage.jsx` based on `sceneKind` prop:
 - `sceneKind="town"` → town_square.glb (day/night via lighting)
 - `sceneKind="mafia"` → mafia_lair.glb
 - `sceneKind="detective"` → detective_office.glb
+
+Stage auto-centers + scales scene GLBs to a target width, then applies an optional offset.
+If a scene feels too big/small or misaligned, adjust:
+- `SCENE_TARGET_WIDTH` and `SCENE_OFFSETS` in `viewer/src/components/Stage.jsx`
 
 ## Style Consistency
 

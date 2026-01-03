@@ -27,6 +27,7 @@ Stylized mesh humanoids with blocky proportions. Roblox-adjacent silhouette, not
 - Character workflow: `docs/character_pipeline.md`
 - Scene workflow: `docs/scene_pipeline.md` (asset packs assembled in Blender)
 - Output: `.glb` for R3F (scale normalized, pivot at feet, materials optionally overridden)
+  - Scenes are auto-centered/scaled in viewer; tune per scene if needed
 
 ---
 
@@ -203,7 +204,7 @@ Material and pose rules live in `docs/character_pipeline.md`. Palette and lighti
 | Day (Town Square) | Warm, golden hour | Discussion + voting |
 | Night (Sleeping) | Blue/dark, moonlight | Transition (public mode) |
 | Mafia Lair | Red underglow, fog | Night coordination (omniscient) |
-| Detective Office | Blue/noir | Investigation (omniscient) |
+| Detective Office | Neutral + warm accent | Investigation (omniscient) |
 
 **Layout:** Characters in semi-circle arc facing camera. Table/podium in foreground.
 
