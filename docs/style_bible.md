@@ -47,24 +47,33 @@ Goal: meme-friendly, kid/teen pleasing, but cinematic and slightly serious via l
 - emissive intensity: `0.6–1.2`
 
 ## Lighting Rules
+
+All scenes use a **3-point setup**: ambient + key directional + fill directional. No shadows (cleaner stylized look).
+
 **Day (Town)**
-- Key: warm directional `#FFE6C7`, intensity `1.0–1.3`
-- Fill: cool ambient `#BBD4FF`, intensity `0.2–0.4`
-- Soft shadows on
+- Ambient: cool `#BBD4FF`, intensity `0.4`
+- Key: warm directional `#FFE6C7`, intensity `1.2`
+- Fill: neutral directional `#ffffff`, intensity `0.5`
 
 **Night (Town)**
-- Key: cool directional `#7FA7FF`, intensity `0.4–0.7`
-- Ambient: `0.1–0.2`
-- Practical lights: lamps/windows emissive
+- Ambient: cool `#7FA7FF`, intensity `0.2`
+- Key: cool directional `#7FA7FF`, intensity `0.6`
+- Fill: neutral directional `#ffffff`, intensity `0.3`
 
 **Mafia Lair**
-- Key: red `#FF4D4D`, intensity `0.8–1.2`
-- Ambient: `0.1`
-- Light fog/haze if available
+- Ambient: dark red `#3B1A1A`, intensity `0.15`
+- Key: red directional `#FF4D4D`, intensity `1.0`
+- Fill: neutral directional `#ffffff`, intensity `0.4` (preserves character colors)
 
 **Detective Office**
-- Key: blue `#4DA3FF`, intensity `0.8–1.1`
-- Accent: warm desk lamp `#FFC857`
+- Ambient: dark blue `#15254A`, intensity `0.25`
+- Key: blue directional `#4DA3FF`, intensity `1.0`
+- Fill: neutral directional `#ffffff`, intensity `0.3`
+- Accent: warm point light `#FFC857`, intensity `0.65`
+
+## Scene Pipeline
+
+See `docs/scene_pipeline.md` for asset sources, Blender assembly, and export rules.
 
 ## Town Square Blockout (Scene A)
 Top-down plan, centered at (0,0):

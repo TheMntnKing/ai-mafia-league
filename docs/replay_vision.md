@@ -25,7 +25,7 @@ Stylized mesh humanoids with blocky proportions. Roblox-adjacent silhouette, not
 
 ### Asset Pipeline (Practical)
 - Character workflow: `docs/character_pipeline.md`
-- Props generation: Trellis 2 (fal.ai), guided by `docs/style_bible.md`
+- Scene workflow: `docs/scene_pipeline.md` (asset packs assembled in Blender)
 - Output: `.glb` for R3F (scale normalized, pivot at feet, materials optionally overridden)
 
 ---

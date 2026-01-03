@@ -29,7 +29,7 @@ See `docs/replay_vision.md` for visual style rationale and detailed specs.
 | Helpers | @react-three/drei |
 | State | Zustand |
 | Animation | React Spring |
-| Assets | fal.ai API (Hunyuan3D, Trellis 2) → .glb |
+| Assets | Hunyuan3D (characters) + asset packs via Blender (scenes) → .glb |
 | Debug | Leva |
 
 ```bash
@@ -60,7 +60,7 @@ viewer/src/
 │   └── gameStore.js        # Zustand: log, eventIndex, playback state
 ├── components/
 │   ├── Scene.jsx           # R3F Canvas wrapper
-│   ├── Stage.jsx           # Floor, table geometry
+│   ├── Stage.jsx           # Scene loader (GLB) + floor placeholder
 │   ├── Character.jsx       # Single stylized character
 │   ├── Characters.jsx      # All characters positioned in arc
 │   ├── Subtitles.jsx       # Speech text display
@@ -82,7 +82,7 @@ viewer/src/
 ## Asset Pipeline
 
 - Characters: `docs/character_pipeline.md`
-- Props: Trellis 2 (fal.ai), guided by `docs/style_bible.md`
+- Scenes: `docs/scene_pipeline.md` (asset packs assembled in Blender)
 
 ---
 
@@ -94,15 +94,15 @@ viewer/src/
 
 **Tasks:**
 - [x] Define a style bible (palette, materials, lighting rules, scale) in `docs/style_bible.md`
-- [x] Lock AI tools (fal.ai: Hunyuan3D for characters, Trellis 2 for props)
-- [x] Draft prompt rules for town assets + character silhouettes
+- [x] Lock character tool (fal.ai: Hunyuan3D) + scene pipeline (asset packs + Blender)
+- [x] Draft prompt rules for characters + select scene asset packs
 - [x] Draft a town square blockout (houses, lamps, round table)
-- [ ] Smoke test: generate 1 character + 1 prop via fal.ai, verify GLB loads in R3F
-  - Character GLB loads in viewer (tralalelo.glb); prop still pending.
+- [ ] Smoke test: load 1 character GLB + 1 scene GLB, verify R3F loads both
+  - Character GLB loads in viewer (tralalelo.glb); scene GLB pending.
 
-**Deliverable:** Style bible + AI prompt rules + blockout scene + verified pipeline.
+**Deliverable:** Style bible + character prompts + scene pipeline + blockout scene + verified pipeline.
 
-**Status:** ⚠️ Mostly complete. Smoke test (fal.ai generation) pending.
+**Status:** ⚠️ Mostly complete. Smoke test (scene GLB load) pending.
 
 ---
 
@@ -206,7 +206,7 @@ viewer/src/
 
 **Tasks:**
 - [ ] Create remaining character models
-- [ ] Scene variations:
+- [ ] Scene variations (scene GLBs per `docs/scene_pipeline.md`):
   - Day town square (warm)
   - Mafia lair (red, fog)
   - Detective office (blue/noir)
@@ -259,7 +259,7 @@ viewer/src/
 
 **Pending tasks (Phase 10):**
 - Character model pipeline (10.4)
-- Scene environment detail: fog for Mafia lair, props for town square (10.5)
+- Scene GLB assembly: fog for Mafia lair, props from asset packs (10.5)
 - Reasoning display rules: Detective always, Mafia pre‑speech, most nominated before defense (10.6)
 - New logs with corrected last_words → elimination ordering
 
