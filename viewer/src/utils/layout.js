@@ -8,6 +8,9 @@ export const ARC_LAYOUT = {
 
 export function getArcPositions(count, config = ARC_LAYOUT) {
   if (count <= 0) return []
+  if (count === 1) {
+    return [[0, config.y, 0]]
+  }
 
   const { radius, centerZ, startAngle, endAngle, y } = config
   const step = count > 1 ? (endAngle - startAngle) / (count - 1) : 0

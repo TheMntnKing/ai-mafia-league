@@ -1,4 +1,5 @@
 import { Canvas } from '@react-three/fiber'
+import { Preload } from '@react-three/drei'
 import Camera from './Camera'
 import Lighting from './Lighting'
 import Stage from './Stage'
@@ -31,8 +32,8 @@ function Scene({
 
   return (
     <div className="scene">
-      <Canvas shadows>
-        <Camera mode={focusMode} speakerPosition={speakerPosition} />
+      <Canvas>
+        <Camera mode={focusMode} speakerPosition={speakerPosition} sceneKind={sceneKind} />
         <Lighting phase={phase} scene={sceneKind} />
         <Stage sceneKind={sceneKind} />
         <Characters
@@ -40,7 +41,9 @@ function Scene({
           activeSpeaker={activeSpeaker}
           living={living}
           showRoles={showRoles}
+          sceneKind={sceneKind}
         />
+        <Preload all />
       </Canvas>
       {sceneLabel && <div className="scene-label">{sceneLabel}</div>}
       {subtitle}

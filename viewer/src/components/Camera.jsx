@@ -8,17 +8,23 @@ const WIDE = {
   position: new Vector3(0, 3.5, 9),
   target: new Vector3(0, 0.8, 0),
 }
+const DETECTIVE_WIDE = {
+  position: new Vector3(5, 2.5, 2),
+  target: new Vector3(0.5, 1.5, 0.1),
+}
 const ELIMINATION = {
   position: new Vector3(0, 2.2, 4.6),
   target: new Vector3(0, 0.9, 0),
 }
 
-function Camera({ mode, speakerPosition }) {
+function Camera({ mode, speakerPosition, sceneKind }) {
   const cameraRef = useRef(null)
 
+  const widePreset = sceneKind === 'detective' ? DETECTIVE_WIDE : WIDE
+  const fov = sceneKind === 'detective' ? 25: 45
   const [{ position, target }, api] = useSpring(() => ({
-    position: WIDE.position.toArray(),
-    target: WIDE.target.toArray(),
+    position: widePreset.position.toArray(),
+    target: widePreset.target.toArray(),
     config: { tension: 140, friction: 22 },
   }))
 
@@ -32,7 +38,7 @@ function Camera({ mode, speakerPosition }) {
 
   useEffect(() => {
     if (mode === 'vote') return
-    let preset = WIDE
+    let preset = widePreset
     if (mode === 'speaker' && speakerPreset) {
       preset = speakerPreset
     }
@@ -46,7 +52,7 @@ function Camera({ mode, speakerPosition }) {
       position: preset.position.toArray(),
       target: preset.target.toArray(),
     })
-  }, [mode, speakerPreset, api])
+  }, [mode, speakerPreset, api, widePreset])
 
   useFrame((state) => {
     const camera = cameraRef.current
@@ -66,7 +72,7 @@ function Camera({ mode, speakerPosition }) {
     camera.lookAt(tgt[0], tgt[1], tgt[2])
   })
 
-  return <PerspectiveCamera ref={cameraRef} makeDefault fov={45} />
+  return <PerspectiveCamera ref={cameraRef} makeDefault fov={fov} />
 }
 
 export default Camera
