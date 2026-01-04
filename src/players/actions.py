@@ -50,6 +50,8 @@ class ActionHandler:
             return self._validate_night_kill(output, game_state, mafia_names)
         elif action_type == ActionType.INVESTIGATION:
             return self._validate_investigation(output, game_state, player_name)
+        elif action_type == ActionType.DOCTOR_PROTECT:
+            return self._validate_doctor_protect(output, game_state)
         else:
             # LAST_WORDS and DEFENSE have no validation constraints
             return output
@@ -147,6 +149,15 @@ class ActionHandler:
             raise ActionValidationError("Cannot investigate yourself.")
         return output
 
+    def _validate_doctor_protect(self, output: dict, state: GameState) -> dict:
+        """Target must be a living player (self allowed)."""
+        target = output.get("target", "")
+        if target not in state.living_players:
+            raise ActionValidationError(
+                f"Invalid target '{target}'. Must be a living player."
+            )
+        return output
+
     def get_default(
         self,
         action_type: ActionType,
@@ -209,6 +220,13 @@ class ActionHandler:
                 "strategy": "Investigate to build future evidence.",
                 "reasoning": "No strong lead, investigating randomly.",
                 "target": random.choice(valid_targets),
+            },
+            ActionType.DOCTOR_PROTECT: {
+                "observations": "Night phase with no clear protection target.",
+                "suspicions": "Uncertain who will be targeted.",
+                "strategy": "Protect a likely target or self if unsure.",
+                "reasoning": "No strong read, choosing a safe protection.",
+                "target": random.choice(game_state.living_players),
             },
             ActionType.LAST_WORDS: {
                 "reasoning": "Offer final guidance and close out respectfully.",

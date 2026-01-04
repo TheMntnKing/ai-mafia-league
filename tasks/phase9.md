@@ -2,7 +2,7 @@
 
 **Goal:** Move engine to 10 players (3 Mafia + Doctor) and split night events for replay.
 
-**Status:** PLANNING  
+**Status:** IN PROGRESS (9.1 complete)  
 **Prerequisites:** Phase 1-8 complete
 
 ---
@@ -10,19 +10,20 @@
 ## Changes (what + where)
 
 ### 9.1 Schema + State
-- `src/schemas/core.py`: add `ActionType.DOCTOR_PROTECT`
-- `src/schemas/actions.py`: add `DoctorProtectOutput(BaseThinking)`
-- `src/schemas/persona.py`: add `doctor` to `RoleGuidance` (optional field)
-- `src/engine/state.py`: require 10 players; roles = 3 Mafia + Doctor + Detective + 5 Town; speaking order uses player count (use `% player_count`, no hardcoded 7); add `get_mafia_partners()`
-- `src/engine/state.py` or `src/engine/game.py`: improve win-condition evaluation to handle “forced parity after night” when no Doctor is alive (end immediately after a mislynch if the next night kill is guaranteed to reach parity)
-- `src/engine/game.py`: pass Mafia partners list into agents (not single partner)
-- Use `partners: list[str]` (all other Mafia) as the standard key in `action_context`
-- Flow: `game.py` builds partners list -> `agent.py` stores -> `context.py` reads for role/coordination sections
-- `src/engine/run.py`: expect 10 personas (remove 7-persona guard)
-- `src/providers/anthropic.py`: add `DoctorProtectOutput` to `ACTION_SCHEMA_MAP`
-- `src/players/actions.py`: validate `DOCTOR_PROTECT` (living target, allow self); add default action
-- `src/players/agent.py`: store partners list; use for validation + context
-- `src/engine/context.py`: add `ActionType.DOCTOR_PROTECT` handling in `_build_action_prompt`
+**Status:** ✅ implemented in code (tests pending in 9.7)
+- `src/schemas/core.py`: add `ActionType.DOCTOR_PROTECT` ✅
+- `src/schemas/actions.py`: add `DoctorProtectOutput(BaseThinking)` ✅
+- `src/schemas/persona.py`: add `doctor` to `RoleGuidance` (optional field) ✅
+- `src/engine/state.py`: require 10 players; roles = 3 Mafia + Doctor + Detective + 5 Town; speaking order uses player count (use `% player_count`, no hardcoded 7); add `get_mafia_partners()` ✅
+- `src/engine/state.py` or `src/engine/game.py`: improve win-condition evaluation to handle “forced parity after night” when no Doctor is alive (end immediately after a mislynch if the next night kill is guaranteed to reach parity) ✅
+- `src/engine/game.py`: pass Mafia partners list into agents (not single partner) ✅
+- Use `partners: list[str]` (all other Mafia) as the standard key in `action_context` ✅
+- Flow: `game.py` builds partners list -> `agent.py` stores -> `context.py` reads for role/coordination sections ✅
+- `src/engine/run.py`: expect 10 personas (remove 7-persona guard) ✅
+- `src/providers/anthropic.py`: add `DoctorProtectOutput` to `ACTION_SCHEMA_MAP` ✅
+- `src/players/actions.py`: validate `DOCTOR_PROTECT` (living target, allow self); add default action ✅
+- `src/players/agent.py`: store partners list; use for validation + context ✅
+- `src/engine/context.py`: add `ActionType.DOCTOR_PROTECT` handling in `_build_action_prompt` ✅
 
 ### 9.2 Log Schema + Event Decomposition
 - `src/engine/events.py`: add

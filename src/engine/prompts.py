@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-RULES_SUMMARY = """You are playing Mafia with 7 players: 2 Mafia, 1 Detective, 4 Town.
+RULES_SUMMARY = """You are playing Mafia with 10 players: 3 Mafia, 1 Detective, 1 Doctor, 5 Town.
 
 ROLES:
-- Town: No special abilities. Win by eliminating both Mafia.
+- Town: No special abilities. Win by eliminating all Mafia.
 - Detective: Town-aligned. Can investigate one player per night to learn if they are Mafia.
+- Doctor: Town-aligned. Can protect one player per night (including self). If targeted, the kill is prevented.
 - Mafia: Know each other. Can kill one player per night. Win when Mafia >= Town-aligned.
 
 GAME FLOW:
 1. Day Phase: All players discuss, each nominates one player. Then vote.
    - Plurality vote eliminates a player. Skip wins mean no elimination. Player ties (or skip tied with one player) trigger revote.
-2. Night Phase: Mafia choose a kill target. Detective investigates.
+2. Night Phase: Mafia choose a kill target. Doctor protects. Detective investigates.
 3. Game ends when all Mafia are dead (Town wins) or Mafia >= Town-aligned (Mafia wins).
 
 RULES:
@@ -82,8 +83,8 @@ NIGHT_KILL_PROMPT_TEMPLATE = """[YOUR TASK: MAFIA NIGHT KILL]
 It's night. Choose a target to kill.
 
 1. Consider who threatens your team (Detective suspects, strong Town leaders)
-2. Coordinate with your partner's suggestion if provided
-3. Provide a message to your partner explaining your reasoning
+2. Coordinate with your partners' suggestions if provided
+3. Provide a message to your partners explaining your reasoning
 4. Choose a target or "skip" to spare everyone tonight
 
 Valid targets: {living_except_self}
@@ -99,6 +100,18 @@ It's night. Choose someone to investigate.
 3. Choose a target to learn if they are Mafia
 
 Valid targets: {living_except_self}
+
+ Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
+ then provide your target."""
+
+DOCTOR_PROTECT_PROMPT_TEMPLATE = """[YOUR TASK: DOCTOR PROTECTION]
+It's night. Choose someone to protect.
+
+1. Consider who is most likely to be targeted
+2. Decide whether to protect yourself or another player
+3. Choose one living player to protect
+
+Valid targets: {living_players}
 
  Fill out ALL fields in the schema (observations → suspicions → strategy → reasoning),
  then provide your target."""
@@ -147,6 +160,10 @@ def build_night_kill_prompt(living_except_self: str) -> str:
 
 def build_investigation_prompt(living_except_self: str) -> str:
     return INVESTIGATION_PROMPT_TEMPLATE.format(living_except_self=living_except_self)
+
+
+def build_doctor_protect_prompt(living_players: str) -> str:
+    return DOCTOR_PROTECT_PROMPT_TEMPLATE.format(living_players=living_players)
 
 
 def build_last_words_prompt(last_words_role_note: str) -> str:

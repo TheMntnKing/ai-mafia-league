@@ -45,6 +45,12 @@ class InvestigationOutput(BaseThinking):
     target: str  # player name
 
 
+class DoctorProtectOutput(BaseThinking):
+    """Night phase: Doctor protection."""
+
+    target: str  # player name (can protect self)
+
+
 class LastWordsOutput(BaseModel):
     """Eliminated player's final statement."""
 

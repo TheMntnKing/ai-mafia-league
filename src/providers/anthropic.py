@@ -12,6 +12,7 @@ from src.providers.base import InvalidResponseError, ProviderError, retry_with_b
 from src.schemas import (
     ActionType,
     DefenseOutput,
+    DoctorProtectOutput,
     InvestigationOutput,
     LastWordsOutput,
     NightKillOutput,
@@ -43,6 +44,7 @@ ACTION_SCHEMA_MAP: dict[ActionType, type] = {
     ActionType.VOTE: VotingOutput,
     ActionType.NIGHT_KILL: NightKillOutput,
     ActionType.INVESTIGATION: InvestigationOutput,
+    ActionType.DOCTOR_PROTECT: DoctorProtectOutput,
     ActionType.LAST_WORDS: LastWordsOutput,
     ActionType.DEFENSE: DefenseOutput,
 }

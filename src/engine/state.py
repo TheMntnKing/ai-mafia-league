@@ -14,7 +14,7 @@ class PlayerInfo:
 
     name: str
     seat: int
-    role: str  # "mafia", "detective", "town"
+    role: str  # "mafia", "detective", "doctor", "town"
     alive: bool = True
 
 
@@ -34,14 +34,14 @@ class GameStateManager:
         Initialize game with players.
 
         Args:
-            player_names: List of exactly 7 player names
+            player_names: List of exactly 10 player names
             seed: Random seed for reproducibility (useful for testing)
 
         Raises:
-            ValueError: If not exactly 7 players
+            ValueError: If not exactly 10 players
         """
-        if len(player_names) != 7:
-            raise ValueError(f"Game requires exactly 7 players, got {len(player_names)}")
+        if len(player_names) != 10:
+            raise ValueError(f"Game requires exactly 10 players, got {len(player_names)}")
 
         self.rng = random.Random(seed)
         self.players: dict[str, PlayerInfo] = {}
@@ -58,8 +58,8 @@ class GameStateManager:
         shuffled = names.copy()
         self.rng.shuffle(shuffled)
 
-        # Assign roles: 2 Mafia, 1 Detective, 4 Town
-        roles = ["mafia", "mafia", "detective"] + ["town"] * 4
+        # Assign roles: 3 Mafia, 1 Doctor, 1 Detective, 5 Town
+        roles = ["mafia"] * 3 + ["doctor", "detective"] + ["town"] * 5
         self.rng.shuffle(roles)
 
         for seat, (name, role) in enumerate(zip(shuffled, roles, strict=True)):
@@ -121,7 +121,7 @@ class GameStateManager:
         """
         Get speaking order for current day.
 
-        Speaking order rotates: first speaker position = (day_number - 1) mod 7.
+        Speaking order rotates: first speaker position = (day_number - 1) mod player_count.
         Dead players are skipped.
         """
         # Get living players sorted by seat
@@ -131,18 +131,20 @@ class GameStateManager:
         if not living:
             return []
 
+        player_count = len(self.players)
+
         # Calculate starting position (rotates each day)
         # Day 1 -> start at seat 0, Day 2 -> start at seat 1, etc.
         day_number = self.round_number if self.round_number > 0 else 1
-        start_offset = (day_number - 1) % 7
+        start_offset = (day_number - 1) % player_count
 
         # Find the first living player at or after the start position
         # by rotating the living players list
         result = []
 
         # Find players in order starting from start_offset
-        for offset in range(7):
-            target_seat = (start_offset + offset) % 7
+        for offset in range(player_count):
+            target_seat = (start_offset + offset) % player_count
             for player in living:
                 if player.seat == target_seat and player.name not in result:
                     result.append(player.name)
@@ -164,10 +166,30 @@ class GameStateManager:
         if not player or player.role != "mafia":
             return None
 
-        for other in self.players.values():
-            if other.role == "mafia" and other.name != player_name:
-                return other.name
-        return None
+        partners = self.get_mafia_partners(player_name)
+        return partners[0] if partners else None
+
+    def get_mafia_partners(self, player_name: str) -> list[str]:
+        """
+        Get all Mafia partners of a player (excluding self).
+
+        Args:
+            player_name: Name of the player to check
+
+        Returns:
+            List of Mafia partner names (empty if not Mafia)
+        """
+        player = self.players.get(player_name)
+        if not player or player.role != "mafia":
+            return []
+
+        partners = [
+            other.name
+            for other in self.players.values()
+            if other.role == "mafia" and other.name != player_name
+        ]
+        partners.sort(key=lambda name: self.players[name].seat)
+        return partners
 
     def get_player_role(self, player_name: str) -> str | None:
         """Get a player's role."""
@@ -228,14 +250,33 @@ class GameStateManager:
         """
         living = [p for p in self.players.values() if p.alive]
         mafia_count = sum(1 for p in living if p.role == "mafia")
-        town_count = len(living) - mafia_count  # Includes Detective
+        town_count = len(living) - mafia_count  # Includes Detective and Doctor
 
-        # Town wins: both Mafia dead
+        # Town wins: all Mafia dead
         if mafia_count == 0:
             return "town"
 
         # Mafia wins: Mafia >= Town-aligned
         if mafia_count >= town_count:
+            return "mafia"
+
+        return None
+
+    def check_forced_parity_after_day(self) -> str | None:
+        """
+        Check if Mafia win is guaranteed after the next night kill.
+
+        Applies only when Doctor is dead and a day elimination just occurred.
+        """
+        living = [p for p in self.players.values() if p.alive]
+        mafia_count = sum(1 for p in living if p.role == "mafia")
+        town_count = len(living) - mafia_count
+        doctor_alive = any(p.alive and p.role == "doctor" for p in self.players.values())
+
+        if doctor_alive:
+            return None
+
+        if mafia_count >= town_count - 1:
             return "mafia"
 
         return None

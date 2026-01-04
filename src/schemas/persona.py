@@ -35,6 +35,7 @@ class RoleGuidance(BaseModel):
     town: str
     mafia: str
     detective: str
+    doctor: str | None = None
 
 
 class Persona(BaseModel):

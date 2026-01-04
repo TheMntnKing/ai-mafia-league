@@ -87,8 +87,8 @@ async def run_game_cli(args: argparse.Namespace) -> int:
         console.print("Create personas in src/personas/initial.py")
         return 1
 
-    if len(personas) != 7:
-        console.print(f"[red]Error: Expected 7 personas, got {len(personas)}[/red]")
+    if len(personas) != 10:
+        console.print(f"[red]Error: Expected 10 personas, got {len(personas)}[/red]")
         return 1
 
     # Create provider

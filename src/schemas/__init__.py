@@ -3,6 +3,7 @@
 from src.schemas.actions import (
     BaseThinking,
     DefenseOutput,
+    DoctorProtectOutput,
     InvestigationOutput,
     LastWordsOutput,
     NightKillOutput,
@@ -40,6 +41,7 @@ __all__ = [
     # Actions
     "BaseThinking",
     "DefenseOutput",
+    "DoctorProtectOutput",
     "InvestigationOutput",
     "LastWordsOutput",
     "NightKillOutput",

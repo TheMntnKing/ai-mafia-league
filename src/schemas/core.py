@@ -16,6 +16,7 @@ class ActionType(str, Enum):
     LAST_WORDS = "last_words"
     NIGHT_KILL = "night_kill"
     INVESTIGATION = "investigation"
+    DOCTOR_PROTECT = "doctor_protect"
 
 
 class GameState(BaseModel):

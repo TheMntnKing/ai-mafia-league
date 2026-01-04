@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from src.engine.prompts import (
     DEFENSE_PROMPT,
     RULES_SUMMARY,
+    build_doctor_protect_prompt,
     build_investigation_prompt,
     build_last_words_prompt,
     build_night_kill_prompt,
@@ -37,7 +38,7 @@ class ContextBuilder:
     - Identity (role, persona)
     - Rules summary
     - Game state
-    - Role-specific info (Mafia partner, Detective results)
+    - Role-specific info (Mafia partners, Detective results)
     - Recent public events since last turn
     - Transcript (2-round window)
     - Memory/beliefs
@@ -66,7 +67,7 @@ class ContextBuilder:
             transcript: Game transcript (may be compressed)
             memory: Player's memory state
             action_type: Type of action to take
-            extra: Role-specific or action-specific info (partner, defense context)
+            extra: Role-specific or action-specific info (partners, defense context)
 
         Returns:
             Complete context string for LLM system prompt
@@ -122,6 +123,8 @@ class ContextBuilder:
                 lines.append(f"As Mafia: {persona.role_guidance.mafia}")
             elif role == "detective":
                 lines.append(f"As Detective: {persona.role_guidance.detective}")
+            elif role == "doctor" and persona.role_guidance.doctor:
+                lines.append(f"As Doctor: {persona.role_guidance.doctor}")
 
         return "\n".join(lines)
 
@@ -148,18 +151,18 @@ Nominated for vote: {nominated_str}"""
     def _build_role_specific_section(
         self, role: str, extra: dict | None
     ) -> str | None:
-        """Build role-specific section (partner info, investigation results)."""
+        """Build role-specific section (partner list, investigation results)."""
         if not extra:
             return None
 
-        if role == "mafia" and "partner" in extra:
-            partner = extra["partner"]
-            partner_alive = extra.get("partner_alive", True)
-            alive_str = "" if partner_alive else " (dead)"
-            return (
-                f"[MAFIA INFO]\nYour partner is {partner}{alive_str}. "
-                "Protect each other's identity."
-            )
+        if role == "mafia" and "partners" in extra:
+            partners = extra["partners"]
+            if partners:
+                partner_list = ", ".join(partners)
+                return (
+                    f"[MAFIA INFO]\nYour partners are: {partner_list}. "
+                    "Protect each other's identity."
+                )
 
         if role == "detective" and "results" in extra:
             results = extra["results"]
@@ -323,12 +326,13 @@ Your current beliefs:
 
         living = ", ".join(state.living_players)
 
-        # For Mafia night kill, exclude all Mafia (self and partner)
+        # For Mafia night kill, exclude all Mafia (self and partners)
         mafia_members = set()
-        if extra:
+        if role == "mafia":
             mafia_members.add(player_name)
-            if "partner" in extra:
-                mafia_members.add(extra["partner"])
+            if extra:
+                if "partners" in extra:
+                    mafia_members.update(extra["partners"])
 
         living_targets = [
             p
@@ -372,7 +376,7 @@ Your current beliefs:
         last_words_role_note = ""
         if role == "mafia":
             last_words_role_note = (
-                "\nAs Mafia: Do NOT reveal you are Mafia or name your partner. "
+                "\nAs Mafia: Do NOT reveal you are Mafia or name your partners. "
                 "Stay in character and try to misdirect suspicion."
             )
         elif role == "detective":
@@ -392,6 +396,9 @@ Your current beliefs:
             return build_night_kill_prompt(living_except_self)
         if action_type == ActionType.INVESTIGATION:
             return build_investigation_prompt(living_except_self)
+        if action_type == ActionType.DOCTOR_PROTECT:
+            living_targets = ", ".join(state.living_players)
+            return build_doctor_protect_prompt(living_targets)
         if action_type == ActionType.LAST_WORDS:
             return build_last_words_prompt(last_words_role_note)
         if action_type == ActionType.DEFENSE:

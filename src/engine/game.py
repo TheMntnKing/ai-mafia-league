@@ -89,10 +89,10 @@ class GameRunner:
             seat = self.state.get_player_seat(name)
             persona = self.config.personas[name]
 
-            # Get Mafia partner if applicable
-            partner = None
+            # Get Mafia partners if applicable
+            partners: list[str] = []
             if role == "mafia":
-                partner = self.state.get_mafia_partner(name)
+                partners = self.state.get_mafia_partners(name)
 
             self.agents[name] = PlayerAgent(
                 name=name,
@@ -100,7 +100,7 @@ class GameRunner:
                 role=role,
                 seat=seat,
                 provider=self.config.provider,
-                partner=partner,
+                partners=partners,
             )
 
     async def run(self) -> GameResult:
@@ -151,6 +151,10 @@ class GameRunner:
             winner = self.state.check_win_condition()
             if winner:
                 return await self._finalize_game(winner)
+            if eliminated:
+                forced_winner = self.state.check_forced_parity_after_day()
+                if forced_winner:
+                    return await self._finalize_game(forced_winner)
 
             # Advance to night phase before running
             self.state.advance_phase()  # day_N → night_N

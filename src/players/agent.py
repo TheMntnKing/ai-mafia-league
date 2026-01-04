@@ -45,7 +45,7 @@ class PlayerAgent:
         role: str,
         seat: int,
         provider: PlayerProvider,
-        partner: str | None = None,
+        partners: list[str] | None = None,
     ):
         """
         Initialize player agent.
@@ -54,20 +54,25 @@ class PlayerAgent:
             name: Player's name
             persona: Player's persona definition
             role: Player's role (mafia, detective, town)
-            seat: Player's seat number (0-6)
+            seat: Player's seat number (0-9)
             provider: LLM provider for making calls
-            partner: Mafia partner's name (if role is mafia)
+            partners: Mafia partner names (if role is mafia)
         """
         self.name = name
         self.persona = persona
         self.role = role
         self.seat = seat
         self.provider = provider
-        self.partner = partner
+        self.partners = partners or []
 
         # Internal helpers
         self.context_builder = ContextBuilder()
         self.action_handler = ActionHandler()
+
+    @property
+    def partner(self) -> str | None:
+        """Legacy alias for 2-Mafia flows (returns first partner if any)."""
+        return self.partners[0] if self.partners else None
 
     @observe(name="player_act")
     async def act(
@@ -120,8 +125,8 @@ class PlayerAgent:
 
     def _get_role_extra(self, memory: PlayerMemory) -> dict:
         """Get role-specific extra context from engine-owned memory."""
-        if self.role == "mafia" and self.partner:
-            return {"partner": self.partner}
+        if self.role == "mafia" and self.partners:
+            return {"partners": self.partners}
         if self.role == "detective":
             results = memory.facts.get("investigation_results", [])
             if results is None:
@@ -198,10 +203,7 @@ class PlayerAgent:
     def _get_mafia_names(self) -> list[str] | None:
         """Get list of all Mafia player names (for validation)."""
         if self.role == "mafia":
-            names = [self.name]
-            if self.partner:
-                names.append(self.partner)
-            return names
+            return [self.name, *self.partners]
         return None
 
     def _update_memory(
@@ -236,6 +238,11 @@ class PlayerAgent:
                 "reasoning": output.get("reasoning", ""),
             }
         elif action_type == ActionType.INVESTIGATION:
+            new_facts[action_key] = {
+                "target": output.get("target", ""),
+                "reasoning": output.get("reasoning", ""),
+            }
+        elif action_type == ActionType.DOCTOR_PROTECT:
             new_facts[action_key] = {
                 "target": output.get("target", ""),
                 "reasoning": output.get("reasoning", ""),
