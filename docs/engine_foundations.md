@@ -5,7 +5,8 @@ so an LLM can understand how pieces fit together without hopping between task fi
 Viewer + log schema upgrades live in Phase 8 and beyond.
 
 **Phase 9 (in progress):** 10 players (3 Mafia + Doctor), decomposed night events,
-and prompt/context upgrades are implemented; remaining tasks live in `tasks/phase9.md`.
+and prompt/context upgrades are implemented. Remaining tasks: tests, sample log,
+viewer parser sync (see `tasks/phase9.md`).
 
 **Phase 9 preload docs:** `tasks/phase9.md`, `tasks/phase8.md`, `docs/02_game_rules.md`,
 `docs/05_context_management.md`.
@@ -16,6 +17,7 @@ and prompt/context upgrades are implemented; remaining tasks live in `tasks/phas
 - Day/Night loop with plurality voting and optional revote.
 - Night kills are silent (no last words).
 - Storage is JSON logs (schema v1.3).
+- Persona roster: defined in `src/personas/initial.py` (10 total).
 
 ## Phase 9 Delta Summary (Implemented)
 - Player count: 10 (3 Mafia, 1 Detective, 1 Doctor, 5 Town).
@@ -80,6 +82,7 @@ Location: `src/engine/state.py`
 - Speaking order advances by seat each day; dead seats are skipped.
 - Nominations are tracked (unique list).
 - Votes must target nominated players or `skip`.
+- Role claims are unverified; bluffs are allowed. Do not invent public events.
 - Win conditions:
   - Town wins when Mafia count reaches 0.
   - Mafia wins when Mafia >= Town-aligned players.
@@ -104,7 +107,7 @@ Location: `src/engine/transcript.py`, `src/engine/context.py`
 - Compression keeps factual outcomes only (vote line + defense marker).
 - Last words are included only for day eliminations.
 - ContextBuilder sections:
-  - Identity + persona + role guidance
+  - Identity + persona play style + role tactics
   - Mafia info (partners list)
   - Mafia coordination context (Night Zero + Night rounds)
   - Role playbook (role-specific tips)

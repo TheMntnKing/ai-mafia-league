@@ -2,7 +2,7 @@
 
 **Goal:** Move engine to 10 players (3 Mafia + Doctor) and split night events for replay.
 
-**Status:** IN PROGRESS (9.1–9.4 complete, 9.5 started)  
+**Status:** IN PROGRESS (9.1–9.6 complete; 9.7 pending)  
 **Prerequisites:** Phase 1-8 complete
 
 ---

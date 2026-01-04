@@ -187,9 +187,7 @@ viewer/src/
 - [x] Create 2 initial hero characters via fal.ai:
   - Tralalero Tralala (use reference image + style prompt)
   - Brbrpatapim (use reference image + style prompt)
-- [ ] Create remaining hero characters:
-  - Bombardiro Crocodilo (use reference image + style prompt)
-  - Generic humanoid (text prompt only)
+- [ ] Create remaining hero characters from the current roster (see `src/personas/initial.py`)
 - [x] Apply unified material properties; keep textures only if flat/clean (otherwise palette)
 - [x] Download initial .glb files
 - [x] Model loading with `useGLTF`

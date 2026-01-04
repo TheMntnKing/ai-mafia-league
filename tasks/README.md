@@ -4,7 +4,7 @@ Single source of truth for delivery status and next steps.
 
 ## Status
 
-**Game Engine:** Core complete (Phases 1-8), Phase 9 in progress
+**Game Engine:** Core complete (Phases 1-8), Phase 9 in progress (9.1–9.6 done; 9.7 pending)
 **Replay Viewer:** In Progress (Phase 10 - Stylized Mesh)
 
 ### Completed Phases
@@ -24,7 +24,8 @@ Single source of truth for delivery status and next steps.
 
 ## Current Focus: Phase 9 + Phase 10
 
-Expanding the engine roster/roles (Phase 9) and building the stylized mesh viewer (Phase 10).
+Expanding the engine roster/roles (Phase 9, tests + viewer sync pending) and building the
+stylized mesh viewer (Phase 10).
 See `tasks/phase9.md` and `tasks/phase10.md` for detailed plans.
 
 **Key decisions:**
@@ -39,7 +40,7 @@ See `tasks/phase9.md` and `tasks/phase10.md` for detailed plans.
 ## Priorities (P0 / P1 / P2)
 
 **P0 — Essentials (Week 1)**
-- Finish character roster (8 more + generic) and load GLBs in viewer
+- Finish character roster (current 10 personas) and load GLBs in viewer
 - Build town square + mafia lair scene GLBs; load in viewer
 - Apply scene scaling/centering + offsets to all scenes
 - Camera presets + lighting tuning per scene (day/night/mafia/detective)

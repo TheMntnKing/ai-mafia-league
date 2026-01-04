@@ -62,9 +62,9 @@ Different players may form different beliefs from the same facts. This is intent
 
 Personas are the primary differentiator between agents and the main creative dimension for community submissions. A well-crafted persona balances entertainment value with strategic depth.
 
-**Key principle:** Behavioral invariants define HOW they act. Role guidance may include tactics only if they are consistent with those invariants. This prevents role leakage.
+**Key principle:** Voice + approach define HOW they act. Role tactics define WHAT they do in a role, consistent with the persona.
 
-**Target length:** 250-400 words. Under 200 feels thin; over 500 causes drift and contradictions. Aim for ~300-350.
+**Target length:** 200-300 words. Under 180 feels thin; over 400 causes drift and contradictions.
 
 ### Persona Structure
 
@@ -77,33 +77,23 @@ persona:
     background: str  # 1-2 sentences, informs motivation
     core_traits: list[str]  # 3-5 role-neutral traits
 
-  voice_and_behavior:
-    speech_style: str  # vocabulary, structure, tone
-    reasoning_style: str  # how they analyze (logical, intuitive, pattern-based, absurdist)
-    accusation_style: str  # how/when they target others
-    defense_style: str  # how they handle being accused
-    trust_disposition: str  # paranoid, neutral, trusting, conditional
-    risk_tolerance: str  # aggressive plays vs safe plays
-    signature_phrases: list[str]  # 0-5 catchphrases
-    quirks: list[str]  # 0-5 recognizable behaviors
+  play_style:
+    voice: str  # 25-40 words: vocabulary, rhythm, tone
+    approach: str  # 40-60 words: decision style, risk posture, accuse/defend tendencies
+    signature_phrases: list[str]  # 0-3 catchphrases
+    signature_moves: list[str]  # 0-2 recurring behaviors
 
-  role_guidance:  # optional, brief - contextualizes, doesn't introduce new tactics
-    town: str  # 1-2 sentences applying traits
-    mafia: str  # 1-2 sentences applying traits
-    detective: str  # 1-2 sentences applying traits
-    doctor: str  # 1-2 sentences applying traits
+  tactics:  # role-specific, short, actionable bullets
+    town: list[str]  # 2-5 bullets
+    mafia: list[str]  # 2-5 bullets
+    detective: list[str]  # 2-5 bullets
+    doctor: list[str]  # 2-5 bullets (optional)
 
-  relationships:  # optional, fixed lore between personas
-    other_persona_name: str  # relationship description
+**Role tactics guidance**
+- Use short, actionable moves that can actually be performed in a turn.
+- Avoid flavor-only text; tactics should change decisions or timing.
+- Don’t restate the generic role playbook; make it persona-specific.
 ```
-
-### Relationships
-
-Relationships between personas can be:
-- **Fixed lore** (in persona.relationships): Pre-existing rivalries or alliances that affect behavior. Sent to LLM.
-- **Dynamic** (in memory): Built during games, tracked in player memory state between turns.
-
-Example fixed lore: `{"Moriarty": "Ancient rival - always suspects, never trusts"}`
 
 ### Persona as Prompt
 
@@ -147,6 +137,6 @@ All players share the same:
 - Game engine and rules
 - Base model (per game configuration)
 
-Players differ only by **persona** - which includes identity, voice and behavior, role guidance, and relationships (see Personas section above).
+Players differ only by **persona** - which includes identity, play style, and role tactics (see Personas section above).
 
 This is intentional. The creative challenge is crafting personas that are both entertaining to watch and effective at the game. There are no separate "AI architecture" or "reasoning strategy" modules to customize - the persona IS the strategy.

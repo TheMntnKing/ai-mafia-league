@@ -105,7 +105,7 @@ class DefenseOutput(BaseModel):
 - `src/personas/initial.py` - Updated to import individual personas
 
 **Notes:**
-- Roster now includes `Bombardiro Crocodilo` and `Tralalero Tralala` (7 total)
+- Roster now includes `Tralalero Tralala` (Bombardiro later removed)
 
 ---
 

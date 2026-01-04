@@ -10,9 +10,9 @@ Games produce watchable content where viewers see both public speech and private
 
 ## Status
 
-**Current: Game engine complete through Phase 8; Phase 9 in progress; Phase 10 in progress**
+**Current: Game engine complete through Phase 8; Phase 9 in progress (9.1–9.6 done; 9.7 pending); Phase 10 in progress**
 
-Core game loop, providers, and tests are implemented.
+Core game loop, providers, and baseline tests are implemented.
 
 ## Documentation
 

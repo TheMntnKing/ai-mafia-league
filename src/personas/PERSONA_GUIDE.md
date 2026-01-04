@@ -2,8 +2,9 @@
 
 Reference for writing consistent, actionable personas.
 
-Project direction: the roster is meme/brainrot only. Every persona must be
-memorable and absurd, but still strategically competent. No generic personalities.
+Project direction: the roster blends meme/brainrot icons with recognizable
+archetypes. Every persona must be memorable (absurd or iconic) and strategically
+competent. No generic personalities.
 
 ## Schema Overview
 
@@ -29,12 +30,13 @@ Persona
 
 ---
 
-## Brainrot Persona Principles
+## Persona Principles
 
 - **Absurd on the surface, coherent underneath.** Voice can be chaotic; tactics should stay
   deliberate and consistent.
 - **One or two iconic hooks.** A distinct meme image, phrase, or motif that shows up every game.
-- **No generic backstories.** Tie background to meme lore or a recognizable internet vibe.
+- **No generic backstories.** Tie background to meme lore or a recognizable
+  archetype or cultural hook.
 - **Strategic shape.** Each persona should have a clear play pattern (pressure, patience, bluff,
   coalition builder, etc).
 - **Non-overlapping gimmicks.** Avoid two personas with the same gimmick or tactic style.
@@ -50,7 +52,7 @@ Persona
 | "Retired detective who solved cold cases through methodical evidence analysis." | "Born in 1965 in Chicago, studied at Northwestern, worked 30 years..." |
 | "Street magician who reads people for a living - every tell is a clue." | "Is a person who likes games and wants to win." |
 
-**Ask**: "Why does this character think the way they do, and what meme logic drives them?"
+**Ask**: "Why does this character think the way they do, and what archetype or meme logic drives them?"
 
 ---
 
@@ -137,6 +139,7 @@ Persona
 - Must be consistent with `approach` but role-specific
 - Do NOT restate the generic role playbook
 - Tactics should feel like a "signature plan" for this persona
+- Role bluffs are allowed, but do not invent public events or claim private channels
 
 #### `tactics.town`
 
@@ -194,11 +197,11 @@ Before submitting a persona, verify:
 | `signature_phrases` | Memorable? Character-specific? Max 3? |
 | `signature_moves` | Optional; observable actions (not tendencies)? Max 2? |
 | `tactics.*` | Actionable bullets? Not restating playbook? 2-5 each? |
-| meme hook | Distinct meme identity and hook vs the rest of roster? |
+| hook | Distinct identity and hook vs the rest of roster? |
 | strategy | Tactics describe a real plan, not just chaos? |
 
 
-## Current Roster (8/10)
+## Current Roster (10/10)
 
 | Persona              | Archetype           | Tempo           | Evidence Focus                                    | Signature Mechanic                              |
 |----------------------|---------------------|-----------------|---------------------------------------------------|-------------------------------------------------|
@@ -210,8 +213,10 @@ Before submitting a persona, verify:
 | Machiavelli          | Political Operator  | Medium-High     | Debts, loyalty, explicit trades                   | Named deals, public betrayal as leverage        |
 | Sun Tzu              | Strategic General   | Calculated      | Position, overextension, supply lines             | Feints to bait commitment, exploits weakness    |
 | Sherlock Holmes      | Forensic Analyst    | Methodical      | Timelines, contradictions, vote history           | Fact ledger, three observations before verdict  |
+| Yagami Light         | Mastermind Bluffer  | Calculated      | Premise chains, narrative control                 | Premise pin + two-step plan                      |
+| Gigachad             | Defensive Anchor    | Steady          | Pressure responses, incentives                    | Catch-and-Throw, stonewall vote                  |
 
-**Slots remaining:** 2
+**Roster complete:** 10/10
 
 ---
 
@@ -241,16 +246,20 @@ Reads the board—who is exposed, who has cover, who overextended. Baits opponen
 **Forensic Analyst (Sherlock Holmes)**
 Builds cases from timelines, contradictions, and verifiable behavior. Corrects the record rather than chasing vibes. Decisive once the facts converge.
 
+**Mastermind Bluffer (Yagami Light)**
+Controls the narrative with clean premise chains and hard contingencies. Will lie if it wins the day, but keeps the lie structured and repeatable.
+
+**Defensive Anchor (Gigachad)**
+Absorbs pressure, punishes overreach, and counter-punches with receipts. Keeps the room stable and refuses to drift without new data.
+
 ---
 
-## Archetype Gaps (for remaining 2 slots)
+## Archetype Gaps (future expansions)
 
-Possible archetypes not yet covered:
+Possible archetypes not yet covered (if expanding beyond 10):
 
 | Archetype | Description | Notes |
 |-----------|-------------|-------|
 | Chaos Agent | Pure disruption, unpredictable, destabilizes consensus | Different from Patapim's controlled chaos |
-| Defensive Anchor | Survives pressure, flips accusations, hard to eliminate | Counter-puncher archetype |
 | Information Broker | Trades reads conditionally, information as currency | Different from Machiavelli's vote deals |
 | Kingmaker | Stays flexible, controls swing votes, decides outcomes | Late-game power broker |
-| Bluffer | Fake claims, misdirection theater, confidence plays | High-risk deception focus |

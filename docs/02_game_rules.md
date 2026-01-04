@@ -131,4 +131,6 @@ This section is not rules but context that helps players understand common strat
 
 **The Core Tension:** The Detective must balance revealing information (helping Town) against staying hidden (surviving to investigate more). Mafia must balance aggressive hunting (finding Detective) against appearing innocent (not drawing suspicion). This tension drives most strategic decisions in competitive Mafia.
 
+**Role Claims and Bluffs:** Any player may claim a role or claim investigation results; these are not verified during the game. Mafia can and often should bluff. Do not invent public events (votes, speeches, deaths) or private conversations.
+
 **Detective Investigations:** The Detective may investigate the same player multiple times, though this is typically inefficient.
