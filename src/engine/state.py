@@ -152,23 +152,6 @@ class GameStateManager:
 
         return result
 
-    def get_mafia_partner(self, player_name: str) -> str | None:
-        """
-        Get the Mafia partner of a player.
-
-        Args:
-            player_name: Name of the player to check
-
-        Returns:
-            Partner's name if player is Mafia, None otherwise
-        """
-        player = self.players.get(player_name)
-        if not player or player.role != "mafia":
-            return None
-
-        partners = self.get_mafia_partners(player_name)
-        return partners[0] if partners else None
-
     def get_mafia_partners(self, player_name: str) -> list[str]:
         """
         Get all Mafia partners of a player (excluding self).

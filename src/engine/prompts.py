@@ -22,7 +22,7 @@ RULES:
 - Never reveal other players' hidden information you don't have."""
 
 NIGHT_ZERO_PROMPT_FIRST = """[YOUR TASK: NIGHT ZERO COORDINATION]
-This is Night Zero. No kill tonight - just coordination with your partner.
+This is Night Zero. No kill tonight - just coordination with your partners.
 
 Share your initial strategy:
 - Signals or code words to use during day discussion
@@ -32,10 +32,10 @@ Share your initial strategy:
 
 Provide your strategy in the 'speech' field. The 'nomination' field is not used tonight."""
 
-NIGHT_ZERO_PROMPT_SECOND = """[YOUR TASK: NIGHT ZERO COORDINATION]
-Your partner shared their strategy:
+NIGHT_ZERO_PROMPT_WITH_PARTNERS = """[YOUR TASK: NIGHT ZERO COORDINATION]
+Your partners shared their strategies:
 ---
-{partner_strategy}
+{partner_strategies}
 ---
 
 Now share YOUR strategy. Discuss:
@@ -47,9 +47,18 @@ Now share YOUR strategy. Discuss:
 Provide your strategy in the 'speech' field. The 'nomination' field is not used tonight."""
 
 
-def build_night_zero_prompt(partner_strategy: str | None) -> str:
-    if partner_strategy:
-        return NIGHT_ZERO_PROMPT_SECOND.format(partner_strategy=partner_strategy)
+def build_night_zero_prompt(partner_strategies: dict[str, str] | None) -> str:
+    if partner_strategies:
+        lines = [
+            f"- {name}: {strategy}"
+            for name, strategy in partner_strategies.items()
+            if strategy
+        ]
+        if not lines:
+            lines = ["- (no partner strategies yet)"]
+        return NIGHT_ZERO_PROMPT_WITH_PARTNERS.format(
+            partner_strategies="\n".join(lines)
+        )
     return NIGHT_ZERO_PROMPT_FIRST
 
 

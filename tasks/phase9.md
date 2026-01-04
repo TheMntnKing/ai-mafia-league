@@ -2,7 +2,7 @@
 
 **Goal:** Move engine to 10 players (3 Mafia + Doctor) and split night events for replay.
 
-**Status:** IN PROGRESS (9.1–9.2 complete)  
+**Status:** IN PROGRESS (9.1–9.3 complete, 9.4 started)  
 **Prerequisites:** Phase 1-8 complete
 
 ---
@@ -45,6 +45,7 @@ Event types (stable shapes):
 - `night_resolution`: `intended_kill`, `protected`, `actual_kill` (only `actual_kill` public)
 
 ### 9.3 Night Flow + 3-Mafia Coordination
+**Status:** ✅ implemented in code (tests pending in 9.7)
 - `src/engine/phases.py`:
   - Night Zero: sequential strategies for all living Mafia (not hardcoded to 2)
   - Night Phase: proposals per Mafia (round 1), majority rules; if split -> round 2 -> tie-break by lowest seat
@@ -52,9 +53,10 @@ Event types (stable shapes):
   - Run Doctor protection, Investigation, then `night_resolution`
   - Apply kill only after `night_resolution`
   - Store all Mafia strategies in memory (Night Zero)
-  - Append Mafia kill history (target + outcome) after `night_resolution` (cap length)
-  - Append Doctor protection history (target only, no success flag; cap length)
-  - Pass `game_over` flag to last-words prompt when an elimination ends the game
+  - Append Mafia kill history (target + outcome) after `night_resolution` (no cap)
+  - Append Doctor protection history (target + reasoning) after `doctor_protection` (no cap)
+  - Detective history unified in engine: `investigation_results` + `investigation_history` + `last_investigation`
+  - Pass `game_over` flag into last-words context when an elimination ends the game
 
 Rules:
 - Round 1: 3/3 or 2/3 agreement executes (skip counts as a target)
@@ -67,10 +69,10 @@ Rules:
 - `src/engine/context.py`: add a Night Recap block with role-aware hints (Mafia can infer a block if they targeted and no one died; Doctor does not get confirmation)
 - `src/engine/prompts.py`: update `RULES_SUMMARY` for 10-player roster + Doctor
 - `src/engine/prompts.py`: add `DOCTOR_PROTECT_PROMPT_TEMPLATE` + `build_doctor_protect_prompt()`
-- `src/engine/prompts.py`: update last-words guidance to allow endgame trash talk/analysis when `game_over=true`
-- `src/engine/context.py`: update `_build_role_specific_section` to display list of partners (not single)
-- `src/engine/context.py`: update `_build_mafia_coordination_section` to accept/display multiple partner proposals + messages
-- `src/engine/prompts.py`: update Night Zero prompt wording for multiple partners
+- `src/engine/prompts.py`: update last-words guidance to allow endgame trash talk/analysis when `game_over=true` (partial: context note added; prompt template not yet adjusted)
+- `src/engine/context.py`: update `_build_role_specific_section` to display list of partners (not single) ✅
+- `src/engine/context.py`: update `_build_mafia_coordination_section` to accept/display multiple partner proposals + messages ✅
+- `src/engine/prompts.py`: update Night Zero prompt wording for multiple partners ✅
 - `src/engine/context.py`: add compact “Nominations so far” line to reduce transcript parsing
 - `src/engine/transcript.py`: drop heuristic accusations/claims from compressed summaries (keep factual outcomes only)
 - `tests/sgr_helpers.py`: add `make_doctor_protect_response()`

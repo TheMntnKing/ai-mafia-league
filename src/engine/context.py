@@ -182,32 +182,49 @@ Nominated for vote: {nominated_str}"""
 
         lines = []
 
-        # Night Zero: Second Mafia sees first Mafia's strategy
-        if "partner_strategy" in extra:
-            lines.append("[PARTNER'S STRATEGY]")
-            lines.append(f"Your partner said: \"{extra['partner_strategy']}\"")
-            lines.append("Consider this when formulating your response.")
+        # Night Zero: Mafia see prior partner strategies
+        if "partner_strategies" in extra:
+            strategies = extra.get("partner_strategies") or {}
+            strategy_lines = [
+                f"- {name}: {strategy}"
+                for name, strategy in strategies.items()
+                if strategy
+            ]
+            if strategy_lines:
+                lines.append("[PARTNER STRATEGIES]")
+                lines.extend(strategy_lines)
+                lines.append("Consider this when formulating your response.")
 
-        # Night Round 1: Second Mafia sees first Mafia's proposal
-        if extra.get("round") == 1 and "partner_proposal" in extra:
+        # Night Round 1: show prior proposals to later Mafia
+        if extra.get("round") == 1 and "prior_proposals" in extra:
             lines.append("[COORDINATION ROUND 1]")
-            lines.append(f"Partner's proposal: {extra['partner_proposal']}")
-            partner_message = extra.get("partner_message")
-            if partner_message:
-                lines.append(f"Partner's message: {partner_message}")
+            prior_proposals = extra.get("prior_proposals") or {}
+            prior_messages = extra.get("prior_messages") or {}
+            if prior_proposals:
+                lines.append("Prior proposals:")
+                for name, proposal in prior_proposals.items():
+                    lines.append(f"- {name}: {proposal}")
+            if prior_messages:
+                lines.append("Prior messages:")
+                for name, message in prior_messages.items():
+                    if message:
+                        lines.append(f"- {name}: {message}")
             lines.append("Respond with your own proposal and reasoning.")
 
-        # Night Round 2: Both Mafia see partner's R1 proposal
-        if extra.get("round") == 2 or "my_r1_proposal" in extra:
+        # Night Round 2: show all round 1 proposals
+        if extra.get("round") == 2 and "r1_proposals" in extra:
             lines.append("[COORDINATION ROUND 2]")
-            if "my_r1_proposal" in extra:
-                lines.append(f"Your Round 1 proposal: {extra['my_r1_proposal']}")
-            if "partner_proposal" in extra:
-                lines.append(f"Partner's Round 1 proposal: {extra['partner_proposal']}")
-            if extra.get("my_r1_message"):
-                lines.append(f"Your Round 1 message: {extra['my_r1_message']}")
-            if extra.get("partner_message"):
-                lines.append(f"Partner's Round 1 message: {extra['partner_message']}")
+            r1_proposals = extra.get("r1_proposals") or {}
+            r1_messages = extra.get("r1_messages") or {}
+            if r1_proposals:
+                lines.append("Round 1 proposals:")
+                for name, proposal in r1_proposals.items():
+                    lines.append(f"- {name}: {proposal}")
+            if r1_messages:
+                lines.append("Round 1 messages:")
+                for name, message in r1_messages.items():
+                    if message:
+                        lines.append(f"- {name}: {message}")
             lines.append("You disagreed in Round 1. Try to reach consensus.")
 
         return "\n".join(lines) if lines else None
@@ -308,8 +325,11 @@ Your current beliefs:
 
     def _build_night_zero_prompt(self, extra: dict | None) -> str:
         """Build prompt for Night Zero Mafia coordination."""
-        partner_strategy = (extra or {}).get("partner_strategy")
-        return build_night_zero_prompt(partner_strategy)
+        partner_strategies = None
+        if extra:
+            if "partner_strategies" in extra:
+                partner_strategies = extra.get("partner_strategies")
+        return build_night_zero_prompt(partner_strategies)
 
     def _build_action_prompt(
         self,
@@ -374,7 +394,12 @@ Your current beliefs:
             )
 
         last_words_role_note = ""
-        if role == "mafia":
+        if extra and extra.get("game_over"):
+            last_words_role_note = (
+                "\nThis elimination ends the game. You can drop pretense and give a "
+                "final reaction or analysis."
+            )
+        elif role == "mafia":
             last_words_role_note = (
                 "\nAs Mafia: Do NOT reveal you are Mafia or name your partners. "
                 "Stay in character and try to misdirect suspicion."

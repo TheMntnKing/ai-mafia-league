@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import TYPE_CHECKING
 
 from src.engine.voting import VoteResolver
@@ -19,9 +20,9 @@ class NightZeroPhase:
     """
     Night Zero: Mafia coordination (no kill).
 
-    Sequential coordination where Mafia players share strategy.
-    Second Mafia sees first Mafia's strategy before responding.
-    Both strategies stored in both Mafia's memories for future reference.
+    Sequential coordination where Mafia players share strategy by seat order.
+    Later Mafia see earlier strategies before responding.
+    All strategies are stored in each Mafia's memory for future reference.
     """
 
     async def run(
@@ -45,94 +46,58 @@ class NightZeroPhase:
         )
 
         mafia_agents = [a for a in agents.values() if a.role == "mafia"]
-
-        if len(mafia_agents) != 2:
+        if not mafia_agents:
             return memories
 
         # Sort by seat so coordination order is deterministic
         mafia_agents.sort(key=lambda a: a.seat)
-        first_mafia, second_mafia = mafia_agents
+        strategies: dict[str, str] = {}
 
-        # First Mafia shares strategy
-        game_state = state.get_public_state()
-        response1 = await first_mafia.act(
-            game_state,
-            transcript=[],
-            memory=memories[first_mafia.name],
-            action_type=ActionType.SPEAK,
-            action_context={"night_zero": True},
-        )
-        memories[first_mafia.name] = response1.updated_memory
-        first_strategy = response1.output.get("speech", "")
-        event_log.add(
-            "night_zero_strategy",
-            {
-                "speaker": first_mafia.name,
-                "text": first_strategy,
-                "reasoning": response1.output,
-            },
-            private_fields=[
-                "speaker",
-                "text",
-                "reasoning",
-                "phase",
-                "round_number",
-                "stage",
-                "state_public",
-                "state_before",
-                "state_after",
-            ],
-            phase=state.phase,
-            round_number=state.round_number,
-            stage="night_zero",
-            state_public=state.get_public_snapshot(),
-        )
+        for agent in mafia_agents:
+            game_state = state.get_public_state()
+            action_context: dict[str, object] = {"night_zero": True}
+            if strategies:
+                action_context["partner_strategies"] = dict(strategies)
 
-        # Second Mafia sees first's strategy and responds
-        response2 = await second_mafia.act(
-            game_state,
-            transcript=[],
-            memory=memories[second_mafia.name],
-            action_type=ActionType.SPEAK,
-            action_context={
-                "night_zero": True,
-                "partner_strategy": first_strategy,
-            },
-        )
-        memories[second_mafia.name] = response2.updated_memory
-        second_strategy = response2.output.get("speech", "")
-        event_log.add(
-            "night_zero_strategy",
-            {
-                "speaker": second_mafia.name,
-                "text": second_strategy,
-                "reasoning": response2.output,
-            },
-            private_fields=[
-                "speaker",
-                "text",
-                "reasoning",
-                "phase",
-                "round_number",
-                "stage",
-                "state_public",
-                "state_before",
-                "state_after",
-            ],
-            phase=state.phase,
-            round_number=state.round_number,
-            stage="night_zero",
-            state_public=state.get_public_snapshot(),
-        )
+            response = await agent.act(
+                game_state,
+                transcript=[],
+                memory=memories[agent.name],
+                action_type=ActionType.SPEAK,
+                action_context=action_context,
+            )
+            memories[agent.name] = response.updated_memory
+            strategy = response.output.get("speech", "")
+            strategies[agent.name] = strategy
+            event_log.add(
+                "night_zero_strategy",
+                {
+                    "speaker": agent.name,
+                    "text": strategy,
+                    "reasoning": response.output,
+                },
+                private_fields=[
+                    "speaker",
+                    "text",
+                    "reasoning",
+                    "phase",
+                    "round_number",
+                    "stage",
+                    "state_public",
+                    "state_before",
+                    "state_after",
+                ],
+                phase=state.phase,
+                round_number=state.round_number,
+                stage="night_zero",
+                state_public=state.get_public_snapshot(),
+            )
 
-        # Store both strategies in both Mafia's memories for future reference
+        # Store all strategies in each Mafia's memory for future reference
         for agent in mafia_agents:
             memory = memories[agent.name]
             facts = dict(memory.facts)
-            facts["night_zero_strategies"] = {
-                first_mafia.name: first_strategy,
-                second_mafia.name: second_strategy,
-            }
+            facts["night_zero_strategies"] = dict(strategies)
             memories[agent.name] = PlayerMemory(facts=facts, beliefs=dict(memory.beliefs))
 
         return memories
@@ -257,10 +222,12 @@ class DayPhase:
                 stage="vote",
                 state_public=state_snapshot,
             )
+            game_over = self._is_game_over_after_elimination(state, eliminated)
             last_words_output = await self._get_last_words(
                 agents[eliminated],
                 state,
                 memories[eliminated],
+                game_over,
             )
             last_words_text = ""
             if last_words_output:
@@ -393,6 +360,7 @@ class DayPhase:
         agent: PlayerAgent,
         state: GameStateManager,
         memory: PlayerMemory,
+        game_over: bool,
     ) -> dict[str, object]:
         """Get eliminated player's last words output."""
         response = await agent.act(
@@ -400,8 +368,26 @@ class DayPhase:
             [],
             memory,
             ActionType.LAST_WORDS,
+            action_context={"game_over": game_over},
         )
         return response.output
+
+    def _is_game_over_after_elimination(
+        self, state: GameStateManager, eliminated: str
+    ) -> bool:
+        living = [
+            p for p in state.players.values() if p.alive and p.name != eliminated
+        ]
+        mafia_count = sum(1 for p in living if p.role == "mafia")
+        town_count = len(living) - mafia_count
+        if mafia_count == 0:
+            return True
+        if mafia_count >= town_count:
+            return True
+        doctor_alive = any(p.alive and p.role == "doctor" for p in living)
+        if not doctor_alive and mafia_count >= town_count - 1:
+            return True
+        return False
 
     async def _run_revote(
         self,
@@ -479,10 +465,12 @@ class DayPhase:
         last_words_output: dict[str, object] | None = None
         if result.outcome == "eliminated":
             eliminated = result.eliminated
+            game_over = self._is_game_over_after_elimination(state, eliminated)
             last_words_output = await self._get_last_words(
                 agents[eliminated],
                 state,
                 memories[eliminated],
+                game_over,
             )
             # Last words are logged by the caller (DayPhase) to align with state snapshots.
 
@@ -502,7 +490,7 @@ class DayPhase:
 
 class NightPhase:
     """
-    Night Phase: Mafia kill and Detective investigation.
+    Night Phase: Mafia kill, Doctor protection, Detective investigation.
 
     Night kills are silent - no last words collected.
     """
@@ -531,20 +519,140 @@ class NightPhase:
         transcript = transcript_manager.get_transcript_for_player(state.round_number)
 
         # Mafia coordination
-        kill_target = await self._run_mafia_coordination(
+        intended_kill = await self._run_mafia_coordination(
+            agents, state, transcript, event_log, memories
+        )
+
+        # Doctor protection
+        protected_target, doctor_output = await self._run_doctor_protection(
             agents, state, transcript, event_log, memories
         )
 
         # Detective investigation
-        await self._run_detective_investigation(
+        investigation = await self._run_detective_investigation(
             agents, state, transcript, event_log, memories
+        )
+        if investigation:
+            self._record_detective_investigation_history(memories, *investigation)
+
+        protected = bool(intended_kill and protected_target == intended_kill)
+        actual_kill = intended_kill if intended_kill and not protected else None
+
+        state_before = state.get_public_snapshot()
+        state_after = state.get_public_snapshot_after_kill(actual_kill)
+        event_log.add_night_resolution(
+            intended_kill=intended_kill,
+            protected=protected,
+            actual_kill=actual_kill,
+            phase=state.phase,
+            round_number=state.round_number,
+            stage="night_resolution",
+            state_public=state_before,
+            state_before=state_before,
+            state_after=state_after,
         )
 
         # Execute kill (no last words - night kills are silent)
-        if kill_target and kill_target in agents:
-            state.kill_player(kill_target)
+        if actual_kill and actual_kill in agents:
+            state.kill_player(actual_kill)
 
-        return kill_target, memories
+        self._record_mafia_kill_history(memories, agents, intended_kill, protected)
+        self._record_doctor_protection_history(
+            memories, agents, protected_target, doctor_output
+        )
+
+        return actual_kill, memories
+
+    def _record_mafia_kill_history(
+        self,
+        memories: dict[str, PlayerMemory],
+        agents: dict[str, PlayerAgent],
+        intended_kill: str | None,
+        protected: bool,
+    ) -> None:
+        mafia_agents = [
+            a for a in agents.values() if a.role == "mafia" and a.name in memories
+        ]
+        if not mafia_agents:
+            return
+        if intended_kill is None:
+            outcome = "skipped"
+        elif protected:
+            outcome = "blocked"
+        else:
+            outcome = "killed"
+
+        for agent in mafia_agents:
+            memory = memories[agent.name]
+            facts = dict(memory.facts)
+            history = list(facts.get("mafia_kill_history", []))
+            entry = {"target": intended_kill or "skip", "outcome": outcome}
+            history.append(entry)
+            facts["mafia_kill_history"] = history
+            facts["last_mafia_kill"] = entry
+            memories[agent.name] = PlayerMemory(
+                facts=facts,
+                beliefs=dict(memory.beliefs),
+            )
+
+    def _record_doctor_protection_history(
+        self,
+        memories: dict[str, PlayerMemory],
+        agents: dict[str, PlayerAgent],
+        protected_target: str | None,
+        doctor_output: dict | None,
+    ) -> None:
+        if not protected_target:
+            return
+        doctor_agents = [
+            a for a in agents.values() if a.role == "doctor" and a.name in memories
+        ]
+        if not doctor_agents:
+            return
+        for agent in doctor_agents:
+            memory = memories[agent.name]
+            facts = dict(memory.facts)
+            history = list(facts.get("doctor_protection_history", []))
+            entry = {
+                "target": protected_target,
+                "reasoning": (doctor_output or {}).get("reasoning", ""),
+            }
+            history.append(entry)
+            facts["doctor_protection_history"] = history
+            facts["last_doctor_protect"] = entry
+            memories[agent.name] = PlayerMemory(
+                facts=facts,
+                beliefs=dict(memory.beliefs),
+            )
+
+    def _record_detective_investigation_history(
+        self,
+        memories: dict[str, PlayerMemory],
+        detective_name: str,
+        target: str,
+        result: str,
+        output: dict,
+    ) -> None:
+        memory = memories.get(detective_name)
+        if not memory:
+            return
+        facts = dict(memory.facts)
+        entry = {
+            "target": target,
+            "result": result,
+            "reasoning": output.get("reasoning", ""),
+        }
+        results = list(facts.get("investigation_results", []))
+        results.append({"target": target, "result": result})
+        history = list(facts.get("investigation_history", []))
+        history.append(entry)
+        facts["investigation_results"] = results
+        facts["investigation_history"] = history
+        facts["last_investigation"] = entry
+        memories[detective_name] = PlayerMemory(
+            facts=facts,
+            beliefs=dict(memory.beliefs),
+        )
 
     async def _run_mafia_coordination(
         self,
@@ -563,204 +671,153 @@ class NightPhase:
         if not mafia_agents:
             return None
 
-        if len(mafia_agents) == 1:
-            # Single Mafia, direct choice
-            agent = mafia_agents[0]
-            game_state = state.get_public_state()
-            # Filter out self from targets
-            game_state.living_players = [
-                p for p in game_state.living_players if p != agent.name
-            ]
-
-            response = await agent.act(
-                game_state,
-                transcript,
-                memories[agent.name],
-                ActionType.NIGHT_KILL,
-            )
-            memories[agent.name] = response.updated_memory
-            target = response.output.get("target", "skip")
-
-            target = target if target != "skip" else None
-            state_before = state.get_public_snapshot()
-            state_after = state.get_public_snapshot_after_kill(target)
-            event_log.add_night_kill(
-                target,
-                response.output,
-                phase=state.phase,
-                round_number=state.round_number,
-                stage="night_kill",
-                state_public=state_before,
-                state_before=state_before,
-                state_after=state_after,
-            )
-            return target
+        def resolve_majority(proposals: dict[str, str]) -> str | None:
+            if not proposals:
+                return None
+            counts = Counter(proposals.values())
+            top_target, top_count = max(counts.items(), key=lambda item: item[1])
+            if top_count > len(proposals) / 2:
+                return top_target
+            return None
 
         # Sort by seat for deterministic order
         mafia_agents.sort(key=lambda a: a.seat)
 
-        # Round 1: Sequential proposals
-        proposals_r1 = {}
-        proposals_r1_details: dict[str, dict] = {}
+        state_snapshot = state.get_public_snapshot()
 
-        first_mafia = mafia_agents[0]
-        game_state = state.get_public_state()
-        game_state.living_players = [
-            p for p in game_state.living_players
-            if p != first_mafia.name and p != first_mafia.partner
-        ]
-
-        first_response = await first_mafia.act(
-            game_state,
-            transcript,
-            memories[first_mafia.name],
-            ActionType.NIGHT_KILL,
-        )
-        memories[first_mafia.name] = first_response.updated_memory
-        proposals_r1[first_mafia.name] = first_response.output.get("target", "skip")
-        proposals_r1_details[first_mafia.name] = first_response.output
-
-        second_mafia = mafia_agents[1]
-        game_state = state.get_public_state()
-        game_state.living_players = [
-            p for p in game_state.living_players
-            if p != second_mafia.name and p != second_mafia.partner
-        ]
-
-        second_response = await second_mafia.act(
-            game_state,
-            transcript,
-            memories[second_mafia.name],
-            ActionType.NIGHT_KILL,
-            action_context={
-                "round": 1,
-                "partner_proposal": proposals_r1[first_mafia.name],
-                "partner_message": proposals_r1_details[first_mafia.name].get("message", ""),
-            },
-        )
-        memories[second_mafia.name] = second_response.updated_memory
-        proposals_r1[second_mafia.name] = second_response.output.get("target", "skip")
-        proposals_r1_details[second_mafia.name] = second_response.output
-
-        targets = list(proposals_r1.values())
-
-        # Check Round 1 agreement
-        if targets[0] == targets[1]:
-            target = targets[0] if targets[0] != "skip" else None
-            state_before = state.get_public_snapshot()
-            state_after = state.get_public_snapshot_after_kill(target)
-            event_log.add_night_kill(
-                target,
-                {
-                    "round": 1,
-                    "proposals": proposals_r1,
-                    "proposal_details": proposals_r1_details,
-                },
-                phase=state.phase,
-                round_number=state.round_number,
-                stage="night_kill",
-                state_public=state_before,
-                state_before=state_before,
-                state_after=state_after,
-            )
-            return target
-
-        if targets[0] == "skip" and targets[1] == "skip":
-            state_before = state.get_public_snapshot()
-            event_log.add_night_kill(
-                None,
-                {
-                    "round": 1,
-                    "proposals": proposals_r1,
-                    "proposal_details": proposals_r1_details,
-                },
-                phase=state.phase,
-                round_number=state.round_number,
-                stage="night_kill",
-                state_public=state_before,
-                state_before=state_before,
-                state_after=state_before,
-            )
-            return None
-
-        # Round 2: Each sees partner's R1 proposal
-        proposals_r2 = {}
-        proposals_r2_details: dict[str, dict] = {}
+        # Round 1: sequential proposals
+        proposals_r1: dict[str, str] = {}
+        messages_r1: dict[str, str] = {}
         for agent in mafia_agents:
-            partner_proposal = proposals_r1[agent.partner]
-            game_state = state.get_public_state()
-            game_state.living_players = [
-                p for p in game_state.living_players
-                if p != agent.name and p != agent.partner
-            ]
+            action_context: dict[str, object] = {"round": 1}
+            if proposals_r1:
+                action_context["prior_proposals"] = dict(proposals_r1)
+                if messages_r1:
+                    action_context["prior_messages"] = dict(messages_r1)
 
             response = await agent.act(
-                game_state,
+                state.get_public_state(),
                 transcript,
                 memories[agent.name],
                 ActionType.NIGHT_KILL,
-                action_context={
-                    "round": 2,
-                    "partner_proposal": partner_proposal,
-                    "my_r1_proposal": proposals_r1[agent.name],
-                    "partner_message": proposals_r1_details[agent.partner].get("message", ""),
-                    "my_r1_message": proposals_r1_details[agent.name].get("message", ""),
-                },
+                action_context=action_context,
             )
             memories[agent.name] = response.updated_memory
-            proposals_r2[agent.name] = response.output.get("target", "skip")
-            proposals_r2_details[agent.name] = response.output
-
-        targets_r2 = list(proposals_r2.values())
-
-        # Check Round 2 agreement
-        if targets_r2[0] == targets_r2[1]:
-            target = targets_r2[0] if targets_r2[0] != "skip" else None
-            state_before = state.get_public_snapshot()
-            state_after = state.get_public_snapshot_after_kill(target)
-            event_log.add_night_kill(
-                target,
-                {
-                    "round": 2,
-                    "proposals_r1": proposals_r1,
-                    "proposals_r2": proposals_r2,
-                    "proposal_details_r1": proposals_r1_details,
-                    "proposal_details_r2": proposals_r2_details,
-                },
+            target = response.output.get("target", "skip")
+            proposals_r1[agent.name] = target
+            messages_r1[agent.name] = response.output.get("message", "")
+            event_log.add_mafia_discussion(
+                speaker=agent.name,
+                target=target,
+                message=response.output.get("message", ""),
+                reasoning=response.output,
+                coordination_round=1,
                 phase=state.phase,
                 round_number=state.round_number,
-                stage="night_kill",
-                state_public=state_before,
-                state_before=state_before,
-                state_after=state_after,
+                state_public=state_snapshot,
             )
-            return target
 
-        # Still disagree: first Mafia (by seat) decides
-        first_mafia = mafia_agents[0]
-        target = proposals_r2[first_mafia.name]
-        target = target if target != "skip" else None
+        majority_r1 = resolve_majority(proposals_r1)
+        if majority_r1 is not None:
+            final_target = None if majority_r1 == "skip" else majority_r1
+            event_log.add_mafia_vote(
+                votes=proposals_r1,
+                final_target=final_target,
+                decided_by=None,
+                coordination_round=1,
+                phase=state.phase,
+                round_number=state.round_number,
+                state_public=state_snapshot,
+            )
+            return final_target
 
-        state_before = state.get_public_snapshot()
-        state_after = state.get_public_snapshot_after_kill(target)
-        event_log.add_night_kill(
-            target,
-            {
+        # Round 2: each sees all round 1 proposals
+        proposals_r2: dict[str, str] = {}
+        for agent in mafia_agents:
+            action_context = {
                 "round": 2,
-                "proposals_r1": proposals_r1,
-                "proposals_r2": proposals_r2,
-                "proposal_details_r1": proposals_r1_details,
-                "proposal_details_r2": proposals_r2_details,
-                "decided_by": first_mafia.name,
-            },
+                "r1_proposals": dict(proposals_r1),
+                "r1_messages": dict(messages_r1),
+            }
+            response = await agent.act(
+                state.get_public_state(),
+                transcript,
+                memories[agent.name],
+                ActionType.NIGHT_KILL,
+                action_context=action_context,
+            )
+            memories[agent.name] = response.updated_memory
+            target = response.output.get("target", "skip")
+            proposals_r2[agent.name] = target
+            event_log.add_mafia_discussion(
+                speaker=agent.name,
+                target=target,
+                message=response.output.get("message", ""),
+                reasoning=response.output,
+                coordination_round=2,
+                phase=state.phase,
+                round_number=state.round_number,
+                state_public=state_snapshot,
+            )
+
+        majority_r2 = resolve_majority(proposals_r2)
+        decided_by = None
+        if majority_r2 is None:
+            decided_by = mafia_agents[0].name
+            majority_r2 = proposals_r2[decided_by]
+
+        final_target = None if majority_r2 == "skip" else majority_r2
+        event_log.add_mafia_vote(
+            votes=proposals_r2,
+            final_target=final_target,
+            decided_by=decided_by,
+            coordination_round=2,
             phase=state.phase,
             round_number=state.round_number,
-            stage="night_kill",
-            state_public=state_before,
-            state_before=state_before,
-            state_after=state_after,
+            state_public=state_snapshot,
         )
-        return target
+        return final_target
+
+    async def _run_doctor_protection(
+        self,
+        agents: dict[str, PlayerAgent],
+        state: GameStateManager,
+        transcript: Transcript,
+        event_log: EventLog,
+        memories: dict[str, PlayerMemory],
+    ) -> tuple[str | None, dict | None]:
+        """Run Doctor protection choice."""
+        doctor_agents = [
+            a for a in agents.values()
+            if a.role == "doctor" and state.is_alive(a.name)
+        ]
+
+        if not doctor_agents:
+            return None, None
+
+        agent = doctor_agents[0]
+        response = await agent.act(
+            state.get_public_state(),
+            transcript,
+            memories[agent.name],
+            ActionType.DOCTOR_PROTECT,
+        )
+        memories[agent.name] = response.updated_memory
+
+        protected = response.output.get("target", "")
+        if protected not in state.get_living_players():
+            return None, response.output
+
+        event_log.add_doctor_protection(
+            protector=agent.name,
+            protected=protected,
+            reasoning=response.output,
+            phase=state.phase,
+            round_number=state.round_number,
+            stage="doctor_choice",
+            state_public=state.get_public_snapshot(),
+        )
+        return protected, response.output
 
     async def _run_detective_investigation(
         self,
@@ -769,7 +826,7 @@ class NightPhase:
         transcript: Transcript,
         event_log: EventLog,
         memories: dict[str, PlayerMemory],
-    ) -> None:
+    ) -> tuple[str, str, str, dict] | None:
         """Run Detective investigation."""
         detective_agents = [
             a for a in agents.values()
@@ -798,15 +855,6 @@ class NightPhase:
         if target and target in state.players:
             is_mafia = state.get_player_role(target) == "mafia"
             result = "Mafia" if is_mafia else "Not Mafia"
-            memory = memories[agent.name]
-            facts = dict(memory.facts)
-            results = list(facts.get("investigation_results", []))
-            results.append({"target": target, "result": result})
-            facts["investigation_results"] = results
-            memories[agent.name] = PlayerMemory(
-                facts=facts,
-                beliefs=dict(memory.beliefs),
-            )
             event_log.add_investigation(
                 target,
                 result,
@@ -816,3 +864,5 @@ class NightPhase:
                 stage="investigation",
                 state_public=state.get_public_snapshot(),
             )
+            return agent.name, target, result, response.output
+        return None

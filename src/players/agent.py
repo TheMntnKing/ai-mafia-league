@@ -69,11 +69,6 @@ class PlayerAgent:
         self.context_builder = ContextBuilder()
         self.action_handler = ActionHandler()
 
-    @property
-    def partner(self) -> str | None:
-        """Legacy alias for 2-Mafia flows (returns first partner if any)."""
-        return self.partners[0] if self.partners else None
-
     @observe(name="player_act")
     async def act(
         self,
@@ -229,23 +224,5 @@ class PlayerAgent:
 
         if "strategy" in output:
             new_beliefs["strategy"] = output["strategy"]
-
-        # Record the action taken (skip redundant SPEAK/VOTE facts)
-        action_key = f"last_{action_type.value}"
-        if action_type == ActionType.NIGHT_KILL:
-            new_facts[action_key] = {
-                "target": output.get("target", "skip"),
-                "reasoning": output.get("reasoning", ""),
-            }
-        elif action_type == ActionType.INVESTIGATION:
-            new_facts[action_key] = {
-                "target": output.get("target", ""),
-                "reasoning": output.get("reasoning", ""),
-            }
-        elif action_type == ActionType.DOCTOR_PROTECT:
-            new_facts[action_key] = {
-                "target": output.get("target", ""),
-                "reasoning": output.get("reasoning", ""),
-            }
 
         return PlayerMemory(facts=new_facts, beliefs=new_beliefs)
