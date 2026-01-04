@@ -87,11 +87,11 @@ Rules:
 - `src/schemas/transcript.py`: remove `accusations`/`claims` from `CompressedRoundSummary` (schema break) ✅
 - Deferred to avoid redundancy: context pattern hints (conflict pairs/vote blocs) and a win-condition reminder line
 
-### 9.6 Personas + Roster
-- Remove generic personas (keep only `Tralalero Tralala` + `Bombardiro Crocodilo`)
-- Add 8 new unique personas (names/ids TBD)
-- `src/personas/initial.py`: include 10 total (2 existing + 8 new)
-- Add doctor role guidance where desired (RoleGuidance field is optional)
+### 9.6 Personas + Roster ✅
+- Remove generic personas (keep `Tralalero Tralala`; Bombardiro removed) ✅
+- Add 9 new unique personas ✅
+- `src/personas/initial.py`: include 10 total (1 existing + 9 new) ✅
+- Add doctor role tactics where desired (`RoleTactics.doctor` is optional) ✅
 
 ### 9.7 Tests + Sample Log + Viewer Sync
 - `tests/test_state.py`: 10-player distribution + speaking order

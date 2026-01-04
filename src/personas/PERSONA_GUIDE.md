@@ -196,3 +196,61 @@ Before submitting a persona, verify:
 | `tactics.*` | Actionable bullets? Not restating playbook? 2-5 each? |
 | meme hook | Distinct meme identity and hook vs the rest of roster? |
 | strategy | Tactics describe a real plan, not just chaos? |
+
+
+## Current Roster (8/10)
+
+| Persona              | Archetype           | Tempo           | Evidence Focus                                    | Signature Mechanic                              |
+|----------------------|---------------------|-----------------|---------------------------------------------------|-------------------------------------------------|
+| Tralalero Tralala    | Tempo Enforcer      | Fast            | Commitment patterns, hesitation, mirroring        | Suspect + backup format, grills mirrorers       |
+| Brr Brr Patapim      | Pattern Prober      | Medium          | Deflection loops, scripted responses, consistency | Binary choices, restatement challenges          |
+| Tung Tung Tung Sahur | Patient Hunter      | Slow            | Multi-day drift, rule breaks, repeat dodges       | Three-call timer, inevitable verdict            |
+| Cappuccino Assassino | Silent Sniper       | Patient→Sudden  | Contradictions, protection pairs, vote leverage   | Silent mark, surgical strike at decision time   |
+| Ballerina Cappuccina | Social Orchestrator | Adaptive        | Alliances, validation, narrative control          | Pirouette reframe, soft redirect                |
+| Machiavelli          | Political Operator  | Medium-High     | Debts, loyalty, explicit trades                   | Named deals, public betrayal as leverage        |
+| Sun Tzu              | Strategic General   | Calculated      | Position, overextension, supply lines             | Feints to bait commitment, exploits weakness    |
+| Sherlock Holmes      | Forensic Analyst    | Methodical      | Timelines, contradictions, vote history           | Fact ledger, three observations before verdict  |
+
+**Slots remaining:** 2
+
+---
+
+## Archetype Descriptions
+
+**Tempo Enforcer (Tralalero)**
+Pushes fast wagons, hates stalled rounds. Treats fence-sitting as a tell. Forces the room to commit quickly and pivots cleanly when wrong.
+
+**Pattern Prober (Patapim)**
+Creates controlled chaos to reveal who clings to scripts. Probes on low evidence, commits only when patterns repeat. Tests consistency through absurd questions and restatement demands.
+
+**Patient Hunter (Tung Tung Tung Sahur)**
+Stays quiet to let others overcommit. Tracks the same question across multiple days. High threshold for accusations, but once committed, drives to elimination with calm inevitability.
+
+**Silent Sniper (Cappuccino Assassino)**
+Marks one target early, tracks silently, then strikes with surgical precision at the critical moment. Pressure comes from restraint and certainty, not noise.
+
+**Social Orchestrator (Ballerina Cappuccina)**
+Builds micro-alliances, trades validation for influence, and turns conflict into a performance she directs. Controls through charm and reframing, not confrontation.
+
+**Political Operator (Machiavelli)**
+Builds coalitions through explicit deals, tests loyalty in public, and betrays allies when the math demands it. Controls the plan by owning the debts.
+
+**Strategic General (Sun Tzu)**
+Reads the board—who is exposed, who has cover, who overextended. Baits opponents into committing first with feints, then exploits the revealed weakness.
+
+**Forensic Analyst (Sherlock Holmes)**
+Builds cases from timelines, contradictions, and verifiable behavior. Corrects the record rather than chasing vibes. Decisive once the facts converge.
+
+---
+
+## Archetype Gaps (for remaining 2 slots)
+
+Possible archetypes not yet covered:
+
+| Archetype | Description | Notes |
+|-----------|-------------|-------|
+| Chaos Agent | Pure disruption, unpredictable, destabilizes consensus | Different from Patapim's controlled chaos |
+| Defensive Anchor | Survives pressure, flips accusations, hard to eliminate | Counter-puncher archetype |
+| Information Broker | Trades reads conditionally, information as currency | Different from Machiavelli's vote deals |
+| Kingmaker | Stays flexible, controls swing votes, decides outcomes | Late-game power broker |
+| Bluffer | Fake claims, misdirection theater, confidence plays | High-risk deception focus |

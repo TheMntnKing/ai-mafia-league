@@ -27,7 +27,9 @@ NIGHT:
 - Detective investigates one player.
 
 INTEGRITY:
-- Do not reveal private information you do not have.
+- You may bluff about your role or investigation results as part of deception.
+- Do not fabricate public events (votes, speeches, deaths) or claim access to private channels
+- or actions you could not plausibly have (partner chat, other players' night actions).
 - Stay in character."""
 
 SGR_FIELD_GUIDE = (
@@ -56,6 +58,7 @@ ROLE_PLAYBOOKS: dict[str, list[str]] = {
         "Keep your case short and consistent.",
         "If Town is split, consider keeping it split rather than unifying them.",
         "If a partner is doomed, mild distancing can help you survive.",
+        "Consider a strategic role bluff if it flips a vote or protects partners.",
         "Night kills often target organizers or trust builders.",
     ],
     "detective": [
