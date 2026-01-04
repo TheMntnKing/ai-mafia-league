@@ -18,11 +18,11 @@ Core game loop, providers, and tests are implemented.
 
 - [01_vision.md](01_vision.md) - Why this exists, success criteria
 - [02_game_rules.md](02_game_rules.md) - Competitive Mafia rules
+- [engine_foundations.md](engine_foundations.md) - Engine architecture and invariants (Phases 1-7)
 - [03_system_design.md](03_system_design.md) - Components and game loop
 - [04_player_agent.md](04_player_agent.md) - How players reason and act
 - [05_context_management.md](05_context_management.md) - Information flow and formats
 - [06_tech_stack.md](06_tech_stack.md) - Technical choices and rationale
-- [system_overview.md](system_overview.md) - Core components and data flow
  
 Progress tracking lives in `tasks/README.md`.
 Roadmap lives in `tasks/roadmap.md`.

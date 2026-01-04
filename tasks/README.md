@@ -62,6 +62,7 @@ See `tasks/phase9.md` and `tasks/phase10.md` for detailed plans.
 | Document | Purpose |
 |----------|---------|
 | `docs/replay_vision.md` | Visual style, narrative flow, viewer experience |
+| `docs/engine_foundations.md` | Engine architecture and invariants (Phases 1-7) |
 | `tasks/phase10.md` | Current phase implementation details |
 | `tasks/phase1-8.md` | Completed game engine phases |
 

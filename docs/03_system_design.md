@@ -10,6 +10,57 @@ How the game system works at a high level.
 
 **Players** are LLM agents that play the game. Each player has their own identity, memory, beliefs, and reasoning process. They receive game state, process it, and produce actions.
 
+## Architecture Diagrams
+
+```mermaid
+graph TB
+    GR[GameRunner] --> GSM[GameStateManager]
+    GR --> PH[Phases]
+    PH --> EL[EventLog]
+    PH --> TM[TranscriptManager]
+    PH --> VR[VoteResolver]
+    PH --> CB[ContextBuilder]
+    CB --> PA[PlayerAgent]
+    PA --> PR[Provider]
+    GR --> JSON[JSON Logs]
+```
+
+```mermaid
+sequenceDiagram
+    participant GR as GameRunner
+    participant CB as ContextBuilder
+    participant PA as PlayerAgent
+    participant PR as Provider
+    participant LLM as LLM API
+
+    GR->>CB: Build context (state + transcript + memory + persona + role)
+    CB->>PA: Context + action_type
+    PA->>PR: Act(action_type, context)
+    PR->>LLM: Invoke model (tool_use)
+    LLM-->>PR: Structured output
+    PR-->>PA: Parsed output
+    PA-->>GR: PlayerResponse (output + updated memory)
+```
+
+```mermaid
+flowchart TB
+    subgraph Window["2-Round Window"]
+        CR[Current Round<br/>Full Detail]
+        PR[Previous Round<br/>Full Detail]
+    end
+
+    subgraph Compressed["Older Rounds"]
+        R1[Round N-2<br/>Compressed]
+        R2[Round N-3<br/>Compressed]
+        R3[...]
+    end
+
+    TM[TranscriptManager] --> Window
+    TM --> Compressed
+    Window --> CB[ContextBuilder]
+    Compressed --> CB
+```
+
 ## Game Engine Responsibilities
 
 - Initialize game and assign roles randomly
@@ -153,6 +204,9 @@ See [05_context_management.md](05_context_management.md) for detailed format spe
 - Mafia night discussion (unless they're Mafia)
 - Detective results (unless they're Detective)
 - Doctor protection outcomes (unless they're Doctor, and they do not get a success flag)
+
+**Context visibility:** Players only receive public information. Private fields are stored in
+event logs for replay but are filtered out of player prompts.
 
 ## State Management
 
