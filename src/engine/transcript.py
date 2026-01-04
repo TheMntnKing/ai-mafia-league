@@ -100,9 +100,7 @@ class TranscriptManager:
         """
         Extract key information from old round.
 
-        Uses simple heuristics (keyword matching) to identify:
-        - Major accusations
-        - Role claims
+        Older rounds are summarized with factual outcomes only.
 
         Args:
             round_t: Full round transcript to compress
@@ -110,26 +108,6 @@ class TranscriptManager:
         Returns:
             Compressed summary
         """
-        accusations = []
-        claims = []
-
-        for speech in round_t.speeches:
-            text_lower = speech.text.lower()
-
-            # Simple heuristic: look for accusation patterns
-            accusation_keywords = ["mafia", "suspect", "suspicious", "vote out", "eliminate"]
-            if any(kw in text_lower for kw in accusation_keywords):
-                accusations.append(f"{speech.speaker} accused {speech.nomination}")
-
-            # Simple heuristic: look for role claims
-            claim_keywords = ["i am", "i'm the", "detective", "investigated", "town"]
-            if any(kw in text_lower for kw in claim_keywords):
-                # Check if they're claiming a role
-                if "detective" in text_lower or "investigated" in text_lower:
-                    claims.append(f"{speech.speaker} claimed Detective")
-                elif "town" in text_lower and ("i am" in text_lower or "i'm" in text_lower):
-                    claims.append(f"{speech.speaker} claimed Town")
-
         # Determine vote death
         vote_death = None
         if round_t.vote_outcome.startswith("eliminated:"):
@@ -137,13 +115,24 @@ class TranscriptManager:
         elif round_t.revote_outcome and round_t.revote_outcome.startswith("eliminated:"):
             vote_death = round_t.revote_outcome.split(":")[1]
 
+        final_votes = round_t.revote or round_t.votes or {}
+        vote_line = None
+        if final_votes:
+            vote_line = ", ".join(
+                f"{voter}->{target}" for voter, target in final_votes.items()
+            )
+
+        defense_note = None
+        if round_t.revote or round_t.defense_speeches:
+            defense_note = "Defense: yes (tie -> revote)"
+
         return CompressedRoundSummary(
             round_number=round_t.round_number,
             night_death=round_t.night_kill,
             vote_death=vote_death,
-            accusations=accusations,
             vote_result=round_t.revote_outcome or round_t.vote_outcome,
-            claims=claims,
+            vote_line=vote_line,
+            defense_note=defense_note,
         )
 
     def _has_current_round(self) -> bool:

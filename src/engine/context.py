@@ -13,6 +13,7 @@ from src.engine.prompts import (
     build_last_words_prompt,
     build_night_kill_prompt,
     build_night_zero_prompt,
+    build_role_playbook,
     build_speak_prompt,
     build_vote_prompt,
 )
@@ -74,10 +75,12 @@ class ContextBuilder:
         """
         sections = [
             self._build_identity_section(player_name, role, persona),
-            self._build_rules_section(),
-            self._build_game_state_section(game_state),
             self._build_role_specific_section(role, extra),
             self._build_mafia_coordination_section(extra),
+            self._build_role_playbook_section(role),
+            self._build_rules_section(),
+            self._build_game_state_section(game_state),
+            self._build_speaking_order_section(action_type, extra),
             self._build_defense_context_section(action_type, extra),
             self._build_transcript_section(transcript),
             self._build_memory_section(memory),
@@ -148,6 +151,40 @@ Living players: {', '.join(state.living_players)}
 Dead players: {dead_str}
 Nominated for vote: {nominated_str}"""
 
+    def _build_speaking_order_section(
+        self, action_type: ActionType, extra: dict | None
+    ) -> str | None:
+        """Build speaking order section for discussion/defense turns."""
+        if action_type not in {ActionType.SPEAK, ActionType.DEFENSE}:
+            return None
+        if not extra or "speaking_order" not in extra:
+            return None
+
+        order = extra.get("speaking_order") or {}
+        position = order.get("position")
+        total = order.get("total")
+        spoken = order.get("spoken") or []
+        remaining = order.get("remaining") or []
+
+        lines = ["[SPEAKING ORDER]"]
+        if position and total:
+            lines.append(f"You are speaker #{position} of {total}.")
+        if spoken:
+            lines.append(f"Spoken so far: {', '.join(spoken)}")
+        else:
+            lines.append("Spoken so far: None")
+        if remaining:
+            lines.append(f"Remaining speakers: {', '.join(remaining)}")
+        else:
+            lines.append("Remaining speakers: None")
+
+        if action_type == ActionType.SPEAK:
+            lines.append(
+                "Avoid accusing players for being silent if they have not spoken yet."
+            )
+
+        return "\n".join(lines)
+
     def _build_role_specific_section(
         self, role: str, extra: dict | None
     ) -> str | None:
@@ -163,15 +200,6 @@ Nominated for vote: {nominated_str}"""
                     f"[MAFIA INFO]\nYour partners are: {partner_list}. "
                     "Protect each other's identity."
                 )
-
-        if role == "detective" and "results" in extra:
-            results = extra["results"]
-            if results:
-                result_lines = [
-                    f"- {r['target']}: {r['result']}" for r in results
-                ]
-                return "[INVESTIGATION RESULTS]\n" + "\n".join(result_lines)
-            return "[INVESTIGATION RESULTS]\nNo investigations completed yet."
 
         return None
 
@@ -229,6 +257,10 @@ Nominated for vote: {nominated_str}"""
 
         return "\n".join(lines) if lines else None
 
+    def _build_role_playbook_section(self, role: str) -> str | None:
+        """Build role playbook section."""
+        return build_role_playbook(role)
+
     def _build_defense_context_section(
         self, action_type: ActionType, extra: dict | None
     ) -> str | None:
@@ -270,10 +302,10 @@ Nominated for vote: {nominated_str}"""
                     lines.append(f"Night kill: {item.night_death}")
                 if item.vote_death:
                     lines.append(f"Vote elimination: {item.vote_death}")
-                if item.accusations:
-                    lines.append(f"Key accusations: {'; '.join(item.accusations)}")
-                if item.claims:
-                    lines.append(f"Role claims: {'; '.join(item.claims)}")
+                if item.vote_line:
+                    lines.append(f"Votes: {item.vote_line}")
+                if item.defense_note:
+                    lines.append(item.defense_note)
                 lines.append(f"Vote result: {item.vote_result}")
             elif isinstance(item, DayRoundTranscript):
                 lines.append(f"\n--- Day {item.round_number} (full) ---")
@@ -313,15 +345,73 @@ Nominated for vote: {nominated_str}"""
 
     def _build_memory_section(self, memory: PlayerMemory) -> str:
         """Build memory section of context."""
-        facts_str = json.dumps(memory.facts, indent=2) if memory.facts else "{}"
+        facts = memory.facts or {}
         beliefs_str = json.dumps(memory.beliefs, indent=2) if memory.beliefs else "{}"
+        summary_lines = self._summarize_facts(facts)
+        summary_block = "Fact summary: None yet."
+        if summary_lines:
+            summary_block = "Fact summary:\n" + "\n".join(
+                f"- {line}" for line in summary_lines
+            )
+        elif facts:
+            summary_block = "Facts (raw):\n" + json.dumps(facts, indent=2)
 
         return f"""[YOUR MEMORY]
-Facts you've observed:
-{facts_str}
+{summary_block}
 
 Your current beliefs:
 {beliefs_str}"""
+
+    def _summarize_facts(self, facts: dict) -> list[str]:
+        """Summarize known fact keys into readable lines."""
+        lines: list[str] = []
+
+        investigations = facts.get("investigation_results") or []
+        if investigations:
+            formatted = ", ".join(
+                f"{item.get('target', '?')} -> {item.get('result', '?')}"
+                for item in investigations
+                if isinstance(item, dict)
+            )
+            if formatted:
+                lines.append(f"Investigations: {formatted}")
+        elif isinstance(facts.get("last_investigation"), dict):
+            last = facts["last_investigation"]
+            lines.append(
+                "Last investigation: "
+                f"{last.get('target', '?')} -> {last.get('result', '?')}"
+            )
+
+        mafia_history = facts.get("mafia_kill_history") or []
+        if mafia_history:
+            formatted = ", ".join(
+                f"{item.get('target', '?')} ({item.get('outcome', '?')})"
+                for item in mafia_history
+                if isinstance(item, dict)
+            )
+            if formatted:
+                lines.append(f"Mafia kills: {formatted}")
+        elif isinstance(facts.get("last_mafia_kill"), dict):
+            last = facts["last_mafia_kill"]
+            lines.append(
+                "Last mafia kill: "
+                f"{last.get('target', '?')} ({last.get('outcome', '?')})"
+            )
+
+        doctor_history = facts.get("doctor_protection_history") or []
+        if doctor_history:
+            formatted = ", ".join(
+                item.get("target", "?")
+                for item in doctor_history
+                if isinstance(item, dict)
+            )
+            if formatted:
+                lines.append(f"Doctor protections: {formatted}")
+        elif isinstance(facts.get("last_doctor_protect"), dict):
+            last = facts["last_doctor_protect"]
+            lines.append(f"Last protection: {last.get('target', '?')}")
+
+        return lines
 
     def _build_night_zero_prompt(self, extra: dict | None) -> str:
         """Build prompt for Night Zero Mafia coordination."""

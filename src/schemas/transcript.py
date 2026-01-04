@@ -50,9 +50,9 @@ class CompressedRoundSummary(BaseModel):
     round_number: int
     night_death: str | None
     vote_death: str | None
-    accusations: list[str]
     vote_result: str
-    claims: list[str]
+    vote_line: str | None = None
+    defense_note: str | None = None
 
 
 # Type alias for transcript (mix of full and compressed rounds)

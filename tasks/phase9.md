@@ -2,7 +2,7 @@
 
 **Goal:** Move engine to 10 players (3 Mafia + Doctor) and split night events for replay.
 
-**Status:** IN PROGRESS (9.1–9.3 complete, 9.4 started)  
+**Status:** IN PROGRESS (9.1–9.4 complete, 9.5 started)  
 **Prerequisites:** Phase 1-8 complete
 
 ---
@@ -63,43 +63,29 @@ Rules:
 - Round 2: 2/3+ agreement executes; otherwise lowest-seat Mafia decides
 
 ### 9.4 Context + Prompt Optimization (review + tune)
-- `src/engine/context.py`: add speaking-order awareness for SPEAK/DEFENSE (include order, who has spoken, who still speaks, and round framing like “speaker #X of Y”); avoid accusing “silent” players who haven’t had a turn yet
-- `src/engine/phases.py`: pass speaking-order context into `action_context` for SPEAK/DEFENSE
-- `src/engine/prompts.py`: tighten prompts to be phase-aware (Night Zero = no deaths, Day 1 = low info), emphasize strategic play (ask questions, avoid overconfident claims)
-- `src/engine/context.py`: add a Night Recap block with role-aware hints (Mafia can infer a block if they targeted and no one died; Doctor does not get confirmation)
-- `src/engine/prompts.py`: update `RULES_SUMMARY` for 10-player roster + Doctor
-- `src/engine/prompts.py`: add `DOCTOR_PROTECT_PROMPT_TEMPLATE` + `build_doctor_protect_prompt()`
-- `src/engine/prompts.py`: update last-words guidance to allow endgame trash talk/analysis when `game_over=true` (partial: context note added; prompt template not yet adjusted)
+- `src/engine/context.py`: add speaking-order awareness for SPEAK/DEFENSE (include order, who has spoken, who still speaks, and round framing like “speaker #X of Y”); avoid accusing “silent” players who haven’t had a turn yet ✅
+- `src/engine/phases.py`: pass speaking-order context into `action_context` for SPEAK/DEFENSE ✅
+- `src/engine/prompts.py`: tighten prompts to be phase-aware (Night Zero = no deaths, Day 1 = low info), emphasize strategic play (ask questions, avoid overconfident claims) ✅
+- `src/engine/prompts.py`: update `RULES_SUMMARY` for 10-player roster + Doctor ✅
+- `src/engine/prompts.py`: add `DOCTOR_PROTECT_PROMPT_TEMPLATE` + `build_doctor_protect_prompt()` ✅
+- `src/engine/prompts.py`: update last-words guidance to allow endgame trash talk/analysis when `game_over=true` ✅
 - `src/engine/context.py`: update `_build_role_specific_section` to display list of partners (not single) ✅
 - `src/engine/context.py`: update `_build_mafia_coordination_section` to accept/display multiple partner proposals + messages ✅
 - `src/engine/prompts.py`: update Night Zero prompt wording for multiple partners ✅
-- `src/engine/context.py`: add compact “Nominations so far” line to reduce transcript parsing
-- `src/engine/transcript.py`: drop heuristic accusations/claims from compressed summaries (keep factual outcomes only)
-- `tests/sgr_helpers.py`: add `make_doctor_protect_response()`
-- `tests/test_context.py`: cover speaking-order block + Night Recap hints
-
-Optional (if prompt size grows):
-- `src/engine/context.py`: trim memory rendering to a compact, capped view (e.g., last N facts + current suspicions/strategy) without changing `PlayerMemory` schema
-- `src/engine/phases.py`: for night actions, pass a short previous-day summary instead of full transcript
+- `src/engine/context.py`: remove duplicate investigation results block; summarize facts once in memory ✅
+- `src/engine/transcript.py`: drop heuristic accusations/claims from compressed summaries (keep factual outcomes only) ✅
 
 ### 9.5 Strategy Guidance + Context Signals (added scope)
-- `src/engine/prompts.py`: add role playbooks (longer, trigger-based guidance for Town/Mafia/Detective/Doctor)
-- Scope: 6-10 short bullets per role; phrased as “If X, consider Y” or “Often…”
-- Avoid hard requirements; keep it advisory and in-character
-- `src/engine/prompts.py`: add `SGR_FIELD_GUIDE` with clear per-field intent (observations/suspicions/strategy/reasoning vs public text)
-- Define each field in 1 line (observations = facts only; reasoning = private thoughts; speech/text = public)
-- Call out audience: `message` is Mafia-only; `speech/text` are public
-- `src/schemas/actions.py`: add `Field(description=...)` hints for SGR fields so tool schemas include guidance
-- Keep descriptions short; mirror `SGR_FIELD_GUIDE` wording
-- `src/engine/context.py`: add context pattern hints (conflict pairs, repeated nominations, vote blocs) derived from nominations/votes only
-- Derive deterministically from nominations/votes (no NLP); show top 1-2 conflicts/blocs max
-- Use last 2 rounds by default to keep it stable
-- `src/engine/context.py`: add win-condition reminder line (no mafia count; avoid info leaks)
-- Example: “Win condition: Mafia win at parity. Town must keep a majority.”
-- `src/engine/transcript.py`: add deterministic vote line in compressed summaries (e.g., `Votes: A->B, C->B, D->skip`)
-- Include skip votes and normalize ordering for readability
-- `src/engine/transcript.py`: include a compact “defense occurred” marker when revote/defense happened
-- Example: “Defense: yes (tie → revote)”
+- `src/engine/prompts.py`: add role playbooks (short, advisory guidance for Town/Mafia/Detective/Doctor) ✅
+- Scope: 5-7 short bullets per role; phrased as “consider/aim,” not hard rules ✅
+- `src/engine/prompts.py`: add `SGR_FIELD_GUIDE` with clear per-field intent (observations/suspicions/strategy/reasoning vs public text) ✅
+- Call out audience: `message` is Mafia-only; `speech/text` are public ✅
+- `src/schemas/actions.py`: add `Field(description=...)` hints for SGR fields so tool schemas include guidance ✅
+- Keep descriptions short; mirror `SGR_FIELD_GUIDE` wording ✅
+- `src/engine/transcript.py`: add deterministic vote line in compressed summaries (final votes only) ✅
+- `src/engine/transcript.py`: include a compact “defense occurred” marker when revote/defense happened ✅
+- `src/schemas/transcript.py`: remove `accusations`/`claims` from `CompressedRoundSummary` (schema break) ✅
+- Deferred to avoid redundancy: context pattern hints (conflict pairs/vote blocs) and a win-condition reminder line
 
 ### 9.6 Personas + Roster
 - Remove generic personas (keep only `Tralalero Tralala` + `Bombardiro Crocodilo`)
@@ -113,6 +99,8 @@ Optional (if prompt size grows):
 - `tests/test_player.py`: doctor validation/defaults
 - `tests/test_providers.py`: schema map includes doctor
 - Add tests for 3-Mafia coordination + doctor protection outcomes
+- `tests/sgr_helpers.py`: add `make_doctor_protect_response()`
+- `tests/test_context.py`: update for speaking-order block; compression no longer extracts accusations/claims
 - Generate one 10-player log to validate event stream
 - Viewer parser: handle `mafia_discussion`, `mafia_vote`, `doctor_protection`, `night_resolution`
 

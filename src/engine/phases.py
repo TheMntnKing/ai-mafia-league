@@ -144,7 +144,7 @@ class DayPhase:
         speaking_order = state.get_speaking_order()
         nominations: list[str] = []
 
-        for speaker_name in speaking_order:
+        for position, speaker_name in enumerate(speaking_order, start=1):
             agent = agents[speaker_name]
             game_state = state.get_public_state()
             game_state.nominated_players = nominations.copy()
@@ -156,6 +156,14 @@ class DayPhase:
                 transcript,
                 memories[speaker_name],
                 ActionType.SPEAK,
+                action_context={
+                    "speaking_order": {
+                        "position": position,
+                        "total": len(speaking_order),
+                        "spoken": speaking_order[: position - 1],
+                        "remaining": speaking_order[position:],
+                    }
+                },
             )
 
             memories[speaker_name] = response.updated_memory
@@ -416,14 +424,22 @@ class DayPhase:
         }
 
         # Defense speeches
-        for name in tied_players:
+        for position, name in enumerate(tied_players, start=1):
             agent = agents[name]
             response = await agent.act(
                 state.get_public_state(),
                 transcript_manager.get_transcript_for_player(state.round_number),
                 memories[name],
                 ActionType.DEFENSE,
-                action_context={"defense_context": defense_context},
+                action_context={
+                    "defense_context": defense_context,
+                    "speaking_order": {
+                        "position": position,
+                        "total": len(tied_players),
+                        "spoken": tied_players[: position - 1],
+                        "remaining": tied_players[position:],
+                    },
+                },
             )
             text = response.output.get("text", "")
             defense_speeches.append(DefenseSpeech(speaker=name, text=text))
