@@ -12,7 +12,7 @@
 - `add_speech()`: Add speech to current round
 - `finalize_round()`: Complete round with votes, defense speeches, revote data (last words only for day eliminations)
 - `get_transcript_for_player()`: Returns windowed transcript (`full=True` for uncompressed)
-- Compression extracts: accusations (keyword heuristics), role claims, deaths (no hard caps)
+- Compression keeps factual outcomes only: deaths, final vote result, final vote line, defense marker
 
 ### Context Builder (`src/engine/context.py`)
 - `ContextBuilder` class assembling full context strings for LLM calls
@@ -23,23 +23,23 @@
 | `[YOUR IDENTITY]` | Name, role, persona details, role-specific guidance |
 | `[GAME RULES]` | Rules summary (roles, game flow, constraints) |
 | `[CURRENT STATE]` | Phase, round, living/dead players, nominations |
-| `[MAFIA INFO]` | Partner name and alive status (Mafia only) |
-| `[INVESTIGATION RESULTS]` | Investigation history (Detective only) |
+| `[MAFIA INFO]` | Partner list (Mafia only) |
+| `[ROLE PLAYBOOK]` | Advisory tactics per role |
 | `[DEFENSE CONTEXT]` | Tied players, vote counts (Defense only) |
 | `[TRANSCRIPT]` | Game history (full or compressed) |
 | `[YOUR MEMORY]` | Facts and beliefs as JSON |
 | `[YOUR TASK: *]` | Action-specific prompt with valid targets |
 
-- Action prompts for: SPEAK, VOTE, NIGHT_KILL, INVESTIGATION, LAST_WORDS, DEFENSE
-- Night kill targets exclude all Mafia (self + partner)
+- Action prompts for: SPEAK, VOTE, NIGHT_KILL, INVESTIGATION, DOCTOR_PROTECT, LAST_WORDS, DEFENSE
+- Night kill targets exclude all Mafia (self + partners)
 - Nomination rule only in SPEAK prompt
 
 ### Tests (`tests/test_context.py`)
 | Test Class | Coverage |
 |------------|----------|
 | TestTranscriptManager | Add speech, finalize round, live round with night info, revote data, pending vote_outcome |
-| TestTranscriptCompression | 2-round window, accusations extraction, claims extraction, death capture |
-| TestContextBuilder | All sections, persona info, Mafia partner, Detective results, action prompts, transcript rendering, memory JSON |
+| TestTranscriptCompression | 2-round window, death capture, vote line/defense marker |
+| TestContextBuilder | All sections, persona info, Mafia partners, action prompts, transcript rendering, memory JSON |
 | TestTranscriptFullMode | `full=True` returns uncompressed |
 
 Additional coverage:
@@ -57,8 +57,7 @@ tests/test_context.py
 
 ## Design Notes
 - `vote_outcome` allows "pending" for in-progress rounds (spec updated)
-- Compression uses simple keyword heuristics (intentionally basic, can improve later)
-- Compression does not cap the number of extracted accusations/claims
+- Compression keeps factual outcomes only (no heuristic accusations/claims)
 - ContextBuilder trusts caller (engine) to pass correct `extra` data
 - **Deviation:** Spec says VOTE requires full transcript, but ContextBuilder doesn't enforce this. Engine must pass `full=True` transcript for VOTE actions.
 
@@ -71,6 +70,6 @@ tests/test_context.py
 
 ### Mafia Coordination Context (added in Phase 6)
 - ContextBuilder extended with `_build_mafia_coordination_section()` method
-- Renders `[PARTNER'S STRATEGY]` section for NightZero (second Mafia sees first's strategy)
-- Renders `[COORDINATION ROUND 2]` section for Night kill disagreement resolution
-- Keys in `extra` dict: `partner_strategy`, `partner_proposal`, `my_r1_proposal`
+- Renders `[PARTNER STRATEGIES]` section for NightZero (Mafia see prior strategies)
+- Renders coordination sections for Round 1 and Round 2 proposals/messages
+- Keys in `extra` dict: `partner_strategies`, `prior_proposals`, `prior_messages`, `r1_proposals`, `r1_messages`

@@ -21,15 +21,16 @@ Thin wrapper over provider SDKs. No LangChain/LangGraph.
 
 Single LLM call per action. Schema field order forces reasoning flow: observe → analyze → strategize → decide → output.
 
-Action-specific schemas: `SpeakingOutput`, `VotingOutput`, `NightKillOutput`, `InvestigationOutput`, `LastWordsOutput`, `DefenseOutput`.
+Action-specific schemas: `SpeakingOutput`, `VotingOutput`, `NightKillOutput`, `InvestigationOutput`, `DoctorProtectOutput`, `LastWordsOutput`, `DefenseOutput`.
 
 See `src/schemas/actions.py` for action schema definitions.
 
 ## Storage
 
-**JSON logs:** Complete game records in `logs/`. Schema versioned. Event types:
-`phase_start`, `speech`, `vote_round`, `elimination`, `night_kill`, `investigation`,
-`last_words`, `defense`, `game_end`.
+**JSON logs:** Complete game records in `logs/`. Schema v1.3. Event types:
+`phase_start`, `speech`, `vote_round`, `elimination`, `mafia_discussion`, `mafia_vote`,
+`doctor_protection`, `night_resolution`, `investigation`, `last_words`, `defense`,
+`game_end`.
 
 ## Observability
 

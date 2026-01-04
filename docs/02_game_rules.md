@@ -54,13 +54,13 @@ After voting resolves, night begins.
 
 ## Speaking Order
 
-Speaking order rotates each round. The first speaker position advances by one seat each day, regardless of whether that position is alive. If the starting position is a dead player, they are skipped and the next living player in order speaks first. Seating positions are randomized each game (seats 0-6).
+Speaking order rotates each round. The first speaker position advances by one seat each day, regardless of whether that position is alive. If the starting position is a dead player, they are skipped and the next living player in order speaks first. Seating positions are randomized each game (seats 0-9).
 
 Example: Seats are 0-9. Day 1 starts with seat 0. Seat 0 dies Night 1. Day 2's starting position is seat 1 (rotation advanced by 1). If seat 1 were also dead, seat 2 would speak first.
 
 ## Speech Length
 
-Speeches should be approximately 50-100 words. This keeps games paced for entertainment while allowing meaningful content. Defense speeches during revote may be shorter.
+Speeches should be approximately 80-140 words. This keeps games paced for entertainment while allowing meaningful content. Defense speeches and last words may be shorter (~60-100).
 
 ## Nominations
 
@@ -107,7 +107,7 @@ The narrator never reveals roles during the game. All roles are revealed only wh
 
 ## Win Conditions
 
-**Town wins** when both Mafia are eliminated.
+**Town wins** when all Mafia are eliminated.
 
 **Mafia wins** when living Mafia players equal or outnumber living Town-aligned players (Town, Detective, Doctor combined).
 

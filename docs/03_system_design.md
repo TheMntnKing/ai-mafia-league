@@ -39,7 +39,7 @@ sequenceDiagram
     PR->>LLM: Invoke model (tool_use)
     LLM-->>PR: Structured output
     PR-->>PA: Parsed output
-    PA-->>GR: PlayerResponse (output + updated memory)
+    PA-->>GR: PlayerResponse (output + updated beliefs)
 ```
 
 ```mermaid
@@ -104,10 +104,10 @@ The game engine runs this loop:
 3. Inform Mafia players of all partners
 
 **Night Zero:**
-1. Call each Mafia player for coordination (single round, no back-and-forth):
+1. Call each Mafia player for coordination (single round, sequential by seat):
    - Each receives: role, partner identities, prompt for strategy discussion
    - Each returns: strategy notes (signals to use, cover stories, initial suspicion targets)
-   - Engine shares all strategies with all Mafia (they see each other's plans)
+   - Later Mafia see earlier strategies; engine shares all strategies with all Mafia
 2. No kill occurs, no Detective or Doctor action
 
 **Day One:**
@@ -165,7 +165,7 @@ When a player is called to speak:
 - Summarized history of previous rounds
 - Their own memory/belief state from previous turns
 
-The engine packages these into a prompt via the ContextBuilder. The PlayerAgent passes that prompt to the provider, which returns a raw action output dict. The PlayerAgent validates it and wraps it into `PlayerResponse` with updated memory.
+The engine packages these into a prompt via the ContextBuilder. The PlayerAgent passes that prompt to the provider, which returns a raw action output dict. The PlayerAgent validates it and wraps it into `PlayerResponse` with updated beliefs.
 
 **Processing they do:**
 - Update beliefs based on new information
@@ -177,13 +177,13 @@ The engine packages these into a prompt via the ContextBuilder. The PlayerAgent 
 **Output they return:**
 - Speech text
 - Nominated player
-- Updated memory/belief state (stored for next turn)
+- Updated beliefs (stored for next turn)
 
 When a player is called to vote:
 
 **Input:** Same as above, plus complete transcript of discussion and list of nominated players
 
-**Output:** Vote choice (nominated player or skip), updated memory/belief state
+**Output:** Vote choice (nominated player or skip), updated beliefs
 
 ## Information Visibility
 

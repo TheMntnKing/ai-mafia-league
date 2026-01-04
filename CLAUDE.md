@@ -11,7 +11,7 @@ pip install -e ".[dev]"
 # Run tests
 pytest
 
-# Run a game (when implemented)
+# Run a game
 python -m src.engine.run
 ```
 
@@ -20,7 +20,7 @@ python -m src.engine.run
 - **Python**: 3.11+
 - **LLM Providers**: anthropic, google-generativeai, openai (thin wrappers, no LangChain)
 - **Schemas**: pydantic
-- **Storage**: aiosqlite + JSON files
+- **Storage**: JSON logs
 - **Observability**: langfuse
 - **Testing**: pytest, pytest-asyncio
 
@@ -87,11 +87,10 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 ├── /providers     # LLM client wrappers
 ├── /personas      # Persona definitions
 ├── /schemas       # Pydantic models
-└── /storage       # Database, JSON logs
+└── /storage       # JSON logs
 /tests             # pytest tests
 /docs              # Specifications
 /logs              # Game output logs
-/data              # SQLite database
 ```
 
 ## Testing
@@ -129,10 +128,10 @@ def game_state():
 Single LLM call per action. Schema field order forces reasoning: observe → analyze → strategize → decide → output. See `src/schemas/` for definitions.
 
 ### Player State
-Players define their memory/beliefs each turn. Engine stores it between calls and passes it back. LLMs are stateless; engine manages continuity.
+Players update beliefs each turn. The engine owns factual memory (night histories, investigations, protections), stores it between calls, and passes it back. LLMs are stateless; engine manages continuity.
 
 ### Event Log
-Runtime: builds player context (filtered public view). Persistence: saved to JSON with private reasoning for viewers.
+Runtime: EventLog is for replay; player context uses transcript + memory. Persistence: saved to JSON with private reasoning for viewers.
 
 ## Git Workflow
 

@@ -17,6 +17,7 @@ Engine provides ground truth facts. Players build interpretations.
 **Fixed context (every call):**
 - Role and private knowledge
 - Persona description
+- Role playbook (role-specific strategy tips)
 - Game rules summary
 - Current phase and round number
 - Living/dead player lists
@@ -28,6 +29,8 @@ Engine provides ground truth facts. Players build interpretations.
 **Turn-specific prompt:**
 - Required action (speak, vote, night action, last words)
 - Constraints (nominated players, etc.)
+- SGR field guide that clarifies how to fill observations/suspicions/strategy/reasoning
+- For last words, a `game_over` hint may be passed when the elimination ends the game
 
 **LLM output contract:** Providers return a raw action output dict that matches the action-specific schema. The PlayerAgent validates it and wraps it into `PlayerResponse` with updated memory.
 
@@ -41,11 +44,12 @@ never appear in LLM prompts.
 | Event | Fields |
 |-------|--------|
 | Speech | speaker, text, nomination |
-| Vote | votes (dict), outcome, eliminated |
+| Vote round | votes (dict), outcome, round |
+| Elimination | eliminated |
 | Last words | speaker, text (day elimination only) |
 | Investigation (Detective only) | target, result (Mafia/Not Mafia) |
-| Mafia discussion | speaker, target, message, reasoning (private) |
-| Mafia vote | votes, final_target, decided_by (private) |
+| Mafia discussion | speaker, target, message, reasoning, coordination_round (private) |
+| Mafia vote | votes, final_target, decided_by, coordination_round (private) |
 | Doctor protection | protector, protected, reasoning (private) |
 | Night resolution | intended_kill, protected, actual_kill |
 
@@ -68,7 +72,7 @@ are private fields.
 | Town | Nothing (not called) |
 
 **Mafia Coordination (single round):**
-- Each Mafia called independently
+- Mafia are called sequentially (seat order) so later Mafia see earlier strategies
 - Prompt: "You are Mafia. Your partners are [X, Y]. Discuss strategy: signals to use during day discussion, cover stories, initial suspicion targets to push. No kill tonight."
 - Each returns: strategy notes
 - Engine shares all responses with all Mafia players (stored in their memory for subsequent nights)
@@ -84,9 +88,10 @@ are private fields.
 #### Mafia Coordination (2-round protocol)
 
 **Round 1:**
+- Mafia are called sequentially; later Mafia receive prior proposals + messages
 - Each Mafia receives: fixed context, memory, partner identities
 - Prompt: "Propose kill target. If 2/3+ agree, kill occurs. Round 1 of 2."
-- Each Mafia returns: target or "skip"
+- Each Mafia returns: target or "skip" + message to partners
 
 **Engine resolves Round 1:**
 - 2/3+ agreement → execute kill, skip Round 2
@@ -94,7 +99,7 @@ are private fields.
 Note: "skip" counts as a target for agreement.
 
 **Round 2 (only if disagreement):**
-- Each Mafia receives: fixed context + all Round 1 proposals
+- Each Mafia receives: fixed context + all Round 1 proposals + messages
 - Prompt: "Round 2. Try to reach consensus. No agreement = lowest-seat Mafia decides."
 - Each Mafia returns: final target
 
@@ -106,13 +111,13 @@ Note: "skip" counts as a target for agreement.
 
 #### Doctor
 
-- Receives: fixed context, memory, previous protections
+- Receives: fixed context, memory, previous protections (history; no success flag)
 - Prompt: choose a protection target (may self-protect)
 - Doctor is not told whether protection succeeded; they can infer only from public outcomes
 
 #### Detective
 
-- Receives: fixed context, memory, previous results
+- Receives: fixed context, memory, previous results + investigation history
 - Prompt: choose investigation target
 - After: receives result
 
@@ -124,9 +129,9 @@ Note: "skip" counts as a target for agreement.
 3. **Voting** - all players vote simultaneously
 4. **Revote** (if tie) - tied players defend, then revote
 
-**Speakers (called in order):** Fixed context + memory + death announcement + all speeches from this round so far (in-progress) + prompt to speak and nominate
+**Speakers (called in order):** Fixed context + memory + speaking-order context + death announcement + all speeches from this round so far (in-progress) + prompt to speak and nominate
 
-**Tied players (if revote):** Fixed context + context of the tie + prompt for defense speech
+**Tied players (if revote):** Fixed context + context of the tie + speaking-order context + prompt for defense speech
 
 **Voting:** Fixed context + full transcript including the current round's speeches + nominated players (or tied players for revote) + prompt to vote
 
@@ -140,7 +145,17 @@ Fixed 2-round window for full detail:
 | Previous round | Full speeches verbatim | Track momentum, position shifts |
 | All older rounds | Compressed summary only | Players should have processed into beliefs already |
 
-**Compressed summary includes:** deaths, vote outcomes, deterministic vote line, defense/revote marker (no heuristic accusations/claims).
+**Full transcript shape (current):**
+- `round_number`
+- `night_kill` (None for Day 1)
+- `speeches` (speaker, text, nomination)
+- `votes` (voter -> target/skip) + `vote_outcome`
+- `defense_speeches`, `revote`, `revote_outcome` (only if revote)
+- `last_words` (day eliminations only)
+
+**Compressed summary shape (current):**
+- `round_number`, `night_death`, `vote_death`, `vote_result`
+- `vote_line` (deterministic vote line), `defense_note` (revote/defense marker)
 
 See `src/schemas/transcript.py` for `DayRoundTranscript` and `CompressedRoundSummary`.
 
@@ -148,18 +163,18 @@ See `src/schemas/transcript.py` for `DayRoundTranscript` and `CompressedRoundSum
 
 Memory stored by engine and passed back each call includes both **facts** and **beliefs**, matching the `PlayerMemory` schema.
 
-**Factual memory:**
-- Key events witnessed
-- Votes cast by each player
-- Deaths (night kills have no last words; day eliminations do)
-- Own night action decisions (kill/protect/investigate targets)
+**Factual memory (engine-owned):**
+- Mafia kill history (target + outcome)
+- Doctor protection history (target + reasoning; no success flag)
+- Detective investigation results/history (target + result; history includes reasoning)
+- Latest night action snapshots (`last_*`) for the role
 
 **Processed beliefs:**
 - Suspicion level for each living player (with reasoning)
 - Perceived relationships (alliances, conflicts)
 - Behavioral pattern notes
 
-Memory is structured so engine can store between calls. Players return updated memory with each action.
+Memory is structured so engine can store between calls. Players return updated beliefs with each action; the engine augments factual memory as needed.
 
 ## Information Barriers
 
@@ -177,6 +192,7 @@ Every call injects fresh ground truth:
 - Exact living/dead player lists
 - Player's own role
 - Mafia partner identities (Mafia only)
+- Mafia kill history (Mafia only)
 - Detective investigation results (Detective only)
 - Doctor protection history (Doctor only, no success flag)
 

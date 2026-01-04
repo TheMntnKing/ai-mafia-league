@@ -28,16 +28,19 @@ See `src/schemas/actions.py` for action schema definitions.
 
 ## Memory
 
-PlayerMemory has two parts: **facts** (what happened) and **beliefs** (interpretations). "Player 3 accused Player 5 in round 2" is fact memory. "Player 3 is suspicious" is belief.
+PlayerMemory has two parts: **facts** (engine-owned ground truth for that role) and
+**beliefs** (player interpretations). Facts are written by the engine; agents update
+beliefs. Public speeches and votes are provided via transcript, not stored in facts.
 
-**What factual memory includes:**
-- Speeches heard (who said what, in order)
-- Nominations and votes
-- Deaths (no role information)
-- Own night action decisions (last investigation/kill/protection with brief reasoning)
-- Role-specific private info (partner identities for Mafia, investigation results for Detective; Doctor does not receive a save success flag)
+**What factual memory includes (engine-owned):**
+- Mafia kill history (target + outcome)
+- Doctor protection history (target + reasoning; no success flag)
+- Detective investigation results/history (target + result; history includes reasoning)
+- Latest night action snapshots (`last_*`) for the role
+- Role-specific private info (investigation results for Detective)
 
-**When memory updates:** Only when player is called to act. Between turns, engine accumulates events. On player's turn, they receive all new events, process them, reason, and produce action—all in one LLM call.
+**When memory updates:** Agents update beliefs only when called to act. The engine
+may update factual memory after night resolution (kills, protections, results).
 
 **No passive listening:** Players are only called when they need to act (speaking, voting, night action, last words). No LLM calls happen between turns. Listening, processing, and acting happen together in one call.
 
@@ -114,11 +117,11 @@ The entire persona is rendered into the system prompt for every LLM call. The en
 | Voting | game state, full day transcript, nominated players | vote choice, updated beliefs |
 | Defense | game state, accusation context | defense speech |
 | Last words | game state, full memory | final statement |
-| Night kill (Mafia) | game state, partner's proposal (if Round 2) | target or skip |
+| Night kill (Mafia) | game state, Round 1 proposals (if Round 2) | target or skip + partner message |
 | Investigation (Detective) | game state, all previous results | target |
 | Protection (Doctor) | game state, previous protections | target |
 
-All actions also include fixed context (role, persona, living/dead lists). See [05_context_management.md](05_context_management.md) for full details.
+All actions also include fixed context (role, persona, living/dead lists), plus role playbooks and SGR field guidance in the prompts. See [05_context_management.md](05_context_management.md) for full details.
 
 ## Mafia Coordination
 
@@ -131,8 +134,8 @@ Summary: Round 1 proposals; if 2/3+ agree, execute. If split, Round 2. If still 
 LLMs are stateless. Engine manages continuity:
 1. After each call, engine stores player's memory and beliefs
 2. On next call, engine passes stored memory + beliefs + new events since last call
-3. Player processes everything, produces action + updated memory + updated beliefs
-4. Engine stores the updates for next time
+3. Player processes everything, produces action + updated beliefs
+4. Engine stores beliefs and augments facts as needed
 
 Each call is self-contained from player's perspective.
 

@@ -165,11 +165,11 @@ Target word counts (vary with player count):
 
 | Action | Words |
 |--------|-------|
-| Day Speech | 50-80 |
-| Reasoning | 30-50 |
-| Defense | 30-50 |
-| Last Words | 40-80 |
-| Mafia Night Chat | 30-50 |
+| Day Speech | 80-140 |
+| Reasoning | 40-80 |
+| Defense | 60-100 |
+| Last Words | 60-100 |
+| Mafia Night Chat | 40-80 |
 
 Game length: 10 players ~25-35 min (with Doctor saves potentially extending games).
 

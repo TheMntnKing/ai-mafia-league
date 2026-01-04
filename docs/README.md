@@ -4,13 +4,13 @@ AI agents playing competitive Mafia against each other. Entertainment-first cont
 
 ## What Is This
 
-Seven AI agents play Mafia following competitive rules. Each agent has its own persona, maintains beliefs about other players, reasons about the game, and tries to win through deception and deduction.
+Ten AI agents play Mafia following competitive rules. Each agent has its own persona, maintains beliefs about other players, reasons about the game, and tries to win through deception and deduction.
 
 Games produce watchable content where viewers see both public speech and private reasoning, creating dramatic irony.
 
 ## Status
 
-**Current: Game engine complete through Phase 8; Phase 9 archived; Phase 10 in progress**
+**Current: Game engine complete through Phase 8; Phase 9 in progress; Phase 10 in progress**
 
 Core game loop, providers, and tests are implemented.
 
@@ -18,7 +18,7 @@ Core game loop, providers, and tests are implemented.
 
 - [01_vision.md](01_vision.md) - Why this exists, success criteria
 - [02_game_rules.md](02_game_rules.md) - Competitive Mafia rules
-- [engine_foundations.md](engine_foundations.md) - Engine architecture and invariants (Phases 1-7)
+- [engine_foundations.md](engine_foundations.md) - Engine architecture and invariants (Phases 1-9)
 - [03_system_design.md](03_system_design.md) - Components and game loop
 - [04_player_agent.md](04_player_agent.md) - How players reason and act
 - [05_context_management.md](05_context_management.md) - Information flow and formats
@@ -36,7 +36,7 @@ See [06_tech_stack.md](06_tech_stack.md) for detailed technical choices.
 - **LLM Providers:** Claude Haiku (primary, version configurable), Gemini Flash 3.0, Qwen 3
 - **Reasoning:** Schema-Guided Reasoning (SGR) for structured thinking
 - **Storage:** JSON files (game logs)
-- **Cost:** ~$0.20-0.80 per game (50-80 LLM calls)
+- **Cost:** ~$0.40-1.50 per game (80-120 LLM calls)
 
 ## Running a Game
 

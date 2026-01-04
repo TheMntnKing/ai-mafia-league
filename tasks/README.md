@@ -4,7 +4,7 @@ Single source of truth for delivery status and next steps.
 
 ## Status
 
-**Game Engine:** Core complete (Phases 1-8), Phase 9 role + roster expansion in progress
+**Game Engine:** Core complete (Phases 1-8), Phase 9 in progress
 **Replay Viewer:** In Progress (Phase 10 - Stylized Mesh)
 
 ### Completed Phases
@@ -18,7 +18,7 @@ Single source of truth for delivery status and next steps.
 | Phase 5 | Player agent | ✅ |
 | Phase 6 | Game loop (first runnable game) | ✅ |
 | Phase 7 | Quality and observability | ✅ |
-| Phase 8 | Replayable logs (schema v1.2) | ✅ |
+| Phase 8 | Replayable logs (schema v1.3) | ✅ |
 | **Phase 9** | **Roster + Role Expansion (Engine)** | 🚧 IN PROGRESS |
 | **Phase 10** | **3D Stylized Mesh Viewer** | 🚧 IN PROGRESS |
 
@@ -40,7 +40,6 @@ See `tasks/phase9.md` and `tasks/phase10.md` for detailed plans.
 
 **P0 — Essentials (Week 1)**
 - Finish character roster (8 more + generic) and load GLBs in viewer
-- Add Doctor + extra Mafia + 3 players in engine; ensure logs align with viewer
 - Build town square + mafia lair scene GLBs; load in viewer
 - Apply scene scaling/centering + offsets to all scenes
 - Camera presets + lighting tuning per scene (day/night/mafia/detective)
@@ -62,9 +61,9 @@ See `tasks/phase9.md` and `tasks/phase10.md` for detailed plans.
 | Document | Purpose |
 |----------|---------|
 | `docs/replay_vision.md` | Visual style, narrative flow, viewer experience |
-| `docs/engine_foundations.md` | Engine architecture and invariants (Phases 1-7) |
+| `docs/engine_foundations.md` | Engine architecture and invariants (Phases 1-9) |
 | `tasks/phase10.md` | Current phase implementation details |
-| `tasks/phase1-8.md` | Completed game engine phases |
+| `tasks/phase1.md` - `tasks/phase8.md` | Completed game engine phases |
 
 ## Roadmap
 
