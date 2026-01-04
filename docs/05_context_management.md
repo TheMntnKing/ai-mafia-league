@@ -23,7 +23,7 @@ Engine provides ground truth facts. Players build interpretations.
 
 **Accumulated context:**
 - Memory and beliefs from previous turns
- - Transcript window (current + previous rounds full, older rounds compressed)
+- Transcript window (current + previous rounds full, older rounds compressed)
 
 **Turn-specific prompt:**
 - Required action (speak, vote, night action, last words)
@@ -42,12 +42,19 @@ never appear in LLM prompts.
 |-------|--------|
 | Speech | speaker, text, nomination |
 | Vote | votes (dict), outcome, eliminated |
-| Night kill | target (or null) |
 | Last words | speaker, text (day elimination only) |
 | Investigation (Detective only) | target, result (Mafia/Not Mafia) |
+| Mafia discussion | speaker, target, message, reasoning (private) |
+| Mafia vote | votes, final_target, decided_by (private) |
+| Doctor protection | protector, protected, reasoning (private) |
+| Night resolution | intended_kill, protected, actual_kill |
 
-Investigation events are private and never appear in the public event stream. Only the
-Detective receives investigation results via their memory/context.
+Investigation, Mafia coordination, and Doctor protection events are private and never
+appear in public player context. Only the relevant role receives those details via
+their memory/context.
+
+For `night_resolution`, only `actual_kill` is public; `intended_kill` and `protected`
+are private fields.
 
 ## Context by Game Phase
 
@@ -55,15 +62,16 @@ Detective receives investigation results via their memory/context.
 
 | Role | Receives |
 |------|----------|
-| Mafia | Role, partner identity, strategy prompt |
+| Mafia | Role, partner identities, strategy prompt |
 | Detective | Nothing (not called) |
+| Doctor | Nothing (not called) |
 | Town | Nothing (not called) |
 
 **Mafia Coordination (single round):**
 - Each Mafia called independently
-- Prompt: "You are Mafia. Your partner is [X]. Discuss strategy: signals to use during day discussion, cover stories, initial suspicion targets to push. No kill tonight."
+- Prompt: "You are Mafia. Your partners are [X, Y]. Discuss strategy: signals to use during day discussion, cover stories, initial suspicion targets to push. No kill tonight."
 - Each returns: strategy notes
-- Engine shares both responses with both Mafia players (stored in their memory for subsequent nights)
+- Engine shares all responses with all Mafia players (stored in their memory for subsequent nights)
 
 ### Day One
 
@@ -76,25 +84,31 @@ Detective receives investigation results via their memory/context.
 #### Mafia Coordination (2-round protocol)
 
 **Round 1:**
-- Each Mafia receives: fixed context, memory, partner identity
-- Prompt: "Propose kill target. If both name same player, kill occurs. Round 1 of 2."
+- Each Mafia receives: fixed context, memory, partner identities
+- Prompt: "Propose kill target. If 2/3+ agree, kill occurs. Round 1 of 2."
 - Each Mafia returns: target or "skip"
 
 **Engine resolves Round 1:**
-- Same target → execute kill, skip Round 2
-- Both "skip" → no kill, skip Round 2
-- Different targets → proceed to Round 2
+- 2/3+ agreement → execute kill, skip Round 2
+- All different → proceed to Round 2
+Note: "skip" counts as a target for agreement.
 
 **Round 2 (only if disagreement):**
-- Each Mafia receives: fixed context + partner's Round 1 proposal
-- Prompt: "Partner proposed [X]. You proposed [Y]. Final round. No agreement = first Mafia by seat decides."
+- Each Mafia receives: fixed context + all Round 1 proposals
+- Prompt: "Round 2. Try to reach consensus. No agreement = lowest-seat Mafia decides."
 - Each Mafia returns: final target
 
 **Engine resolves Round 2:**
-- Both agree → use agreed target
-- Still disagree → first Mafia (lower seat number) decides
+- 2/3+ agreement → use agreed target
+- Still split → lowest-seat Mafia decides
 
 **Single Mafia alive:** Direct choice, no coordination needed.
+
+#### Doctor
+
+- Receives: fixed context, memory, previous protections
+- Prompt: choose a protection target (may self-protect)
+- Doctor is not told whether protection succeeded; they can infer only from public outcomes
 
 #### Detective
 
@@ -126,8 +140,7 @@ Fixed 2-round window for full detail:
 | Previous round | Full speeches verbatim | Track momentum, position shifts |
 | All older rounds | Compressed summary only | Players should have processed into beliefs already |
 
-**Compressed summary includes:** deaths, major accusations, vote outcomes, role claims.
-No hard cap on the number of extracted accusations or claims.
+**Compressed summary includes:** deaths, vote outcomes, deterministic vote line, defense/revote marker (no heuristic accusations/claims).
 
 See `src/schemas/transcript.py` for `DayRoundTranscript` and `CompressedRoundSummary`.
 
@@ -137,9 +150,9 @@ Memory stored by engine and passed back each call includes both **facts** and **
 
 **Factual memory:**
 - Key events witnessed
-- Claims made by each player
 - Votes cast by each player
 - Deaths (night kills have no last words; day eliminations do)
+- Own night action decisions (kill/protect/investigate targets)
 
 **Processed beliefs:**
 - Suspicion level for each living player (with reasoning)
@@ -156,14 +169,16 @@ Players DON'T receive:
 - Dead players' roles (until game end)
 - Mafia discussion (for non-Mafia)
 - Investigation results (for non-Detective)
+- Doctor protection details (for non-Doctor)
 
 ## Hallucination Prevention
 
 Every call injects fresh ground truth:
 - Exact living/dead player lists
 - Player's own role
-- Mafia partner identity (Mafia only)
+- Mafia partner identities (Mafia only)
 - Detective investigation results (Detective only)
+- Doctor protection history (Doctor only, no success flag)
 
 Format: structured data, explicit lists, current state separated from history.
 
@@ -180,9 +195,9 @@ Living: Player 1, Player 2, Player 4, Player 7
 Dead: Player 3 (night 1), Player 5 (voted day 2), Player 6 (night 2)
 
 [PREVIOUS ROUNDS SUMMARY]
-Day 1: No elimination. Player 2 accused Player 5.
+Day 1: No elimination.
 Night 1: Player 3 killed.
-Day 2: Player 5 eliminated (4-2-1). Claimed Town in last words.
+Day 2: Player 5 eliminated (4-2-1).
 
 [CURRENT ROUND]
 Night 2: Player 6 killed.

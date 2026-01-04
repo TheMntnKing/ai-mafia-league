@@ -72,14 +72,14 @@ Target: 15-20k tokens per call. Typical: ~7-8k.
 
 ## Cost Estimates
 
-Per game (7 players, 4-5 rounds):
+Per game (10 players, 6-8 rounds):
 
 | Metric | Estimate |
 |--------|----------|
-| LLM calls | 50-80 |
-| Input tokens | 30-50k |
-| Output tokens | 10-20k |
-| **Cost (Haiku)** | **$0.20-0.80** |
+| LLM calls | 80-120 |
+| Input tokens | 50-90k |
+| Output tokens | 15-30k |
+| **Cost (Haiku)** | **$0.40-1.50** |
 
 ## Dependencies
 

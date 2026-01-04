@@ -24,8 +24,7 @@ Stylized mesh humanoids with blocky proportions. Roblox-adjacent silhouette, not
 - Meme culture native - familiar aesthetic to target audience
 
 ### Asset Pipeline (Practical)
-- Character workflow: `docs/character_pipeline.md`
-- Scene workflow: `docs/scene_pipeline.md` (asset packs assembled in Blender)
+- Character + scene workflow: `docs/viewer/art_pipeline.md`
 - Output: `.glb` for R3F (scale normalized, pivot at feet, materials optionally overridden)
   - Scenes are auto-centered/scaled in viewer; tune per scene if needed
 
@@ -79,10 +78,11 @@ Brief transition only:
 ### Omniscient Mode
 Full scenes:
 1. Night falls transition
-2. Mafia lair - red lighting, show coordination, target highlight (target is marked, not dead)
-3. Detective scene - investigation target and result
-4. Dawn transition (return to town square)
-5. Day announcement: "X was killed" → death animation plays now
+2. Mafia lair - red lighting, show coordination (each Mafia speaks), target highlight (marked, not dead)
+3. Doctor scene - protection choice with shield glow on target
+4. Detective scene - investigation target and result
+5. Dawn transition (return to town square)
+6. Day announcement: "X was killed" or "No one died" → death animation plays now (if any)
 
 ### Night Zero
 Mafia coordinate but don't kill. Detective doesn't act.
@@ -99,20 +99,23 @@ ignore these, omniscient can optionally show a short Mafia scene.
 ## Scene Visibility & Death Timing (Viewer Rules)
 
 **Scene roster:**
-- Mafia lair: ONLY Mafia visible
+- Mafia lair: ONLY Mafia visible (3 Mafia in 10-player games)
+- Doctor scene: ONLY Doctor visible
 - Detective office: ONLY Detective visible
 - Town square (day): ALL living players visible
 
 **Night events do NOT kill the target.** The target is only marked during night scenes.
 
 **Death timing:** Death animation happens at **day start** (after dawn transition and announcement),
-not during `night_kill` events.
+not during night events. The `night_resolution` event determines if kill was blocked by Doctor.
 
 **Scene switching logic (omniscient):**
 - `phase = night_*` → transition to night scene
-- `night_zero_strategy` / `night_kill` → Mafia lair
+- `night_zero_strategy` / `mafia_discussion` / `mafia_vote` → Mafia lair
+- `doctor_protection` → Doctor scene
 - `investigation` → Detective office
-- `phase = day_*` → town square (announce kill, then play death animation)
+- `night_resolution` → (internal, no scene change)
+- `phase = day_*` → town square (announce result, then play death animation if any)
 
 ---
 
@@ -167,7 +170,7 @@ Target word counts (vary with player count):
 | Last Words | 40-80 |
 | Mafia Night Chat | 30-50 |
 
-Game length: 7 players ~15-20 min, 10 players ~30-45 min.
+Game length: 10 players ~25-35 min (with Doctor saves potentially extending games).
 
 ---
 
@@ -189,8 +192,7 @@ Each persona = stylized mesh humanoid + 2-3 iconic features:
 - **Accessories:** Glasses, props, badges
 - **Color scheme:** Recognizable at thumbnail size
 
-Material and pose rules live in `docs/character_pipeline.md`. Palette and lighting live in
-`docs/style_bible.md`.
+Material, pose, palette, and lighting rules live in `docs/viewer/art_pipeline.md`.
 
 **Dead state:** Grayscale, X eyes, sink below stage. Stay visible (ghosted).
 
@@ -204,9 +206,16 @@ Material and pose rules live in `docs/character_pipeline.md`. Palette and lighti
 | Day (Town Square) | Warm, golden hour | Discussion + voting |
 | Night (Sleeping) | Blue/dark, moonlight | Transition (public mode) |
 | Mafia Lair | Red underglow, fog | Night coordination (omniscient) |
+| Doctor Scene | Green/teal accent, medical | Protection choice (omniscient) |
 | Detective Office | Neutral + warm accent | Investigation (omniscient) |
 
 **Layout:** Characters in semi-circle arc facing camera. Table/podium in foreground.
+
+**Doctor Scene Notes:**
+- Only Doctor visible
+- Protection target highlighted with shield/glow effect
+- Brief scene (~5 sec) - Doctor chooses, protection animation
+- No confirmation whether protection was successful (resolved at dawn)
 
 ---
 

@@ -81,8 +81,7 @@ viewer/src/
 
 ## Asset Pipeline
 
-- Characters: `docs/character_pipeline.md`
-- Scenes: `docs/scene_pipeline.md` (asset packs assembled in Blender)
+- Characters + scenes: `docs/viewer/art_pipeline.md`
 
 ---
 
@@ -93,7 +92,7 @@ viewer/src/
 **Goal:** Lock the style and asset pipeline before heavy implementation.
 
 **Tasks:**
-- [x] Define a style bible (palette, materials, lighting rules, scale) in `docs/style_bible.md`
+- [x] Define art pipeline (palette, materials, lighting rules, scale) in `docs/viewer/art_pipeline.md`
 - [x] Lock character tool (fal.ai: Hunyuan3D) + scene pipeline (asset packs + Blender)
 - [x] Draft prompt rules for characters + select scene asset packs
 - [x] Draft a town square blockout (houses, lamps, round table)
@@ -121,6 +120,7 @@ viewer/src/
   - `log`, `eventIndex`, `playing`
   - `nextEvent()`, `prevEvent()`, `setIndex()`
 - [x] Create `logParser.js` to extract timeline (handle `night_zero_strategy`: skip in public, short scene in omniscient)
+- [ ] Update log parser to handle `mafia_discussion`, `mafia_vote`, `doctor_protection`, `night_resolution`
 - [x] Basic prev/next buttons
 - [x] Load log via file input
 
@@ -148,7 +148,7 @@ viewer/src/
 
 **Deliverable:** Camera cuts to speaker. Subtitles show text. Day/night lighting works.
 
-**Status (code review 2025-01):** ✅ Camera presets + transitions implemented. Lighting colors match style_bible. **Drifts**: vote pan constant speed. ⚠️ **Needs runtime testing**: camera focus accuracy, lighting during scene transitions.
+**Status (code review 2025-01):** ✅ Camera presets + transitions implemented. Lighting colors match art pipeline. **Drifts**: vote pan constant speed. ⚠️ **Needs runtime testing**: camera focus accuracy, lighting during scene transitions.
 
 ---
 
@@ -169,7 +169,7 @@ viewer/src/
   - Remain visible (ghosted)
 - [x] Handle revote flow (round 2)
 - [x] Defense banner overlay during defense events
-- [x] Replay flow: night‑kill handled as target‑marking with day‑start announcement; camera focuses on night‑kill victim via day_announcement.
+- [ ] Replay flow: night target marked during Mafia scene; death animation plays at day-start announcement via `night_resolution`.
 - [x] Investigation: reasoning shown as subtitles; target/result shown in banner.
 
 **Deliverable:** Votes reveal one-by-one. Dead characters visually distinct.
@@ -208,19 +208,21 @@ viewer/src/
 
 **Tasks:**
 - [ ] Create remaining character models
-- [ ] Scene variations (scene GLBs per `docs/scene_pipeline.md`):
+- [ ] Scene variations (scene GLBs per `docs/viewer/art_pipeline.md`):
   - Day town square (warm)
   - Mafia lair (red, fog)
   - Detective office (neutral + warm accent)
+  - Doctor scene (teal/green accent)
 - [x] Detective office scene GLB loaded + auto-scaled + offset
 - [x] Detective scene tuning: camera preset, neutral lighting, character face-camera
 - [ ] Scene GLB scaling/centering rules applied for all scenes
-- [ ] Camera presets per scene (day/night/mafia/detective)
-- [ ] Lighting tuning per scene (day/night/mafia/detective)
+- [ ] Camera presets per scene (day/night/mafia/detective/doctor)
+- [ ] Lighting tuning per scene (day/night/mafia/detective/doctor)
 - [x] Scene switching based on phase
 - [x] Scene roster filtering:
   - Mafia lair shows ONLY Mafia
   - Detective office shows ONLY Detective
+  - Doctor scene shows ONLY Doctor
   - Town square shows ALL living players
 - [x] Night kill is a target-marking beat (no death yet)
 - [x] Death animation triggers at day start after dawn/announcement
@@ -285,7 +287,7 @@ viewer/src/
 
 ## Log Schema Reference
 
-See `tasks/phase8.md` for the v1.2 log schema and reasoning payload mapping.
+See `tasks/phase8.md` for the v1.3 log schema and reasoning payload mapping.
 
 ---
 
@@ -304,8 +306,8 @@ See `tasks/phase8.md` for the v1.2 log schema and reasoning payload mapping.
 
 ### Phase 10 Complete When:
 
-1. ✅ Loads any v1.2 game log
-2. ⚠️ 7 characters rendered (3+ real models) - Partial (placeholders working, models pending)
+1. ✅ Loads any v1.3 game log
+2. ⚠️ 10 characters rendered (3+ real models) - Partial (placeholders working, models pending)
 3. ✅ Camera cuts to active speaker
 4. ✅ Subtitles display speech
 5. ✅ Votes reveal sequentially

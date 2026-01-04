@@ -65,26 +65,6 @@ See `tasks/phase9.md` and `tasks/phase10.md` for detailed plans.
 | `tasks/phase10.md` | Current phase implementation details |
 | `tasks/phase1-8.md` | Completed game engine phases |
 
----
+## Roadmap
 
-## Post-MVP Ideas
-
-### Game Engine Enhancements
-- 10 players with 3 Mafia (coordination redesign needed)
-- Power roles: Doctor, Jester, Godfather
-- Additional LLM providers (Gemini, OpenAI)
-- Tournament mode with persistent memory
-- Narrator system
-
-### Viewer Enhancements
-- TTS integration (per-provider)
-- Video export directly from viewer
-- Timeline markers for "high drama" moments
-- Live streaming mode
-- Mobile support
-
-### Content Pipeline
-- Persona roster expansion (memes, historical figures, presidents)
-- YouTube channel setup
-- Editing workflow documentation
-- Community persona submissions
+See `tasks/roadmap.md` for forward-looking plans beyond the current phases.

@@ -50,14 +50,14 @@ The game engine runs this loop:
 **Initialization:**
 1. Assign roles randomly
 2. Inform each player of their role
-3. Inform Mafia players of their partner
+3. Inform Mafia players of all partners
 
 **Night Zero:**
 1. Call each Mafia player for coordination (single round, no back-and-forth):
-   - Each receives: role, partner identity, prompt for strategy discussion
+   - Each receives: role, partner identities, prompt for strategy discussion
    - Each returns: strategy notes (signals to use, cover stories, initial suspicion targets)
-   - Engine shares both responses with both Mafia (they see each other's plans)
-2. No kill occurs, no Detective action
+   - Engine shares all strategies with all Mafia (they see each other's plans)
+2. No kill occurs, no Detective or Doctor action
 
 **Day One:**
 1. Narrator announces day begins (no death)
@@ -69,10 +69,11 @@ The game engine runs this loop:
 4. Resolve votes (likely skip on day one)
 
 **Subsequent Nights:**
-1. Call Mafia for kill target (may skip). Coordination runs up to 2 rounds. Prompts encourage round 1 agreement. If no consensus after 2 rounds, first Mafia (by seat order) decides.
-2. Call Detective for investigation target
-3. Return investigation result to Detective
-4. Record kill (if not skipped)
+1. Call Mafia for kill target (may skip). Round 1: each proposes. If 2/3+ agree, execute (skip counts as a target). If split, run Round 2. If still split after Round 2, lowest-seat Mafia decides.
+2. Call Doctor for protection target
+3. Call Detective for investigation target
+4. Return investigation result to Detective
+5. Resolve night outcome (apply kill if not protected)
 
 **Subsequent Days:**
 1. Narrator announces night kill (no last words - night kills are silent)
@@ -139,6 +140,7 @@ See [05_context_management.md](05_context_management.md) for detailed format spe
 
 **What players see:**
 - Their own role and private knowledge
+- Mafia partner identities (Mafia only)
 - Public game state (who's alive, who's dead)
 - All speeches from current and past rounds
 - All nominations and votes
@@ -150,6 +152,7 @@ See [05_context_management.md](05_context_management.md) for detailed format spe
 - Other players' memory/belief states
 - Mafia night discussion (unless they're Mafia)
 - Detective results (unless they're Detective)
+- Doctor protection outcomes (unless they're Doctor, and they do not get a success flag)
 
 ## State Management
 
@@ -186,6 +189,9 @@ persistence. It is not used to build player prompts during runtime.
 - Full log saved to JSON file in `logs/`
 - Viewer view includes private reasoning (creates dramatic irony)
 - Analysis view adds timestamps for debugging and metrics
+
+Event types include (non-exhaustive): `speech`, `vote_round`, `elimination`,
+`mafia_discussion`, `mafia_vote`, `doctor_protection`, `investigation`, `night_resolution`.
 
 See `src/schemas/core.py` for `Event` and `src/schemas/transcript.py` for
 `DayRoundTranscript` and `CompressedRoundSummary` definitions.
@@ -226,5 +232,6 @@ If a player returns invalid output (malformed response, invalid target, etc.):
    - **Voting:** Skip
    - **Night kill:** Random valid target (or first Mafia decides if coordination fails)
    - **Investigation:** Random living non-self player
+   - **Doctor protect:** Random living player (allow self)
 
 Invalid outputs are logged for debugging but don't halt the game.

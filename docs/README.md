@@ -22,11 +22,11 @@ Core game loop, providers, and tests are implemented.
 - [04_player_agent.md](04_player_agent.md) - How players reason and act
 - [05_context_management.md](05_context_management.md) - Information flow and formats
 - [06_tech_stack.md](06_tech_stack.md) - Technical choices and rationale
-- [07_future_features.md](07_future_features.md) - Post-MVP features
 - [system_overview.md](system_overview.md) - Core components, data flow, ERD
 - [database.sql](database.sql) - SQLite schema
  
 Progress tracking lives in `tasks/README.md`.
+Roadmap lives in `tasks/roadmap.md`.
 
 ## Tech Stack
 
@@ -68,12 +68,4 @@ python -m src.engine.run --seed 123 --output logs/game_001.json --model claude-h
 
 ## Future Features
 
-See [07_future_features.md](07_future_features.md) for post-MVP features:
-- Tournament format with persistent memory
-- Post-game trash talk
-- Additional roles (Don, Doctor)
-- Competition platform
-- Live streaming
-- Visual game client
-- Narrator system
-- Evaluation framework
+See `tasks/roadmap.md` for post-MVP features.

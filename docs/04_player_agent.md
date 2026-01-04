@@ -13,7 +13,7 @@ All players share the same structural design but differ only by persona, which i
 | Component | Description |
 |-----------|-------------|
 | **Identity** | Name and persona. Fixed for the game. |
-| **Role** | Mafia, Detective, or Town. Determines private knowledge and actions. |
+| **Role** | Mafia, Detective, Doctor, or Town. Determines private knowledge and actions. |
 | **Memory** | Factual record of observations. Facts, not interpretations. |
 | **Beliefs** | Player's interpretations: suspicions, trust levels, relationship maps. |
 | **Reasoning** | Structured process for deciding actions. |
@@ -34,8 +34,8 @@ PlayerMemory has two parts: **facts** (what happened) and **beliefs** (interpret
 - Speeches heard (who said what, in order)
 - Nominations and votes
 - Deaths (no role information)
-- Own night action decisions (last investigation/kill with brief reasoning)
-- Role-specific private info (partner identity for Mafia, investigation results for Detective)
+- Own night action decisions (last investigation/kill/protection with brief reasoning)
+- Role-specific private info (partner identities for Mafia, investigation results for Detective; Doctor does not receive a save success flag)
 
 **When memory updates:** Only when player is called to act. Between turns, engine accumulates events. On player's turn, they receive all new events, process them, reason, and produce action—all in one LLM call.
 
@@ -81,13 +81,14 @@ persona:
     defense_style: str  # how they handle being accused
     trust_disposition: str  # paranoid, neutral, trusting, conditional
     risk_tolerance: str  # aggressive plays vs safe plays
-    signature_phrases: list[str]  # 0-3 catchphrases
-    quirks: list[str]  # 0-3 recognizable behaviors
+    signature_phrases: list[str]  # 0-5 catchphrases
+    quirks: list[str]  # 0-5 recognizable behaviors
 
   role_guidance:  # optional, brief - contextualizes, doesn't introduce new tactics
     town: str  # 1-2 sentences applying traits
     mafia: str  # 1-2 sentences applying traits
     detective: str  # 1-2 sentences applying traits
+    doctor: str  # 1-2 sentences applying traits
 
   relationships:  # optional, fixed lore between personas
     other_persona_name: str  # relationship description
@@ -115,14 +116,15 @@ The entire persona is rendered into the system prompt for every LLM call. The en
 | Last words | game state, full memory | final statement |
 | Night kill (Mafia) | game state, partner's proposal (if Round 2) | target or skip |
 | Investigation (Detective) | game state, all previous results | target |
+| Protection (Doctor) | game state, previous protections | target |
 
 All actions also include fixed context (role, persona, living/dead lists). See [05_context_management.md](05_context_management.md) for full details.
 
 ## Mafia Coordination
 
-See [05_context_management.md](05_context_management.md) for detailed 2-round coordination protocol.
+See [05_context_management.md](05_context_management.md) for detailed coordination protocol.
 
-Summary: Up to 2 rounds of discussion. If no consensus, first Mafia (by seat order) decides. Coordination is private.
+Summary: Round 1 proposals; if 2/3+ agree, execute. If split, Round 2. If still split, lowest-seat Mafia decides. Coordination is private.
 
 ## Statelessness
 

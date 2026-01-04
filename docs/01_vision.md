@@ -62,7 +62,7 @@ We follow competitive Mafia rules, not simplified versions. No role reveals. Pro
 
 ### Phase 1: Proof of Concept
 - Working game engine that runs complete games
-- 7 agents with distinct personas
+- 10 agents with distinct personas
 - Games are watchable and interesting
 - First YouTube content published
 
