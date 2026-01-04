@@ -36,7 +36,6 @@ class Settings(BaseSettings):
     retry_base_delay: float = 1.0
 
     # Paths
-    database_path: str = "data/mafia.db"
     logs_dir: str = "logs"
 
     @model_validator(mode="after")

@@ -11,7 +11,7 @@ Single source of truth for delivery status and next steps.
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| Phase 1 | Project foundation (schemas, config, database) | ✅ |
+| Phase 1 | Project foundation (schemas, config) | ✅ |
 | Phase 2 | LLM provider layer | ✅ |
 | Phase 3 | Game state & event system | ✅ |
 | Phase 4 | Context builder | ✅ |

@@ -6,7 +6,7 @@
 
 ### Project Setup
 - Python 3.11+ package with `pyproject.toml`
-- Dependencies: anthropic, pydantic, aiosqlite, langfuse, rich, pytest, pytest-asyncio, ruff
+- Dependencies: anthropic, pydantic, langfuse, rich, pytest, pytest-asyncio, ruff
 - Async test support via `asyncio_mode = "auto"`
 
 ### Schemas (`src/schemas/`)
@@ -23,19 +23,11 @@
 - API keys, model name, retry policy, paths
 - Cached `get_settings()` accessor
 
-### Database (`src/storage/database.py`)
-- Async SQLite wrapper using aiosqlite
-- Schema initialization from `docs/database.sql` (fails fast if missing)
-- Foreign keys enabled
-- Persona CRUD: create, get by id, get by name, get id by name, list, update stats
-- Game CRUD: record, get, list, update, delete (with cascade to game_players)
-
 ### Tests
 | File | Coverage |
 |------|----------|
-| `conftest.py` | Fixtures: test_db, sample_game_state, sample_persona, sample_memory, seven_personas |
+| `conftest.py` | Fixtures: sample_game_state, sample_persona, sample_memory, seven_personas |
 | `test_schemas.py` | Schema validation, SGR output shapes, persona constraints |
-| `test_database.py` | Connection, schema init, persona CRUD, game records, FK enforcement |
 
 ## Files Created
 ```
@@ -47,8 +39,6 @@ src/schemas/actions.py
 src/schemas/transcript.py
 src/schemas/persona.py
 src/storage/__init__.py
-src/storage/database.py
 tests/conftest.py
 tests/test_schemas.py
-tests/test_database.py
 ```

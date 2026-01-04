@@ -4,7 +4,7 @@
 
 - **Language:** Python 3.11+
 - **LLM Providers:** Claude Haiku (primary, version configurable), Gemini Flash 3.0, Qwen 3
-- **Storage:** SQLite + JSON files
+- **Storage:** JSON files
 - **Observability:** Langfuse
 
 ## LLM Providers
@@ -27,9 +27,9 @@ See `src/schemas/actions.py` for action schema definitions.
 
 ## Storage
 
-**SQLite:** Personas, games, participants, tournaments. See [database.sql](database.sql).
-
-**JSON logs:** Complete game records in `logs/`. Schema versioned. Event types: `phase_start`, `speech`, `vote_round`, `elimination`, `night_kill`, `investigation`, `last_words`, `defense`, `game_end`.
+**JSON logs:** Complete game records in `logs/`. Schema versioned. Event types:
+`phase_start`, `speech`, `vote_round`, `elimination`, `night_kill`, `investigation`,
+`last_words`, `defense`, `game_end`.
 
 ## Observability
 
@@ -54,10 +54,9 @@ async def run_game(...): ...
 │   ├── /providers     # LLM clients
 │   ├── /personas      # Persona definitions
 │   ├── /schemas       # Pydantic schemas
-│   └── /storage       # SQLite, JSON
+│   └── /storage       # JSON logs
 ├── /logs              # Game logs
 ├── /tests
-└── /data              # SQLite DB
 ```
 
 ## Token Budget
@@ -88,7 +87,6 @@ anthropic
 google-generativeai
 openai
 pydantic
-aiosqlite
 langfuse
 pytest
 pytest-asyncio

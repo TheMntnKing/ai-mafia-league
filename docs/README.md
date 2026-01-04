@@ -22,8 +22,7 @@ Core game loop, providers, and tests are implemented.
 - [04_player_agent.md](04_player_agent.md) - How players reason and act
 - [05_context_management.md](05_context_management.md) - Information flow and formats
 - [06_tech_stack.md](06_tech_stack.md) - Technical choices and rationale
-- [system_overview.md](system_overview.md) - Core components, data flow, ERD
-- [database.sql](database.sql) - SQLite schema
+- [system_overview.md](system_overview.md) - Core components and data flow
  
 Progress tracking lives in `tasks/README.md`.
 Roadmap lives in `tasks/roadmap.md`.
@@ -36,7 +35,7 @@ See [06_tech_stack.md](06_tech_stack.md) for detailed technical choices.
 - **Language:** Python 3.11+
 - **LLM Providers:** Claude Haiku (primary, version configurable), Gemini Flash 3.0, Qwen 3
 - **Reasoning:** Schema-Guided Reasoning (SGR) for structured thinking
-- **Storage:** SQLite (structured data) + JSON files (game logs)
+- **Storage:** JSON files (game logs)
 - **Cost:** ~$0.20-0.80 per game (50-80 LLM calls)
 
 ## Running a Game

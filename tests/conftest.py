@@ -10,20 +10,6 @@ from src.schemas import (
     RoleGuidance,
     VoiceAndBehavior,
 )
-from src.storage.database import Database
-
-
-@pytest.fixture
-async def test_db(tmp_path):
-    """Temporary database for testing."""
-    db_path = tmp_path / "test.db"
-    db = Database(str(db_path))
-    await db.connect()
-    await db.initialize_schema()
-    yield db
-    await db.close()
-
-
 @pytest.fixture
 def sample_game_state() -> GameState:
     """Sample game state for testing."""

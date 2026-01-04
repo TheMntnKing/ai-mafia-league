@@ -1,1 +1,1 @@
-"""Storage: database and JSON logs."""
+"""Storage: JSON logs."""
