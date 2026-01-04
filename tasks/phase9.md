@@ -2,7 +2,7 @@
 
 **Goal:** Move engine to 10 players (3 Mafia + Doctor) and split night events for replay.
 
-**Status:** IN PROGRESS (9.1 complete)  
+**Status:** IN PROGRESS (9.1–9.2 complete)  
 **Prerequisites:** Phase 1-8 complete
 
 ---
@@ -26,15 +26,16 @@
 - `src/engine/context.py`: add `ActionType.DOCTOR_PROTECT` handling in `_build_action_prompt` ✅
 
 ### 9.2 Log Schema + Event Decomposition
+**Status:** ✅ implemented in engine (doctor event emitted in 9.3)
 - `src/engine/events.py`: add
-  - `add_mafia_discussion()`
-  - `add_mafia_vote()`
-  - `add_doctor_protection()`
-  - `add_night_resolution()`
-- Remove `night_kill` event usage entirely in night flow (use `mafia_discussion` + `mafia_vote` + `night_resolution`)
-- `src/storage/json_logs.py`: bump `schema_version` to `1.3`
-- `tasks/phase8.md`: update stage/event registry for new types
-- `docs/replay_vision.md`: confirm night flow uses discrete events (no monolithic `night_kill`)
+  - `add_mafia_discussion()` ✅
+  - `add_mafia_vote()` ✅
+  - `add_doctor_protection()` ✅
+  - `add_night_resolution()` ✅
+- Remove `night_kill` event usage entirely in night flow (use `mafia_discussion` + `mafia_vote` + `night_resolution`) ✅
+- `src/storage/json_logs.py`: bump `schema_version` to `1.3` ✅
+- `tasks/phase8.md`: update stage/event registry for new types ✅
+- `docs/replay_vision.md`: confirm night flow uses discrete events (no monolithic `night_kill`) ✅
 
 Event types (stable shapes):
 - `mafia_discussion`: `speaker`, `target`, `message`, `reasoning`, `coordination_round` (all private)

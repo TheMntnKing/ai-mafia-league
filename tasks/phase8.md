@@ -4,19 +4,19 @@
 omniscient (all roles + private reasoning). Achieve this with a log schema upgrade
 and lightweight CLI progress.
 
-**Status:** ✅ COMPLETE
+**Status:** ✅ COMPLETE (viewer requires v1.3 logs; no backward compatibility)
 
 ---
 
 ## Scope
 
-- Log schema v1.2 (state snapshots + phase metadata)
+- Log schema v1.3 (state snapshots + phase metadata)
 - Night Zero logging
 - CLI progress updates
 
 ---
 
-## Log Schema v1.2
+## Log Schema v1.3 (required, no backward compatibility)
 
 Required fields:
 ```javascript
@@ -28,7 +28,7 @@ log.winner
 log.players           // [{seat, persona_id, name, role, outcome}]
 log.events            // [{type, timestamp, data, private_fields}]
 
-event.type            // "speech", "vote_round", "elimination", "night_kill", etc.
+event.type            // "speech", "vote_round", "elimination", "night_resolution", etc.
 event.timestamp       // ISO8601
 event.data.phase      // "day_1", "night_1", etc.
 event.data.round_number
@@ -51,7 +51,10 @@ Notes:
 - `vote_round` → `stage: "vote"` (data includes `round: 1 | 2`)
 - `defense` → `stage: "defense"`
 - `elimination` → `stage: "elimination"`
-- `night_kill` → `stage: "night_kill"`
+- `mafia_discussion` → `stage: "mafia_lair"`
+- `mafia_vote` → `stage: "mafia_lair"`
+- `doctor_protection` → `stage: "doctor_choice"`
+- `night_resolution` → `stage: "night_resolution"`
 - `investigation` → `stage: "investigation"`
 - `last_words` → `stage: "last_words"`
 - `night_zero_strategy` → `stage: "night_zero"`
@@ -85,14 +88,10 @@ spoken line. Many events have no subtitle.
 | `investigation` | `data.reasoning.reasoning` | none | `data.reasoning` is full `InvestigationOutput`. |
 | `elimination` | none | none | Use UI + day announcement, not log text. |
 
-**Night kill bundle details:**
-- Round 1: `reasoning.proposals` + `reasoning.proposal_details`
-- Round 2: `reasoning.proposals_r1`, `reasoning.proposals_r2`,
-  `reasoning.proposal_details_r1`, `reasoning.proposal_details_r2`, optional `decided_by`
-- Each entry in `proposal_details*` is a full `NightKillOutput` (includes `message` and
-  `reasoning`). Viewer must parse these; do not assume `data.text` exists.
+Viewer should handle `vote_round` + `elimination` events (schema v1.3).
 
-Viewer should handle `vote_round` + `elimination` events (schema v1.2).
+**v1.3 update:** `night_kill` is replaced by `mafia_discussion` + `mafia_vote` +
+`night_resolution` (Doctor adds `doctor_protection`). Viewer assumes v1.3 only.
 
 **Context alignment:**
 - Event log changes are for replay/visibility only.

@@ -280,9 +280,103 @@ class EventLog:
             state_after=state_after,
         )
 
-    def add_night_kill(
+    def add_mafia_discussion(
         self,
-        target: str | None,
+        speaker: str,
+        target: str,
+        message: str,
+        reasoning: dict,
+        coordination_round: int,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+        state_before: dict[str, object] | None = None,
+        state_after: dict[str, object] | None = None,
+    ) -> Event:
+        """Log a Mafia coordination proposal (fully private)."""
+        if stage is None:
+            stage = "mafia_lair"
+        return self.add(
+            "mafia_discussion",
+            {
+                "speaker": speaker,
+                "target": target,
+                "message": message,
+                "reasoning": reasoning,
+                "coordination_round": coordination_round,
+            },
+            private_fields=[
+                "speaker",
+                "target",
+                "message",
+                "reasoning",
+                "coordination_round",
+                "phase",
+                "round_number",
+                "stage",
+                "state_public",
+                "state_before",
+                "state_after",
+            ],
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
+            state_before=state_before,
+            state_after=state_after,
+        )
+
+    def add_mafia_vote(
+        self,
+        votes: dict[str, str],
+        final_target: str | None,
+        decided_by: str | None,
+        coordination_round: int,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+        state_before: dict[str, object] | None = None,
+        state_after: dict[str, object] | None = None,
+    ) -> Event:
+        """Log Mafia coordination vote resolution (fully private)."""
+        if stage is None:
+            stage = "mafia_lair"
+        return self.add(
+            "mafia_vote",
+            {
+                "votes": votes,
+                "final_target": final_target,
+                "decided_by": decided_by,
+                "coordination_round": coordination_round,
+            },
+            private_fields=[
+                "votes",
+                "final_target",
+                "decided_by",
+                "coordination_round",
+                "phase",
+                "round_number",
+                "stage",
+                "state_public",
+                "state_before",
+                "state_after",
+            ],
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
+            state_before=state_before,
+            state_after=state_after,
+        )
+
+    def add_doctor_protection(
+        self,
+        protector: str,
+        protected: str,
         reasoning: dict,
         *,
         phase: str | None = None,
@@ -292,20 +386,15 @@ class EventLog:
         state_before: dict[str, object] | None = None,
         state_after: dict[str, object] | None = None,
     ) -> Event:
-        """
-        Log Mafia's night kill.
-
-        Args:
-            target: Name of killed player, or None if no kill
-            reasoning: Private reasoning (filtered from public view)
-        """
+        """Log Doctor's protection choice (fully private)."""
         if stage is None:
-            stage = "night_kill"
+            stage = "doctor_choice"
         return self.add(
-            "night_kill",
-            {"target": target, "reasoning": reasoning},
+            "doctor_protection",
+            {"protector": protector, "protected": protected, "reasoning": reasoning},
             private_fields=[
-                "target",
+                "protector",
+                "protected",
                 "reasoning",
                 "phase",
                 "round_number",
@@ -314,6 +403,38 @@ class EventLog:
                 "state_before",
                 "state_after",
             ],
+            phase=phase,
+            round_number=round_number,
+            stage=stage,
+            state_public=state_public,
+            state_before=state_before,
+            state_after=state_after,
+        )
+
+    def add_night_resolution(
+        self,
+        intended_kill: str | None,
+        protected: bool,
+        actual_kill: str | None,
+        *,
+        phase: str | None = None,
+        round_number: int | None = None,
+        stage: str | None = None,
+        state_public: dict[str, object] | None = None,
+        state_before: dict[str, object] | None = None,
+        state_after: dict[str, object] | None = None,
+    ) -> Event:
+        """Log final night outcome (actual kill is public)."""
+        if stage is None:
+            stage = "night_resolution"
+        return self.add(
+            "night_resolution",
+            {
+                "intended_kill": intended_kill,
+                "protected": protected,
+                "actual_kill": actual_kill,
+            },
+            private_fields=["intended_kill", "protected"],
             phase=phase,
             round_number=round_number,
             stage=stage,

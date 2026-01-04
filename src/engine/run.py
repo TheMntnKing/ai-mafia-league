@@ -23,8 +23,8 @@ def _cli_event_reporter(console: Console):
         if event.type == "phase_start":
             phase = event.data.get("phase", "unknown")
             console.print(f"[bold]Phase:[/bold] {phase}")
-        elif event.type == "night_kill":
-            target = event.data.get("target") or "none"
+        elif event.type == "night_resolution":
+            target = event.data.get("actual_kill") or "none"
             console.print(f"Night kill: {target}")
         elif event.type == "vote_round":
             outcome = event.data.get("outcome", "unknown")

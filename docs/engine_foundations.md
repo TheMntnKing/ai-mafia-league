@@ -15,7 +15,7 @@ night events. See `tasks/phase9.md` for planned changes.
 - Night Zero: Mafia coordination only (no kill).
 - Day/Night loop with plurality voting and optional revote.
 - Night kills are silent (no last words).
-- Storage is JSON logs (schema v1.2).
+- Storage is JSON logs (schema v1.3).
 
 Planned expansion to 10 players + Doctor lives in `tasks/phase9.md`.
 
@@ -89,8 +89,8 @@ Location: `src/engine/events.py`, `src/storage/json_logs.py`
 - EventLog stores events and filters `private_fields` for public view.
 - EventLog is not used for player context; transcript + memory are.
 - Event types: `phase_start`, `speech`, `vote_round`, `elimination`,
-  `night_kill`, `investigation`, `last_words`, `defense`, `game_end`,
-  `night_zero_strategy`.
+  `mafia_discussion`, `mafia_vote`, `night_resolution`, `investigation`,
+  `last_words`, `defense`, `game_end`, `night_zero_strategy`.
 - JSON logs schema v1.2 (GameLogWriter). GameRunner adds:
   - `metadata` (seed, model, player_count)
   - `transcript` (full transcript dump)

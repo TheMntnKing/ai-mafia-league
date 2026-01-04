@@ -10,6 +10,7 @@ debugging code or reading transcripts.
 
 **Target platform:** YouTube (15-30 minute episodes)
 **Target feel:** Entertainment first, strategic depth optional
+**Log requirement:** Viewer expects v1.3 logs only (no backward compatibility).
 
 ---
 
