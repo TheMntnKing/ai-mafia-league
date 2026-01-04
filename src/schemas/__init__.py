@@ -17,12 +17,7 @@ from src.schemas.core import (
     PlayerMemory,
     PlayerResponse,
 )
-from src.schemas.persona import (
-    Persona,
-    PersonaIdentity,
-    RoleGuidance,
-    VoiceAndBehavior,
-)
+from src.schemas.persona import Persona, PersonaIdentity, PlayStyle, RoleTactics
 from src.schemas.transcript import (
     CompressedRoundSummary,
     DayRoundTranscript,
@@ -56,6 +51,6 @@ __all__ = [
     # Persona
     "Persona",
     "PersonaIdentity",
-    "RoleGuidance",
-    "VoiceAndBehavior",
+    "PlayStyle",
+    "RoleTactics",
 ]

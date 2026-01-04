@@ -13,43 +13,43 @@ class PersonaIdentity(BaseModel):
     core_traits: list[str] = Field(min_length=3, max_length=5)  # Role-neutral traits
 
 
-class VoiceAndBehavior(BaseModel):
-    """How the persona speaks, thinks, and acts. These are behavioral invariants."""
+class PlayStyle(BaseModel):
+    """How the persona speaks and decides in play."""
 
-    speech_style: str  # vocabulary, structure, tone
-    reasoning_style: str  # how they analyze (logical, intuitive, pattern-based, absurdist)
-    accusation_style: str  # how/when they target others
-    defense_style: str  # how they handle being accused
-    trust_disposition: str  # paranoid, neutral, trusting, conditional
-    risk_tolerance: str  # aggressive plays vs safe plays
-    signature_phrases: list[str] = Field(default_factory=list, max_length=5)
-    quirks: list[str] = Field(default_factory=list, max_length=5)
+    voice: str  # 30-40 words: vocabulary, rhythm, tone
+    approach: str  # 40-60 words: decision style, risk posture, accuse/defend tendencies
+    signature_phrases: list[str] = Field(default_factory=list, max_length=3)
+    signature_moves: list[str] = Field(default_factory=list, max_length=2)
 
 
-class RoleGuidance(BaseModel):
+class RoleTactics(BaseModel):
     """
-    Brief contextualization of how traits apply to each role.
-    1-2 sentences each. Tactics are allowed only if consistent with behavioral invariants.
+    Role-specific tactics; only the current role is shown to the LLM.
+
+    Guidance:
+    - Use short, actionable moves that can be observed in play.
+    - Avoid flavor-only text; keep it tactical.
+    - Do not restate the global role playbook.
+    - Prefer concrete levers: timing, vote strategy, info sharing, ally/foe management.
     """
 
-    town: str
-    mafia: str
-    detective: str
-    doctor: str | None = None
+    town: list[str] = Field(min_length=2, max_length=5)
+    mafia: list[str] = Field(min_length=2, max_length=5)
+    detective: list[str] = Field(min_length=2, max_length=5)
+    doctor: list[str] | None = Field(default=None, min_length=2, max_length=5)
 
 
 class Persona(BaseModel):
     """
     Complete persona definition. Entire structure is sent to LLM prompt.
 
-    Target length: 250-400 words when rendered as prompt.
-    Under 200 feels thin; over 500 causes drift and contradictions.
+    Target length: 200-300 words when rendered as prompt.
+    Under 180 feels thin; over 400 causes drift and contradictions.
 
-    Key principle: Behavioral invariants define HOW they act.
-    Role guidance may include tactics only if they are consistent with behavioral invariants.
+    Key principle: Voice + approach define HOW they act.
+    Role tactics define WHAT they do in a role, consistent with the persona.
     """
 
     identity: PersonaIdentity
-    voice_and_behavior: VoiceAndBehavior
-    role_guidance: RoleGuidance | None = None  # Optional but recommended
-    relationships: dict[str, str] = Field(default_factory=dict)  # persona_name -> relationship
+    play_style: PlayStyle
+    tactics: RoleTactics

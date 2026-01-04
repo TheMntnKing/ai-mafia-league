@@ -101,33 +101,32 @@ class ContextBuilder:
             f"Background: {persona.identity.background}",
             f"Core traits: {', '.join(persona.identity.core_traits)}",
             "",
-            f"Speech style: {persona.voice_and_behavior.speech_style}",
-            f"Reasoning style: {persona.voice_and_behavior.reasoning_style}",
-            f"When accusing: {persona.voice_and_behavior.accusation_style}",
-            f"When defending: {persona.voice_and_behavior.defense_style}",
-            f"Trust disposition: {persona.voice_and_behavior.trust_disposition}",
-            f"Risk tolerance: {persona.voice_and_behavior.risk_tolerance}",
+            f"Voice: {persona.play_style.voice}",
+            f"Approach: {persona.play_style.approach}",
         ]
 
-        if persona.voice_and_behavior.signature_phrases:
+        if persona.play_style.signature_phrases:
             lines.append(
-                f"Signature phrases: {', '.join(persona.voice_and_behavior.signature_phrases)}"
+                f"Signature phrases: {', '.join(persona.play_style.signature_phrases)}"
             )
 
-        if persona.voice_and_behavior.quirks:
-            lines.append(f"Quirks: {', '.join(persona.voice_and_behavior.quirks)}")
+        if persona.play_style.signature_moves:
+            lines.append(f"Signature moves: {', '.join(persona.play_style.signature_moves)}")
 
-        # Add role-specific guidance if available
-        if persona.role_guidance:
+        tactics: list[str] | None = None
+        if role == "town":
+            tactics = persona.tactics.town
+        elif role == "mafia":
+            tactics = persona.tactics.mafia
+        elif role == "detective":
+            tactics = persona.tactics.detective
+        elif role == "doctor":
+            tactics = persona.tactics.doctor
+
+        if tactics:
             lines.append("")
-            if role == "town":
-                lines.append(f"As Town: {persona.role_guidance.town}")
-            elif role == "mafia":
-                lines.append(f"As Mafia: {persona.role_guidance.mafia}")
-            elif role == "detective":
-                lines.append(f"As Detective: {persona.role_guidance.detective}")
-            elif role == "doctor" and persona.role_guidance.doctor:
-                lines.append(f"As Doctor: {persona.role_guidance.doctor}")
+            lines.append("Role tactics:")
+            lines.extend([f"- {item}" for item in tactics])
 
         return "\n".join(lines)
 
