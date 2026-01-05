@@ -69,11 +69,10 @@ DefenseOutput: reasoning + text
 Location: `src/providers/`
 - `PlayerProvider` protocol: `act(action_type, context) -> dict`.
 - `retry_with_backoff`: exponential backoff, max 3 attempts.
-- `AnthropicProvider`:
-  - Uses tool_use with Pydantic schema per action.
+- `GoogleGenAIProvider`:
+  - Uses `response_json_schema` with Pydantic schema per action.
   - Validates output and raises `InvalidResponseError` on schema mismatch.
-  - Retries on `APIError` and `APIConnectionError`.
-  - Optional Langfuse tracing via `@observe`.
+  - Retries on provider-level errors raised during API calls.
 
 ## Game State and Rules (Engine)
 Location: `src/engine/state.py`

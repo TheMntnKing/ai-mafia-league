@@ -11,7 +11,7 @@ from rich.panel import Panel
 
 from src.config import get_settings
 from src.engine.game import GameConfig, GameRunner
-from src.providers.anthropic import AnthropicProvider
+from src.providers.google import GoogleGenAIProvider
 from src.schemas import Event
 
 console = Console()
@@ -73,8 +73,8 @@ async def run_game_cli(args: argparse.Namespace) -> int:
     settings = get_settings()
 
     # Check for API key
-    if not settings.anthropic_api_key:
-        console.print("[red]Error: ANTHROPIC_API_KEY not set[/red]")
+    if not settings.gemini_api_key:
+        console.print("[red]Error: GEMINI_API_KEY not set[/red]")
         console.print("Set it in your environment or .env file")
         return 1
 
@@ -93,8 +93,8 @@ async def run_game_cli(args: argparse.Namespace) -> int:
 
     # Create provider
     model = args.model or settings.model_name
-    provider = AnthropicProvider(
-        api_key=settings.anthropic_api_key,
+    provider = GoogleGenAIProvider(
+        api_key=settings.gemini_api_key,
         model=model,
     )
 

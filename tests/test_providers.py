@@ -1,18 +1,17 @@
 """Tests for LLM providers."""
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
-from anthropic import APIConnectionError
 
 from src.providers import (
-    AnthropicProvider,
+    GoogleGenAIProvider,
     InvalidResponseError,
     RetryExhausted,
     retry_with_backoff,
 )
-from src.schemas import ActionType
+from src.schemas import ActionType, SpeakingOutput
 from tests.sgr_helpers import make_speak_response
 
 
@@ -80,41 +79,44 @@ class TestRetryDecorator:
         assert call_count == 1
 
 
-class TestAnthropicProvider:
+class TestGoogleGenAIProvider:
     @pytest.fixture
-    def mock_anthropic_client(self):
-        """Mock Anthropic client."""
-        with patch("src.providers.anthropic.AsyncAnthropic") as mock:
-            yield mock.return_value
+    def mock_genai_client(self):
+        """Mock Google GenAI client."""
+        with patch("src.providers.google.genai.Client") as mock:
+            client = mock.return_value
+            client.aio = MagicMock()
+            client.aio.models.generate_content = AsyncMock()
+            yield client
 
     @pytest.fixture
-    def provider(self, mock_anthropic_client):
+    def provider(self, mock_genai_client):
         """Provider with mocked client."""
-        return AnthropicProvider(api_key="test-key")
+        return GoogleGenAIProvider(api_key="test-key")
 
     @pytest.fixture
-    def sample_tool_response(self):
-        """Sample tool use response from Claude."""
-        tool_use = MagicMock()
-        tool_use.type = "tool_use"
-        tool_use.input = make_speak_response(
-            observations="Day started.",
-            suspicions="No strong suspicions yet.",
-            strategy="Gather information.",
-            reasoning="No information yet.",
-            speech="Hello everyone, let's discuss.",
-            nomination="Bob",
-        )
-
+    def sample_response(self):
+        """Sample JSON response from Gemini."""
         response = MagicMock()
-        response.content = [tool_use]
+        response.text = json.dumps(
+            make_speak_response(
+                observations="Day started.",
+                suspicions="No strong suspicions yet.",
+                strategy="Gather information.",
+                reasoning="No information yet.",
+                speech="Hello everyone, let's discuss.",
+                nomination="Bob",
+            )
+        )
         return response
 
-    async def test_act_returns_tool_output(
-        self, provider, mock_anthropic_client, sample_tool_response
+    async def test_act_returns_structured_output(
+        self, provider, mock_genai_client, sample_response
     ):
-        """Provider extracts structured data from tool_use response."""
-        mock_anthropic_client.messages.create = AsyncMock(return_value=sample_tool_response)
+        """Provider extracts structured data from response JSON."""
+        mock_genai_client.aio.models.generate_content = AsyncMock(
+            return_value=sample_response
+        )
 
         result = await provider.act(
             action_type=ActionType.SPEAK,
@@ -125,36 +127,30 @@ class TestAnthropicProvider:
         assert result["nomination"] == "Bob"
 
     async def test_act_calls_api_correctly(
-        self, provider, mock_anthropic_client, sample_tool_response
+        self, provider, mock_genai_client, sample_response
     ):
-        """Provider calls Anthropic API with correct parameters."""
-        mock_anthropic_client.messages.create = AsyncMock(return_value=sample_tool_response)
+        """Provider calls GenAI API with correct parameters."""
+        mock_genai_client.aio.models.generate_content = AsyncMock(
+            return_value=sample_response
+        )
 
         await provider.act(
             action_type=ActionType.SPEAK,
             context="Test context",
         )
 
-        # Verify API was called
-        mock_anthropic_client.messages.create.assert_called_once()
+        mock_genai_client.aio.models.generate_content.assert_called_once()
+        call_kwargs = mock_genai_client.aio.models.generate_content.call_args.kwargs
+        assert call_kwargs["model"] == "gemini-3-flash-preview"
+        assert call_kwargs["contents"] == "Test context"
+        assert call_kwargs["config"]["response_mime_type"] == "application/json"
+        assert call_kwargs["config"]["response_json_schema"] == SpeakingOutput.model_json_schema()
 
-        # Check call arguments
-        call_kwargs = mock_anthropic_client.messages.create.call_args.kwargs
-        assert call_kwargs["model"] == "claude-haiku-4-5-20251001"
-        assert call_kwargs["system"] == "Test context"
-        assert len(call_kwargs["tools"]) == 1
-        assert call_kwargs["tools"][0]["name"] == "speak"
-
-    async def test_act_raises_on_missing_tool_use(self, provider, mock_anthropic_client):
-        """Provider raises InvalidResponseError if no tool_use in response."""
-        # Response without tool_use block
-        text_block = MagicMock()
-        text_block.type = "text"
-        text_block.text = "I refuse to use tools"
-
+    async def test_act_raises_on_empty_response(self, provider, mock_genai_client):
+        """Provider raises InvalidResponseError if response is empty."""
         response = MagicMock()
-        response.content = [text_block]
-        mock_anthropic_client.messages.create = AsyncMock(return_value=response)
+        response.text = ""
+        mock_genai_client.aio.models.generate_content = AsyncMock(return_value=response)
 
         with pytest.raises(InvalidResponseError):
             await provider.act(
@@ -162,72 +158,33 @@ class TestAnthropicProvider:
                 context="Test context",
             )
 
-    async def test_act_raises_on_invalid_schema(self, provider, mock_anthropic_client):
+    async def test_act_raises_on_invalid_schema(self, provider, mock_genai_client):
         """Provider raises InvalidResponseError for invalid schema."""
-        tool_use = MagicMock()
-        tool_use.type = "tool_use"
-        tool_use.input = {"speech": "Hello"}  # Missing required fields
-
         response = MagicMock()
-        response.content = [tool_use]
-        mock_anthropic_client.messages.create = AsyncMock(return_value=response)
+        response.text = json.dumps({"speech": "Hello"})
+        mock_genai_client.aio.models.generate_content = AsyncMock(return_value=response)
 
         with pytest.raises(InvalidResponseError):
-            await provider.act(
-                action_type=ActionType.SPEAK,
-                context="Test context",
-            )
-
-    async def test_act_retries_on_api_error(
-        self, provider, mock_anthropic_client, sample_tool_response
-    ):
-        """Provider retries when API errors occur."""
-        request = httpx.Request("POST", "https://example.com")
-        error = APIConnectionError(message="Connection error.", request=request)
-
-        mock_anthropic_client.messages.create = AsyncMock(
-            side_effect=[error, sample_tool_response]
-        )
-
-        result = await provider.act(
-            action_type=ActionType.SPEAK,
-            context="Test context",
-        )
-
-        assert result["speech"] == "Hello everyone, let's discuss."
-        assert mock_anthropic_client.messages.create.call_count == 2
-
-    async def test_act_retries_exhausted(self, provider, mock_anthropic_client):
-        """Provider raises RetryExhausted after repeated API errors."""
-        request = httpx.Request("POST", "https://example.com")
-        error = APIConnectionError(message="Connection error.", request=request)
-
-        mock_anthropic_client.messages.create = AsyncMock(
-            side_effect=[error, error, error]
-        )
-
-        with pytest.raises(RetryExhausted):
             await provider.act(
                 action_type=ActionType.SPEAK,
                 context="Test context",
             )
 
     async def test_records_usage_with_langfuse(
-        self, provider, mock_anthropic_client, sample_tool_response, monkeypatch
+        self, provider, mock_genai_client, sample_response, monkeypatch
     ):
         """Langfuse receives usage details when available."""
-        from src.providers import anthropic as provider_module
+        from src.providers import google as provider_module
 
         mock_langfuse = MagicMock()
         monkeypatch.setattr(provider_module, "LANGFUSE_AVAILABLE", True)
         monkeypatch.setattr(provider_module, "Langfuse", MagicMock(return_value=mock_langfuse))
 
         usage = MagicMock()
-        usage.input_tokens = 10
-        usage.output_tokens = 5
-        sample_tool_response.usage = usage
-
-        mock_anthropic_client.messages.create = AsyncMock(return_value=sample_tool_response)
+        usage.prompt_token_count = 12
+        usage.candidates_token_count = 8
+        sample_response.usage_metadata = usage
+        mock_genai_client.aio.models.generate_content = AsyncMock(return_value=sample_response)
 
         await provider.act(
             action_type=ActionType.SPEAK,
@@ -236,45 +193,37 @@ class TestAnthropicProvider:
 
         mock_langfuse.update_current_generation.assert_called_once()
         call_kwargs = mock_langfuse.update_current_generation.call_args.kwargs
-        assert call_kwargs["model"] == "claude-haiku-4-5-20251001"
-        assert call_kwargs["usage_details"]["total"] == 15
+        assert call_kwargs["model"] == "gemini-3-flash-preview"
+        assert call_kwargs["usage_details"]["total"] == 20
 
-    def test_build_tool_for_action(self, provider):
-        """Provider builds correct tool schema for each action type."""
-        tool = provider._build_tool_for_action(ActionType.SPEAK)
+    async def test_act_retries_on_provider_error(
+        self, provider, mock_genai_client, sample_response
+    ):
+        """Provider retries when API errors occur."""
+        mock_genai_client.aio.models.generate_content = AsyncMock(
+            side_effect=[Exception("Connection error."), sample_response]
+        )
 
-        assert tool["name"] == "speak"
-        assert "description" in tool
-        assert "input_schema" in tool
+        result = await provider.act(
+            action_type=ActionType.SPEAK,
+            context="Test context",
+        )
 
-        # Check schema has expected fields
-        schema = tool["input_schema"]
-        assert "properties" in schema
-        assert "speech" in schema["properties"]
-        assert "nomination" in schema["properties"]
+        assert result["speech"] == "Hello everyone, let's discuss."
+        assert mock_genai_client.aio.models.generate_content.call_count == 2
 
-    def test_build_tool_for_vote(self, provider):
-        """Provider builds correct tool schema for voting."""
-        tool = provider._build_tool_for_action(ActionType.VOTE)
+    async def test_act_retries_exhausted(self, provider, mock_genai_client):
+        """Provider raises RetryExhausted after repeated API errors."""
+        mock_genai_client.aio.models.generate_content = AsyncMock(
+            side_effect=[
+                Exception("Connection error."),
+                Exception("Connection error."),
+                Exception("Connection error."),
+            ]
+        )
 
-        assert tool["name"] == "vote"
-        schema = tool["input_schema"]
-        assert "vote" in schema["properties"]
-        assert "reasoning" in schema["properties"]
-
-    def test_build_tool_for_last_words(self, provider):
-        """Provider builds correct tool schema for last words (simple)."""
-        tool = provider._build_tool_for_action(ActionType.LAST_WORDS)
-
-        assert tool["name"] == "last_words"
-        schema = tool["input_schema"]
-        assert "text" in schema["properties"]
-        assert "reasoning" in schema["properties"]
-
-    def test_build_tool_for_doctor_protect(self, provider):
-        """Provider builds correct tool schema for doctor protection."""
-        tool = provider._build_tool_for_action(ActionType.DOCTOR_PROTECT)
-
-        assert tool["name"] == "doctor_protect"
-        schema = tool["input_schema"]
-        assert "target" in schema["properties"]
+        with pytest.raises(RetryExhausted):
+            await provider.act(
+                action_type=ActionType.SPEAK,
+                context="Test context",
+            )

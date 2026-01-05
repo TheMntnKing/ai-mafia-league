@@ -9,9 +9,11 @@ from src.providers.base import (
     RetryExhaustedError,
     retry_with_backoff,
 )
+from src.providers.google import GoogleGenAIProvider
 
 __all__ = [
     "AnthropicProvider",
+    "GoogleGenAIProvider",
     "InvalidResponseError",
     "PlayerProvider",
     "ProviderError",

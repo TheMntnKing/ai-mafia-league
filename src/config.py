@@ -23,7 +23,8 @@ class Settings(BaseSettings):
 
     # LLM Provider
     anthropic_api_key: str = ""
-    model_name: str = "claude-haiku-4-5-20251001"
+    gemini_api_key: str = ""
+    model_name: str = "gemini-3-flash-preview"
 
     # Langfuse observability (optional)
     langfuse_public_key: str = ""
