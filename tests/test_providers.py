@@ -270,3 +270,11 @@ class TestAnthropicProvider:
         schema = tool["input_schema"]
         assert "text" in schema["properties"]
         assert "reasoning" in schema["properties"]
+
+    def test_build_tool_for_doctor_protect(self, provider):
+        """Provider builds correct tool schema for doctor protection."""
+        tool = provider._build_tool_for_action(ActionType.DOCTOR_PROTECT)
+
+        assert tool["name"] == "doctor_protect"
+        schema = tool["input_schema"]
+        assert "target" in schema["properties"]

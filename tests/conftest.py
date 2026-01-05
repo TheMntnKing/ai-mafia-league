@@ -7,8 +7,8 @@ from src.schemas import (
     Persona,
     PersonaIdentity,
     PlayerMemory,
-    RoleGuidance,
-    VoiceAndBehavior,
+    PlayStyle,
+    RoleTactics,
 )
 @pytest.fixture
 def sample_game_state() -> GameState:
@@ -16,7 +16,18 @@ def sample_game_state() -> GameState:
     return GameState(
         phase="day_1",
         round_number=1,
-        living_players=["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+        living_players=[
+            "Alice",
+            "Bob",
+            "Charlie",
+            "Diana",
+            "Eve",
+            "Frank",
+            "Grace",
+            "Hector",
+            "Ivy",
+            "Jules",
+        ],
         dead_players=[],
         nominated_players=[],
     )
@@ -28,8 +39,8 @@ def sample_game_state_mid_game() -> GameState:
     return GameState(
         phase="day_3",
         round_number=3,
-        living_players=["Alice", "Charlie", "Diana", "Eve", "Grace"],
-        dead_players=["Bob", "Frank"],
+        living_players=["Alice", "Charlie", "Diana", "Eve", "Grace", "Hector", "Ivy"],
+        dead_players=["Bob", "Frank", "Jules"],
         nominated_players=["Alice", "Diana"],
     )
 
@@ -43,20 +54,28 @@ def sample_persona() -> Persona:
             background="A test persona created for unit testing purposes.",
             core_traits=["analytical", "cautious", "verbose"],
         ),
-        voice_and_behavior=VoiceAndBehavior(
-            speech_style="Direct and methodical",
-            reasoning_style="Logical deduction based on evidence",
-            accusation_style="Evidence-based, builds cases carefully",
-            defense_style="Calm and factual rebuttals",
-            trust_disposition="neutral",
-            risk_tolerance="conservative",
+        play_style=PlayStyle(
+            voice="Direct and methodical, with a calm and factual tone.",
+            approach=(
+                "Leans on evidence, builds cases carefully, and defends with clear rebuttals. "
+                "Conservative with risk and slow to accuse without support."
+            ),
             signature_phrases=["Let's examine the facts"],
-            quirks=["Often pauses before speaking"],
+            signature_moves=["Summarizes voting patterns before speaking"],
         ),
-        role_guidance=RoleGuidance(
-            town="Focus on gathering information and finding inconsistencies.",
-            mafia="Use analytical reputation as cover for misdirection.",
-            detective="Methodically investigate suspicious players.",
+        tactics=RoleTactics(
+            town=[
+                "Gather information before nominating.",
+                "Test claims with follow-up questions.",
+            ],
+            mafia=[
+                "Use credibility to steer suspicion elsewhere.",
+                "Avoid over-explaining when pressured.",
+            ],
+            detective=[
+                "Investigate the least consistent players first.",
+                "Reveal only when it flips a vote.",
+            ],
         ),
     )
 
@@ -84,8 +103,19 @@ def empty_memory() -> PlayerMemory:
 
 @pytest.fixture
 def seven_personas() -> list[Persona]:
-    """Seven distinct personas for a full game."""
-    names = ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"]
+    """Ten distinct personas for a full game."""
+    names = [
+        "Alice",
+        "Bob",
+        "Charlie",
+        "Diana",
+        "Eve",
+        "Frank",
+        "Grace",
+        "Hector",
+        "Ivy",
+        "Jules",
+    ]
     traits_list = [
         ["analytical", "cautious", "patient"],
         ["aggressive", "confident", "blunt"],
@@ -94,6 +124,9 @@ def seven_personas() -> list[Persona]:
         ["strategic", "calculating", "quiet"],
         ["charismatic", "persuasive", "bold"],
         ["skeptical", "independent", "direct"],
+        ["methodical", "reserved", "precise"],
+        ["curious", "empathetic", "steady"],
+        ["blunt", "decisive", "pragmatic"],
     ]
     styles = [
         ("Methodical", "logical"),
@@ -103,6 +136,9 @@ def seven_personas() -> list[Persona]:
         ("Strategic", "calculating"),
         ("Charismatic", "persuasive"),
         ("Skeptical", "contrarian"),
+        ("Reserved", "careful"),
+        ("Empathetic", "observant"),
+        ("Blunt", "decisive"),
     ]
 
     personas = []
@@ -114,13 +150,17 @@ def seven_personas() -> list[Persona]:
                     background=f"{name} is player {i + 1} in the game.",
                     core_traits=traits_list[i],
                 ),
-                voice_and_behavior=VoiceAndBehavior(
-                    speech_style=f"{styles[i][0]} and clear",
-                    reasoning_style=f"{styles[i][1]} analysis",
-                    accusation_style="Evidence-based",
-                    defense_style="Calm denial",
-                    trust_disposition="neutral",
-                    risk_tolerance="moderate",
+                play_style=PlayStyle(
+                    voice=f"{styles[i][0]} and clear",
+                    approach=(
+                        f"{styles[i][1]} analysis with balanced risk; accuses carefully "
+                        "and defends with calm denials."
+                    ),
+                ),
+                tactics=RoleTactics(
+                    town=["Ask pointed questions", "Build cases before voting"],
+                    mafia=["Blend in with the group", "Avoid leading early"],
+                    detective=["Investigate quiet players", "Reveal with leverage"],
                 ),
             )
         )

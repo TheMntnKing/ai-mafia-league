@@ -10,6 +10,7 @@ from src.personas.initial import get_personas
 from src.schemas import PlayerMemory
 from tests.sgr_helpers import (
     make_defense_response,
+    make_doctor_protect_response,
     make_investigation_response,
     make_last_words_response,
     make_night_kill_response,
@@ -168,7 +169,7 @@ class TestGameRunner:
         """GameRunner creates agents for all players."""
         runner = GameRunner(game_config)
 
-        assert len(runner.agents) == 7
+        assert len(runner.agents) == 10
         for name in game_config.player_names:
             assert name in runner.agents
             assert runner.agents[name].name == name
@@ -179,54 +180,64 @@ class TestGameRunner:
 
         roles = [runner.state.get_player_role(name) for name in game_config.player_names]
 
-        assert roles.count("mafia") == 2
+        assert roles.count("mafia") == 3
+        assert roles.count("doctor") == 1
         assert roles.count("detective") == 1
-        assert roles.count("town") == 4
+        assert roles.count("town") == 5
 
     def test_game_runner_initializes_memories(self, game_config):
         """GameRunner initializes empty memories for all players."""
         runner = GameRunner(game_config)
 
-        assert len(runner.memories) == 7
+        assert len(runner.memories) == 10
         for name in game_config.player_names:
             assert name in runner.memories
             assert isinstance(runner.memories[name], PlayerMemory)
 
     async def test_game_runner_runs_to_completion(self, game_config, mock_provider):
         """GameRunner completes a game with mocked provider."""
+        runner = GameRunner(game_config)
 
-        # Track calls to determine game phase
-        call_count = [0]
-        eliminated = set()
+        def get_living():
+            return runner.state.get_living_players()
 
-        def make_response(action_type):
-            """Generate a response based on action type and game state."""
-            call_count[0] += 1
-
+        def make_response(action_type: str):
+            """Generate a response based on action type and current game state."""
             if action_type == "speak":
-                # Nominate someone who isn't eliminated
-                living = [n for n in game_config.player_names if n not in eliminated]
-                nomination = living[1] if len(living) > 1 else living[0]
+                living = get_living()
+                nomination = living[0] if living else "skip"
                 return make_speak_response(
                     speech="I've been observing carefully and have some thoughts.",
                     nomination=nomination,
                 )
-            elif action_type == "vote":
-                living = [n for n in game_config.player_names if n not in eliminated]
-                target = living[1] if len(living) > 1 else "skip"
+            if action_type == "vote":
+                nominations = runner.state.nominations
+                target = nominations[0] if nominations else "skip"
                 return make_vote_response(vote=target, reasoning="Based on behavior.")
-            elif action_type == "night_kill":
-                living = [n for n in game_config.player_names if n not in eliminated]
-                # Pick a non-mafia target
-                target = living[2] if len(living) > 2 else living[0]
-                return make_night_kill_response(target=target, reasoning="Strategic target.")
-            elif action_type == "investigation":
-                living = [n for n in game_config.player_names if n not in eliminated]
+            if action_type == "night_kill":
+                living = get_living()
+                non_mafia = [
+                    name
+                    for name in living
+                    if runner.state.get_player_role(name) != "mafia"
+                ]
+                target = non_mafia[0] if non_mafia else "skip"
+                return make_night_kill_response(
+                    target=target,
+                    reasoning="Strategic target.",
+                )
+            if action_type == "doctor_protect":
+                living = get_living()
+                target = living[0] if living else game_config.player_names[0]
+                return make_doctor_protect_response(target=target, reasoning="Safe protect.")
+            if action_type == "investigation":
+                living = get_living()
+                target = living[1] if len(living) > 1 else living[0]
                 return make_investigation_response(
-                    target=living[1],
+                    target=target,
                     reasoning="Most suspicious.",
                 )
-            elif action_type in ("last_words", "defense"):
+            if action_type in ("last_words", "defense"):
                 if action_type == "last_words":
                     return make_last_words_response(
                         reasoning="Offer a final note to help town.",
@@ -245,8 +256,6 @@ class TestGameRunner:
 
         mock_provider.act = mock_act
 
-        runner = GameRunner(game_config)
-
         # Run with a timeout to prevent infinite loops
         import asyncio
 
@@ -260,16 +269,17 @@ class TestGameRunner:
         assert len(result.final_living) > 0
 
     def test_mafia_agents_have_partners(self, game_config):
-        """Mafia agents are assigned their partner."""
+        """Mafia agents are assigned their partners."""
         runner = GameRunner(game_config)
 
         mafia_agents = [a for a in runner.agents.values() if a.role == "mafia"]
-        assert len(mafia_agents) == 2
+        assert len(mafia_agents) == 3
 
-        # Each mafia should have the other as partner
-        m1, m2 = mafia_agents
-        assert m1.partner == m2.name
-        assert m2.partner == m1.name
+        mafia_names = [a.name for a in mafia_agents]
+        for agent in mafia_agents:
+            assert len(agent.partners) == 2
+            assert agent.name not in agent.partners
+            assert set(agent.partners) == (set(mafia_names) - {agent.name})
 
 
 class TestGameIntegration:
@@ -347,6 +357,16 @@ class TestGameIntegration:
                     reasoning="Strategic.",
                     target=target,
                 )
+            elif action_name == "doctor_protect":
+                living = runner.state.get_living_players()
+                target = living[0] if living else "skip"
+                return make_doctor_protect_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Mafia targets identified.",
+                    strategy="Protect key town voices.",
+                    reasoning="Strategic.",
+                    target=target,
+                )
             elif action_name == "investigation":
                 return make_investigation_response(
                     observations="Discussion ongoing.",
@@ -389,10 +409,10 @@ class TestGameIntegration:
 
         runner = GameRunner(config)
 
-        # Find town players (including detective)
+        # Find town players (including detective and doctor)
         town_names = [
             name for name in config.player_names
-            if runner.state.get_player_role(name) in ("town", "detective")
+            if runner.state.get_player_role(name) in ("town", "detective", "doctor")
         ]
 
         # Mock provider to always vote for town until Mafia wins
@@ -433,13 +453,23 @@ class TestGameIntegration:
                 town = [
                     p
                     for p in living
-                    if runner.state.get_player_role(p) in ("town", "detective")
+                    if runner.state.get_player_role(p) in ("town", "detective", "doctor")
                 ]
                 target = town[0] if town else "skip"
                 return make_night_kill_response(
                     observations="Discussion ongoing.",
                     suspicions="Town targets identified.",
                     strategy="Eliminate town to secure majority.",
+                    reasoning="Strategic.",
+                    target=target,
+                )
+            elif action_name == "doctor_protect":
+                living = runner.state.get_living_players()
+                target = living[0] if living else "skip"
+                return make_doctor_protect_response(
+                    observations="Discussion ongoing.",
+                    suspicions="Town targets identified.",
+                    strategy="Protect key town voices.",
                     reasoning="Strategic.",
                     target=target,
                 )
@@ -516,11 +546,11 @@ class TestSpeakingOrder:
         # The rotation should follow seat order
         seat_day1 = runner.state.get_player_seat(first_speaker_day1)
         seat_day2 = runner.state.get_player_seat(first_speaker_day2)
-        # Day 2 should start at the next living seat after (day1_seat + 1) % 7.
-        expected_start_seat = (seat_day1 + 1) % 7
+        # Day 2 should start at the next living seat after (day1_seat + 1) % 10.
+        expected_start_seat = (seat_day1 + 1) % 10
         next_living_seat = None
-        for offset in range(7):
-            seat = (expected_start_seat + offset) % 7
+        for offset in range(10):
+            seat = (expected_start_seat + offset) % 10
             if any(p.seat == seat and p.alive for p in runner.state.players.values()):
                 next_living_seat = seat
                 break
@@ -550,7 +580,7 @@ class TestSpeakingOrder:
         order = runner.state.get_speaking_order()
 
         assert victim not in order
-        assert len(order) == 6  # 7 - 1 dead
+        assert len(order) == 9  # 10 - 1 dead
 
 
 class TestNightZeroCoordination:
@@ -565,7 +595,7 @@ class TestNightZeroCoordination:
         return AsyncMock()
 
     async def test_night_zero_stores_strategies_in_memory(self, personas, mock_provider):
-        """Night Zero stores both Mafia strategies in their memories."""
+        """Night Zero stores all Mafia strategies in their memories."""
         from src.engine.events import EventLog
         from src.engine.phases import NightZeroPhase
 
@@ -596,13 +626,22 @@ class TestNightZeroCoordination:
                     speech="I suggest we use signal words and target quiet players.",
                     nomination="Bob",
                 )
+            if call_count[0] == 2:
+                return make_speak_response(
+                    observations="Night zero coordination.",
+                    suspicions="No suspicions yet.",
+                    strategy="Coordinate signals and cover.",
+                    reasoning="Planning.",
+                    speech="I want a subtle push on confident Town voices.",
+                    nomination="Alice",
+                )
             return make_speak_response(
                 observations="Night zero coordination.",
                 suspicions="No suspicions yet.",
                 strategy="Coordinate signals and cover.",
                 reasoning="Planning.",
-                speech="I agree with partner. Let's target the detective.",
-                nomination="Alice",
+                speech="Let's keep our tells consistent and avoid overreach.",
+                nomination="Charlie",
             )
 
         mock_provider.act = mock_act
@@ -620,19 +659,20 @@ class TestNightZeroCoordination:
 
         # Night Zero strategies are logged and fully private.
         events = event_log.get_events_of_type("night_zero_strategy")
-        assert len(events) == 2
+        assert len(events) == 3
         public_types = {event.type for event in event_log.get_public_view()}
         assert "night_zero_strategy" not in public_types
 
-        # Both Mafia should have strategies stored
+        # All Mafia should have strategies stored
         for mafia_name in mafia_names:
             assert "night_zero_strategies" in memories[mafia_name].facts
             strategies = memories[mafia_name].facts["night_zero_strategies"]
-            assert len(strategies) == 2
+            assert len(strategies) == 3
             assert all(name in strategies for name in mafia_names)
             assert set(strategies.values()) == {
                 "I suggest we use signal words and target quiet players.",
-                "I agree with partner. Let's target the detective.",
+                "I want a subtle push on confident Town voices.",
+                "Let's keep our tells consistent and avoid overreach.",
             }
 
     async def test_second_mafia_sees_first_strategy(self, personas, mock_provider):
@@ -676,13 +716,15 @@ class TestNightZeroCoordination:
             runner.memories,
         )
 
-        # First Mafia's context should NOT contain partner's strategy section
-        assert "[PARTNER'S STRATEGY]" not in context_strings[0]
+        assert len(context_strings) == 3
+        # First Mafia's context should NOT contain partner strategies
+        assert "[PARTNER STRATEGIES]" not in context_strings[0]
 
-        # Second Mafia's context SHOULD contain partner's strategy
-        # The context builder wraps it in a PARTNER'S STRATEGY section
-        assert "[PARTNER'S STRATEGY]" in context_strings[1]
+        # Later Mafia should see partner strategies
+        assert "[PARTNER STRATEGIES]" in context_strings[1]
+        assert "[PARTNER STRATEGIES]" in context_strings[2]
         assert "My strategy is to target Alice" in context_strings[1]
+        assert "My strategy is to target Alice" in context_strings[2]
 
 
 class TestLogSchema:
@@ -707,13 +749,14 @@ class TestLogSchema:
 
         runner = GameRunner(config)
 
+        names = list(personas.keys())
         # Simulate some eliminations
         runner.eliminations = [
-            {"round": 1, "phase": "day", "player": "Alice", "role": "town"},
-            {"round": 1, "phase": "night", "player": "Bob", "role": "mafia"},
+            {"round": 1, "phase": "day", "player": names[0], "role": "town"},
+            {"round": 1, "phase": "night", "player": names[1], "role": "mafia"},
         ]
-        runner.state.kill_player("Alice")
-        runner.state.kill_player("Bob")
+        runner.state.kill_player(names[0])
+        runner.state.kill_player(names[1])
 
         log_data = runner._build_log_data("town")
 
@@ -795,7 +838,7 @@ class TestMafiaCoordination:
         return AsyncMock()
 
     async def test_round1_agreement_skips_round2(self, personas, mock_provider):
-        """When both Mafia agree in Round 1, Round 2 is skipped."""
+        """When all Mafia agree in Round 1, Round 2 is skipped."""
         from src.engine.events import EventLog
         from src.engine.phases import NightPhase
         from src.engine.transcript import TranscriptManager
@@ -812,21 +855,34 @@ class TestMafiaCoordination:
         runner.state.advance_phase()  # night_zero -> day_1
         runner.state.advance_phase()  # day_1 -> night_1
 
-        call_count = [0]
+        mafia_call_count = [0]
         round1_contexts = []
+        non_mafia = [
+            name
+            for name in runner.state.get_living_players()
+            if runner.state.get_player_role(name) != "mafia"
+        ]
+        agreed_target = non_mafia[0] if non_mafia else "skip"
 
         async def mock_act(action_type, _context_string):
-            call_count[0] += 1
-
             if action_type.value == "night_kill":
-                # Both agree on same target
+                mafia_call_count[0] += 1
+                # All Mafia agree on same target
                 round1_contexts.append(_context_string)
                 return make_night_kill_response(
                     observations="Night phase begins.",
                     suspicions="Town targets identified.",
                     strategy="Eliminate a key town voice.",
                     reasoning="Strategic.",
-                    target="Alice",
+                    target=agreed_target,
+                )
+            elif action_type.value == "doctor_protect":
+                return make_doctor_protect_response(
+                    observations="Night phase begins.",
+                    suspicions="Town targets identified.",
+                    strategy="Protect key town voices.",
+                    reasoning="Strategic.",
+                    target=agreed_target,
                 )
             elif action_type.value == "investigation":
                 return make_investigation_response(
@@ -834,7 +890,7 @@ class TestMafiaCoordination:
                     suspicions="Town targets identified.",
                     strategy="Eliminate a key town voice.",
                     reasoning="Strategic.",
-                    target="Bob",
+                    target=agreed_target,
                 )
             return make_speak_response()
 
@@ -852,12 +908,13 @@ class TestMafiaCoordination:
             runner.memories,
         )
 
-        # Should have 2 Mafia calls (Round 1 only) + 1 Detective = 3
-        # If Round 2 happened, would be 4 Mafia + 1 Detective = 5
-        assert call_count[0] == 3
-        assert len(round1_contexts) == 2
+        # Should have 3 Mafia calls (Round 1 only)
+        assert mafia_call_count[0] == 3
+        assert len(round1_contexts) == 3
         assert "[COORDINATION ROUND 1]" in round1_contexts[1]
-        assert "Partner's message" in round1_contexts[1]
+        assert "[COORDINATION ROUND 1]" in round1_contexts[2]
+        assert "Prior proposals" in round1_contexts[1]
+        assert "Prior messages" in round1_contexts[1]
 
     async def test_round2_on_disagreement(self, personas, mock_provider):
         """Round 2 occurs when Mafia disagree in Round 1."""
@@ -880,6 +937,13 @@ class TestMafiaCoordination:
         mafia_call_count = [0]
         round2_context_strings = []
         round1_context_strings = []
+        non_mafia = [
+            name
+            for name in runner.state.get_living_players()
+            if runner.state.get_player_role(name) != "mafia"
+        ]
+        r1_targets = non_mafia[:3]
+        r2_target = non_mafia[0] if non_mafia else "skip"
 
         async def mock_act(action_type, context_string):
             if action_type.value == "night_kill":
@@ -890,38 +954,41 @@ class TestMafiaCoordination:
                     round1_context_strings.append(context_string)
                 if is_round2:
                     round2_context_strings.append(context_string)
-                    # In Round 2, both agree on Alice
+                    # In Round 2, all agree on the same target
                     return make_night_kill_response(
                         observations="Night phase begins.",
                         suspicions="Town targets identified.",
                         strategy="Eliminate a key town voice.",
                         reasoning="Strategic.",
-                        target="Alice",
+                        target=r2_target,
                     )
                 else:
-                    # Round 1: disagree - first says Alice, second says Bob
-                    if mafia_call_count[0] == 1:
-                        return make_night_kill_response(
-                            observations="Night phase begins.",
-                            suspicions="Town targets identified.",
-                            strategy="Eliminate a key town voice.",
-                            reasoning="Strategic.",
-                            target="Alice",
-                        )
+                    # Round 1: disagree - each Mafia picks a different target
+                    r1_index = (mafia_call_count[0] - 1) % 3
+                    target = r1_targets[r1_index] if r1_targets else "skip"
                     return make_night_kill_response(
                         observations="Night phase begins.",
                         suspicions="Town targets identified.",
                         strategy="Eliminate a key town voice.",
                         reasoning="Strategic.",
-                        target="Bob",
+                        target=target,
                     )
+            elif action_type.value == "doctor_protect":
+                target = non_mafia[0] if non_mafia else "skip"
+                return make_doctor_protect_response(
+                    observations="Night phase begins.",
+                    suspicions="Town targets identified.",
+                    strategy="Protect key town voices.",
+                    reasoning="Strategic.",
+                    target=target,
+                )
             elif action_type.value == "investigation":
                 return make_investigation_response(
                     observations="Night phase begins.",
                     suspicions="Town targets identified.",
                     strategy="Eliminate a key town voice.",
                     reasoning="Strategic.",
-                    target="Charlie",
+                    target=r2_target,
                 )
             return make_speak_response()
 
@@ -939,18 +1006,19 @@ class TestMafiaCoordination:
             runner.memories,
         )
 
-        # Should have 4 Mafia calls (2 R1 + 2 R2)
-        assert mafia_call_count[0] == 4
+        # Should have 6 Mafia calls (3 R1 + 3 R2)
+        assert mafia_call_count[0] == 6
 
         # Round 2 should have occurred with partner proposals visible
-        assert len(round2_context_strings) == 2
+        assert len(round2_context_strings) == 3
         for ctx in round2_context_strings:
-            # Context should contain info about partner's R1 proposal
-            assert "Partner's Round 1 proposal" in ctx
-            assert "Partner's Round 1 message" in ctx
-        # Second Mafia should see partner proposal in Round 1
-        assert len(round1_context_strings) == 2
+            # Context should contain info about Round 1 proposals
+            assert "Round 1 proposals" in ctx
+            assert "Round 1 messages" in ctx
+        # Later Mafia should see prior proposals in Round 1
+        assert len(round1_context_strings) == 3
         assert "[COORDINATION ROUND 1]" in round1_context_strings[1]
+        assert "[COORDINATION ROUND 1]" in round1_context_strings[2]
 
     async def test_first_mafia_decides_on_continued_disagreement(self, personas, mock_provider):
         """First Mafia (by seat) decides if still disagree after Round 2."""
@@ -970,29 +1038,36 @@ class TestMafiaCoordination:
         runner.state.advance_phase()
         runner.state.advance_phase()
 
-        # Track Mafia calls to alternate between first and second Mafia
-        # Order: First(R1), Second(R1), First(R2), Second(R2)
         mafia_call_count = [0]
+        non_mafia = [
+            name
+            for name in runner.state.get_living_players()
+            if runner.state.get_player_role(name) != "mafia"
+        ]
+        targets = non_mafia[:3]
+        if len(targets) < 3:
+            targets = (targets + ["skip", "skip", "skip"])[:3]
 
         async def mock_act(action_type, _context_string):
             if action_type.value == "night_kill":
                 mafia_call_count[0] += 1
-                # First Mafia always says Alice (calls 1, 3)
-                # Second Mafia always says Bob (calls 2, 4)
-                if mafia_call_count[0] % 2 == 1:
-                    return make_night_kill_response(
-                        observations="Night phase begins.",
-                        suspicions="Town targets identified.",
-                        strategy="Eliminate a key town voice.",
-                        reasoning="Strategic.",
-                        target="Alice",
-                    )
+                r1_index = (mafia_call_count[0] - 1) % 3
+                target = targets[r1_index]
                 return make_night_kill_response(
                     observations="Night phase begins.",
                     suspicions="Town targets identified.",
                     strategy="Eliminate a key town voice.",
                     reasoning="Strategic.",
-                    target="Bob",
+                    target=target,
+                )
+            elif action_type.value == "doctor_protect":
+                target = non_mafia[0] if non_mafia else "skip"
+                return make_doctor_protect_response(
+                    observations="Night phase begins.",
+                    suspicions="Town targets identified.",
+                    strategy="Protect key town voices.",
+                    reasoning="Strategic.",
+                    target=target,
                 )
             elif action_type.value == "investigation":
                 return make_investigation_response(
@@ -1000,7 +1075,7 @@ class TestMafiaCoordination:
                     suspicions="Town targets identified.",
                     strategy="Eliminate a key town voice.",
                     reasoning="Strategic.",
-                    target="Charlie",
+                    target=targets[0],
                 )
             return make_speak_response()
 
@@ -1010,7 +1085,7 @@ class TestMafiaCoordination:
         event_log = EventLog()
         transcript = TranscriptManager()
 
-        kill_target, _ = await phase.run(
+        await phase.run(
             runner.agents,
             runner.state,
             transcript,
@@ -1018,5 +1093,16 @@ class TestMafiaCoordination:
             runner.memories,
         )
 
-        # First mafia's R2 choice (Alice) should be used as tiebreaker
-        assert kill_target == "Alice"
+        mafia_votes = event_log.get_events_of_type("mafia_vote")
+        assert mafia_votes
+        final_vote = mafia_votes[-1]
+        mafia_agents = sorted(
+            [a for a in runner.agents.values() if a.role == "mafia"],
+            key=lambda a: a.seat,
+        )
+        expected_decider = mafia_agents[0].name
+
+        # First mafia's R2 choice should be used as tiebreaker
+        assert final_vote.data.get("coordination_round") == 2
+        assert final_vote.data.get("decided_by") == expected_decider
+        assert final_vote.data.get("final_target") == targets[0]

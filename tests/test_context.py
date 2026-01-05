@@ -124,59 +124,10 @@ class TestTranscriptCompression:
         transcript = manager.get_transcript_for_player(current_round=3)
 
         # Round 1 should be compressed
-        assert hasattr(transcript[0], "accusations")  # CompressedRoundSummary
+        assert hasattr(transcript[0], "vote_result")  # CompressedRoundSummary
         # Rounds 2 and 3 should be full
         assert hasattr(transcript[1], "speeches")  # DayRoundTranscript
         assert hasattr(transcript[2], "speeches")  # DayRoundTranscript
-
-    def test_compression_extracts_accusations(self, manager):
-        """Compression identifies accusation patterns."""
-        manager.add_speech("Alice", "Bob is definitely mafia, vote him out!", "Bob")
-        manager.add_speech("Bob", "I'm innocent, Alice is suspicious", "Alice")
-        manager.finalize_round(
-            round_number=1,
-            night_kill=None,
-            votes={},
-            vote_outcome="no_elimination",
-        )
-
-        # Add more rounds to push round 1 out of window
-        for i in range(2, 4):
-            manager.add_speech("Charlie", "Discussion", "Diana")
-            manager.finalize_round(
-                round_number=i,
-                night_kill=None,
-                votes={},
-                vote_outcome="no_elimination",
-            )
-
-        transcript = manager.get_transcript_for_player(current_round=3)
-        compressed = transcript[0]
-
-        # Should have captured the accusations
-        assert len(compressed.accusations) > 0
-        assert any("Alice" in acc and "Bob" in acc for acc in compressed.accusations)
-
-    def test_compression_extracts_claims(self, manager):
-        """Compression identifies role claims."""
-        manager.add_speech("Alice", "I am the detective and I investigated Bob", "Bob")
-        manager.finalize_round(
-            round_number=1,
-            night_kill=None,
-            votes={},
-            vote_outcome="no_elimination",
-        )
-
-        # Add rounds to push out of window
-        for i in range(2, 4):
-            manager.add_speech("Bob", "Test", "Charlie")
-            manager.finalize_round(i, None, {}, "no_elimination")
-
-        transcript = manager.get_transcript_for_player(current_round=3)
-        compressed = transcript[0]
-
-        assert len(compressed.claims) > 0
-        assert any("Detective" in claim for claim in compressed.claims)
 
     def test_compression_captures_deaths(self, manager):
         """Compression captures night and vote deaths."""
@@ -210,7 +161,18 @@ class TestContextBuilder:
         return GameState(
             phase="day_1",
             round_number=1,
-            living_players=["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+            living_players=[
+                "Alice",
+                "Bob",
+                "Charlie",
+                "Diana",
+                "Eve",
+                "Frank",
+                "Grace",
+                "Hector",
+                "Ivy",
+                "Jules",
+            ],
             dead_players=[],
             nominated_players=[],
         )
@@ -256,7 +218,7 @@ class TestContextBuilder:
 
         assert sample_persona.identity.name in context
         assert sample_persona.identity.background in context
-        assert sample_persona.voice_and_behavior.speech_style in context
+        assert sample_persona.play_style.voice in context
 
     def test_mafia_context_includes_partner(
         self, builder, sample_persona, game_state, memory
@@ -270,29 +232,11 @@ class TestContextBuilder:
             transcript=[],
             memory=memory,
             action_type=ActionType.SPEAK,
-            extra={"partner": "Bob"},
+            extra={"partners": ["Bob", "Charlie"]},
         )
 
         assert "[MAFIA INFO]" in context
-        assert "Your partner is Bob" in context
-
-    def test_detective_context_includes_results(
-        self, builder, sample_persona, game_state, memory
-    ):
-        """Detective sees investigation results."""
-        context = builder.build_context(
-            player_name="Alice",
-            role="detective",
-            persona=sample_persona,
-            game_state=game_state,
-            transcript=[],
-            memory=memory,
-            action_type=ActionType.SPEAK,
-            extra={"results": [{"target": "Bob", "result": "Mafia"}]},
-        )
-
-        assert "[INVESTIGATION RESULTS]" in context
-        assert "Bob: Mafia" in context
+        assert "Your partners are: Bob, Charlie" in context
 
     def test_action_prompts_differ_by_type(
         self, builder, sample_persona, game_state, memory
@@ -335,14 +279,16 @@ class TestContextBuilder:
             transcript=[],
             memory=memory,
             action_type=ActionType.NIGHT_KILL,
-            extra={"partner": "Bob"},
+            extra={"partners": ["Bob", "Charlie"]},
         )
 
         assert "[YOUR TASK: MAFIA NIGHT KILL]" in context
         # Should list targets excluding Alice
-        assert "Alice" not in context.split("Valid targets:")[1].split("\n")[0]
-        # Should list targets excluding partner
-        assert "Bob" not in context.split("Valid targets:")[1].split("\n")[0]
+        targets_line = context.split("Valid targets:")[1].split("\n")[0]
+        assert "Alice" not in targets_line
+        # Should list targets excluding partners
+        assert "Bob" not in targets_line
+        assert "Charlie" not in targets_line
 
     def test_vote_prompt_does_not_duplicate_skip(
         self, builder, sample_persona, game_state, memory
@@ -412,9 +358,9 @@ class TestContextBuilder:
                 round_number=1,
                 night_death=None,
                 vote_death="Bob",
-                accusations=["Alice accused Bob"],
                 vote_result="eliminated:Bob",
-                claims=["Charlie claimed Detective"],
+                vote_line="Alice->Bob, Charlie->Bob",
+                defense_note="Defense: yes (tie -> revote)",
             )
         ]
 
@@ -438,8 +384,8 @@ class TestContextBuilder:
 
         assert "Day 1 (summary)" in context
         assert "Vote elimination: Bob" in context
-        assert "Alice accused Bob" in context
-        assert "Charlie claimed Detective" in context
+        assert "Votes: Alice->Bob, Charlie->Bob" in context
+        assert "Defense: yes (tie -> revote)" in context
 
     def test_memory_renders_to_json(self, builder, sample_persona, game_state):
         """Memory section shows facts and beliefs as JSON."""
@@ -497,14 +443,13 @@ class TestContextBuilder:
             transcript=[],
             memory=memory,
             action_type=ActionType.SPEAK,
-            extra={"results": []},
         )
 
-        assert "[INVESTIGATION RESULTS]" in context
-        assert "No investigations completed yet" in context
+        assert "[YOUR MEMORY]" in context
+        assert "Fact summary: None yet." in context
 
     def test_mafia_dead_partner(self, builder, sample_persona, game_state, memory):
-        """Mafia context shows dead partner status."""
+        """Mafia context lists partners."""
         context = builder.build_context(
             player_name="Alice",
             role="mafia",
@@ -513,11 +458,11 @@ class TestContextBuilder:
             transcript=[],
             memory=memory,
             action_type=ActionType.SPEAK,
-            extra={"partner": "Bob", "partner_alive": False},
+            extra={"partners": ["Bob", "Charlie"]},
         )
 
         assert "[MAFIA INFO]" in context
-        assert "Your partner is Bob (dead)" in context
+        assert "Your partners are: Bob, Charlie" in context
 
     def test_investigation_prompt(self, builder, sample_persona, game_state, memory):
         """Investigation prompt shows valid targets excluding self."""
@@ -566,7 +511,18 @@ class TestNightZeroPrompt:
         return GameState(
             phase="night_zero",
             round_number=0,
-            living_players=["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+            living_players=[
+                "Alice",
+                "Bob",
+                "Charlie",
+                "Diana",
+                "Eve",
+                "Frank",
+                "Grace",
+                "Hector",
+                "Ivy",
+                "Jules",
+            ],
             dead_players=[],
             nominated_players=[],
         )
@@ -587,7 +543,7 @@ class TestNightZeroPrompt:
             transcript=[],
             memory=memory,
             action_type=ActionType.SPEAK,
-            extra={"partner": "Bob", "night_zero": True},
+            extra={"night_zero": True},
         )
 
         assert "[YOUR TASK: NIGHT ZERO COORDINATION]" in context
@@ -595,7 +551,7 @@ class TestNightZeroPrompt:
         assert "Share your initial strategy" in context
         assert "nomination" in context.lower()  # Tells LLM nomination is unused
         # Should NOT have partner's strategy section
-        assert "Your partner shared their strategy" not in context
+        assert "Your partners shared their strategies" not in context
 
     def test_night_zero_prompt_second_mafia_sees_partner(
         self, builder, sample_persona, game_state, memory
@@ -610,14 +566,16 @@ class TestNightZeroPrompt:
             memory=memory,
             action_type=ActionType.SPEAK,
             extra={
-                "partner": "Alice",
+                "partners": ["Alice", "Charlie"],
                 "night_zero": True,
-                "partner_strategy": "Let's use signal words and target quiet players",
+                "partner_strategies": {
+                    "Alice": "Let's use signal words and target quiet players"
+                },
             },
         )
 
         assert "[YOUR TASK: NIGHT ZERO COORDINATION]" in context
-        assert "Your partner shared their strategy" in context
+        assert "Your partners shared their strategies" in context
         assert "Let's use signal words and target quiet players" in context
         assert "Now share YOUR strategy" in context
 
@@ -652,7 +610,7 @@ class TestNightZeroPrompt:
             transcript=[],
             memory=memory,
             action_type=ActionType.SPEAK,
-            extra={"partner": "Bob", "night_zero": True},
+            extra={"partners": ["Bob", "Charlie"], "night_zero": True},
         )
 
         # Regular speak has [YOUR TASK: SPEAK], Night Zero has different
@@ -684,4 +642,3 @@ class TestTranscriptFullMode:
         # All rounds should be DayRoundTranscript (not compressed)
         for item in transcript:
             assert hasattr(item, "speeches"), "Expected full transcript, got compressed"
-            assert not hasattr(item, "accusations"), "Got compressed instead of full"

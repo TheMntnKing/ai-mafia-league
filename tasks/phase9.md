@@ -2,7 +2,7 @@
 
 **Goal:** Move engine to 10 players (3 Mafia + Doctor) and split night events for replay.
 
-**Status:** IN PROGRESS (9.1–9.6 complete; 9.7 pending)  
+**Status:** IN PROGRESS (9.1–9.6 complete; 9.7 in progress)  
 **Prerequisites:** Phase 1-8 complete
 
 ---
@@ -10,7 +10,7 @@
 ## Changes (what + where)
 
 ### 9.1 Schema + State
-**Status:** ✅ implemented in code (tests pending in 9.7)
+**Status:** ✅ implemented in code + tests updated
 - `src/schemas/core.py`: add `ActionType.DOCTOR_PROTECT` ✅
 - `src/schemas/actions.py`: add `DoctorProtectOutput(BaseThinking)` ✅
 - `src/schemas/persona.py`: add `doctor` to `RoleGuidance` (optional field) ✅
@@ -45,7 +45,7 @@ Event types (stable shapes):
 - `night_resolution`: `intended_kill`, `protected`, `actual_kill` (only `actual_kill` public)
 
 ### 9.3 Night Flow + 3-Mafia Coordination
-**Status:** ✅ implemented in code (tests pending in 9.7)
+**Status:** ✅ implemented in code + tests updated
 - `src/engine/phases.py`:
   - Night Zero: sequential strategies for all living Mafia (not hardcoded to 2)
   - Night Phase: proposals per Mafia (round 1), majority rules; if split -> round 2 -> tie-break by lowest seat
@@ -94,15 +94,15 @@ Rules:
 - Add doctor role tactics where desired (`RoleTactics.doctor` is optional) ✅
 
 ### 9.7 Tests + Sample Log + Viewer Sync
-- `tests/test_state.py`: 10-player distribution + speaking order
-- `tests/test_game.py`: agent count, roles, win condition edges
-- `tests/test_player.py`: doctor validation/defaults
-- `tests/test_providers.py`: schema map includes doctor
-- Add tests for 3-Mafia coordination + doctor protection outcomes
-- `tests/sgr_helpers.py`: add `make_doctor_protect_response()`
-- `tests/test_context.py`: update for speaking-order block; compression no longer extracts accusations/claims
-- Generate one 10-player log to validate event stream
-- Viewer parser: handle `mafia_discussion`, `mafia_vote`, `doctor_protection`, `night_resolution`
+- `tests/test_state.py`: 10-player distribution + speaking order ✅
+- `tests/test_game.py`: agent count, roles, win condition edges ✅
+- `tests/test_player.py`: doctor validation/defaults ✅
+- `tests/test_providers.py`: schema map includes doctor ✅
+- Add tests for 3-Mafia coordination + doctor protection outcomes ✅
+- `tests/sgr_helpers.py`: add `make_doctor_protect_response()` ✅
+- `tests/test_context.py`: update for speaking-order block; compression no longer extracts accusations/claims ✅
+- Generate one 10-player log to validate event stream ✅
+- Viewer parser: handle `mafia_discussion`, `mafia_vote`, `doctor_protection`, `night_resolution` ⏳
 
 ---
 

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from src.schemas import (
     DefenseOutput,
+    DoctorProtectOutput,
     InvestigationOutput,
     LastWordsOutput,
     NightKillOutput,
@@ -63,6 +64,17 @@ def make_investigation_response(**overrides) -> dict:
         "target": "Bob",
     }
     return _validate(InvestigationOutput, {**data, **overrides})
+
+
+def make_doctor_protect_response(**overrides) -> dict:
+    data = {
+        "observations": "Night phase with limited information.",
+        "suspicions": "No strong lead to follow.",
+        "strategy": "Protect likely night targets.",
+        "reasoning": "Default reasoning.",
+        "target": "Bob",
+    }
+    return _validate(DoctorProtectOutput, {**data, **overrides})
 
 
 def make_last_words_response(**overrides) -> dict:

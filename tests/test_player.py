@@ -192,6 +192,20 @@ class TestActionHandler:
                 player_name="Alice",
             )
 
+    def test_validate_doctor_protect_valid(self, handler, game_state):
+        """Doctor protection can target any living player (including self)."""
+        output = {"target": "Alice"}
+        result = handler.validate(output, ActionType.DOCTOR_PROTECT, game_state)
+        assert result["target"] == "Alice"
+
+    def test_validate_doctor_protect_invalid(self, handler, game_state):
+        """Doctor protection cannot target dead players."""
+        game_state.dead_players = ["Bob"]
+        game_state.living_players = [p for p in game_state.living_players if p != "Bob"]
+        output = {"target": "Bob"}
+        with pytest.raises(ActionValidationError, match="Invalid target"):
+            handler.validate(output, ActionType.DOCTOR_PROTECT, game_state)
+
     def test_get_default_speak(self, handler, game_state):
         """Default speaking output is valid."""
         default = handler.get_default(ActionType.SPEAK, game_state, "Alice")
@@ -252,6 +266,18 @@ class TestActionHandler:
         )
         default = handler.get_default(ActionType.INVESTIGATION, game_state, "Alice")
         assert default["target"] == "Bob"
+
+    def test_get_default_doctor_protect(self, handler):
+        """Default doctor protect targets a living player."""
+        game_state = GameState(
+            phase="night_1",
+            round_number=1,
+            living_players=["Alice", "Bob"],
+            dead_players=[],
+            nominated_players=[],
+        )
+        default = handler.get_default(ActionType.DOCTOR_PROTECT, game_state, "Alice")
+        assert default["target"] in game_state.living_players
 
 
 class TestPlayerAgent:
@@ -454,7 +480,7 @@ class TestPlayerAgent:
         assert response.updated_memory.beliefs["strategy"] == "Vote to remove top suspect."
 
     async def test_act_updates_memory_investigation(self, agent, mock_provider, memory):
-        """Investigation action stores last_investigation in memory facts."""
+        """Investigation action updates beliefs (facts are engine-owned)."""
         game_state = GameState(
             phase="night_1",
             round_number=1,
@@ -474,44 +500,42 @@ class TestPlayerAgent:
 
         response = await agent.act(game_state, [], memory, ActionType.INVESTIGATION)
 
-        assert response.updated_memory.facts["last_investigation"] == {
-            "target": "Bob",
-            "reasoning": "Investigate Bob to confirm suspicions.",
-        }
+        assert response.updated_memory.facts == memory.facts
+        assert response.updated_memory.beliefs["suspicions"] == "Bob is a candidate."
+        assert response.updated_memory.beliefs["strategy"] == "Gather information for town."
 
     async def test_act_updates_memory_night_kill(self, mock_provider, sample_persona, memory):
-        """Night kill action stores last_night_kill in memory facts."""
+        """Night kill action updates beliefs (facts are engine-owned)."""
         agent = PlayerAgent(
             name="Alice",
             persona=sample_persona,
             role="mafia",
             seat=0,
             provider=mock_provider,
-            partner="Bob",
+            partners=["Bob", "Charlie"],
         )
         game_state = GameState(
             phase="night_1",
             round_number=1,
-            living_players=["Alice", "Bob", "Charlie"],
+            living_players=["Alice", "Bob", "Charlie", "Diana"],
             dead_players=[],
             nominated_players=[],
         )
         mock_provider.act = AsyncMock(
             return_value=make_night_kill_response(
                 observations="Night phase after a tense day.",
-                suspicions="Charlie is influential.",
+                suspicions="Diana is influential.",
                 strategy="Remove a strong town voice.",
-                reasoning="Charlie could be leading town.",
-                target="Charlie",
+                reasoning="Diana could be leading town.",
+                target="Diana",
             )
         )
 
         response = await agent.act(game_state, [], memory, ActionType.NIGHT_KILL)
 
-        assert response.updated_memory.facts["last_night_kill"] == {
-            "target": "Charlie",
-            "reasoning": "Charlie could be leading town.",
-        }
+        assert response.updated_memory.facts == memory.facts
+        assert response.updated_memory.beliefs["suspicions"] == "Diana is influential."
+        assert response.updated_memory.beliefs["strategy"] == "Remove a strong town voice."
 
 
 class TestPlayerAgentRoles:
@@ -521,20 +545,20 @@ class TestPlayerAgentRoles:
         return provider
 
     def test_mafia_agent_has_partner(self, mock_provider, sample_persona):
-        """Mafia agent tracks partner."""
+        """Mafia agent tracks partners."""
         agent = PlayerAgent(
             name="Alice",
             persona=sample_persona,
             role="mafia",
             seat=0,
             provider=mock_provider,
-            partner="Bob",
+            partners=["Bob", "Charlie"],
         )
 
-        assert agent.partner == "Bob"
+        assert agent.partners == ["Bob", "Charlie"]
         memory = PlayerMemory(facts={}, beliefs={})
         extra = agent._get_role_extra(memory)
-        assert extra["partner"] == "Bob"
+        assert extra["partners"] == ["Bob", "Charlie"]
 
     def test_detective_tracks_investigation_results(self, mock_provider, sample_persona):
         """Detective agent tracks investigation results."""
@@ -583,11 +607,11 @@ class TestPlayerAgentRoles:
             role="mafia",
             seat=0,
             provider=mock_provider,
-            partner="Bob",
+            partners=["Bob", "Charlie"],
         )
 
         mafia_names = agent._get_mafia_names()
-        assert mafia_names == ["Alice", "Bob"]
+        assert mafia_names == ["Alice", "Bob", "Charlie"]
 
     def test_town_agent_get_mafia_names_returns_none(self, mock_provider, sample_persona):
         """Non-Mafia agent returns None for mafia_names."""

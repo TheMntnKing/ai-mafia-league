@@ -10,26 +10,38 @@ from src.storage.json_logs import GameLogWriter, PlayerEntry
 class TestGameStateManager:
     @pytest.fixture
     def player_names(self):
-        return ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"]
+        return [
+            "Alice",
+            "Bob",
+            "Charlie",
+            "Diana",
+            "Eve",
+            "Frank",
+            "Grace",
+            "Hector",
+            "Ivy",
+            "Jules",
+        ]
 
     @pytest.fixture
     def manager(self, player_names):
         return GameStateManager(player_names, seed=42)
 
-    def test_requires_seven_players(self):
-        """Game requires exactly 7 players."""
-        with pytest.raises(ValueError, match="exactly 7 players"):
+    def test_requires_ten_players(self):
+        """Game requires exactly 10 players."""
+        with pytest.raises(ValueError, match="exactly 10 players"):
             GameStateManager(["Alice", "Bob", "Charlie"])
 
-        with pytest.raises(ValueError, match="exactly 7 players"):
+        with pytest.raises(ValueError, match="exactly 10 players"):
             GameStateManager(["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"])
 
     def test_role_distribution(self, manager):
-        """7 players get correct role distribution: 2 Mafia, 1 Detective, 4 Town."""
+        """10 players get correct role distribution: 3 Mafia, 1 Doctor, 1 Detective, 5 Town."""
         roles = [p.role for p in manager.players.values()]
-        assert roles.count("mafia") == 2
+        assert roles.count("mafia") == 3
+        assert roles.count("doctor") == 1
         assert roles.count("detective") == 1
-        assert roles.count("town") == 4
+        assert roles.count("town") == 5
 
     def test_all_players_start_alive(self, manager):
         """All players start alive."""
@@ -99,7 +111,18 @@ class TestPhaseTransitions:
     @pytest.fixture
     def manager(self):
         return GameStateManager(
-            ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+            [
+                "Alice",
+                "Bob",
+                "Charlie",
+                "Diana",
+                "Eve",
+                "Frank",
+                "Grace",
+                "Hector",
+                "Ivy",
+                "Jules",
+            ],
             seed=42,
         )
 
@@ -162,7 +185,18 @@ class TestWinConditions:
     @pytest.fixture
     def manager(self):
         return GameStateManager(
-            ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+            [
+                "Alice",
+                "Bob",
+                "Charlie",
+                "Diana",
+                "Eve",
+                "Frank",
+                "Grace",
+                "Hector",
+                "Ivy",
+                "Jules",
+            ],
             seed=42,
         )
 
@@ -171,7 +205,7 @@ class TestWinConditions:
         assert manager.check_win_condition() is None
 
     def test_town_wins_when_mafia_eliminated(self, manager):
-        """Town wins when both Mafia are dead."""
+        """Town wins when all Mafia are dead."""
         mafia_players = manager.get_players_by_role("mafia")
         for name in mafia_players:
             manager.kill_player(name)
@@ -180,24 +214,24 @@ class TestWinConditions:
 
     def test_mafia_wins_when_equals_town(self, manager):
         """Mafia wins when Mafia count >= Town-aligned count."""
-        # Start: 2 Mafia, 5 Town-aligned (1 Detective + 4 Town)
-        # Kill 3 Town-aligned: 2 Mafia vs 2 Town-aligned -> Mafia wins
+        # Start: 3 Mafia, 7 Town-aligned (1 Doctor + 1 Detective + 5 Town)
+        # Kill 4 Town-aligned: 3 Mafia vs 3 Town-aligned -> Mafia wins
 
         town_aligned = [
             name
             for name, info in manager.players.items()
-            if info.role in ("town", "detective")
+            if info.role in ("town", "detective", "doctor")
         ]
 
-        # Kill 3 town-aligned to get to 2v2
-        for name in town_aligned[:3]:
+        # Kill 4 town-aligned to get to 3v3
+        for name in town_aligned[:4]:
             manager.kill_player(name)
 
         assert manager.check_win_condition() == "mafia"
 
     def test_game_continues_with_mafia_minority(self, manager):
         """Game continues while Mafia is in minority."""
-        # Kill 1 town-aligned: 2 Mafia vs 4 Town-aligned
+        # Kill 1 town-aligned: 3 Mafia vs 6 Town-aligned
         town_player = next(
             name for name, info in manager.players.items() if info.role == "town"
         )
@@ -207,24 +241,47 @@ class TestWinConditions:
 
     def test_mafia_wins_with_majority(self, manager):
         """Mafia wins when they outnumber Town."""
-        # Kill 4 town-aligned: 2 Mafia vs 1 Town-aligned -> Mafia wins
+        # Kill 5 town-aligned: 3 Mafia vs 2 Town-aligned -> Mafia wins
         town_aligned = [
             name
             for name, info in manager.players.items()
-            if info.role in ("town", "detective")
+            if info.role in ("town", "detective", "doctor")
         ]
 
-        for name in town_aligned[:4]:
+        for name in town_aligned[:5]:
             manager.kill_player(name)
 
         assert manager.check_win_condition() == "mafia"
+
+    def test_forced_parity_when_doctor_dead(self, manager):
+        """Doctor dead + near parity triggers forced Mafia win after day."""
+        doctor = manager.get_players_by_role("doctor")[0]
+        manager.kill_player(doctor)
+
+        town_players = manager.get_players_by_role("town")
+        for name in town_players[:2]:
+            manager.kill_player(name)
+
+        assert manager.check_win_condition() is None
+        assert manager.check_forced_parity_after_day() == "mafia"
 
 
 class TestSpeakingOrder:
     @pytest.fixture
     def manager(self):
         return GameStateManager(
-            ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+            [
+                "Alice",
+                "Bob",
+                "Charlie",
+                "Diana",
+                "Eve",
+                "Frank",
+                "Grace",
+                "Hector",
+                "Ivy",
+                "Jules",
+            ],
             seed=42,
         )
 
@@ -264,27 +321,38 @@ class TestSpeakingOrder:
 
         order_after = manager.get_speaking_order()
         assert first_speaker not in order_after
-        assert len(order_after) == 6
+        assert len(order_after) == 9
 
 
 class TestMafiaPartner:
     @pytest.fixture
     def manager(self):
         return GameStateManager(
-            ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+            [
+                "Alice",
+                "Bob",
+                "Charlie",
+                "Diana",
+                "Eve",
+                "Frank",
+                "Grace",
+                "Hector",
+                "Ivy",
+                "Jules",
+            ],
             seed=42,
         )
 
     def test_mafia_knows_partner(self, manager):
         """Mafia player can get their partner's name."""
         mafia_players = manager.get_players_by_role("mafia")
-        assert len(mafia_players) == 2
+        assert len(mafia_players) == 3
 
-        partner_of_first = manager.get_mafia_partner(mafia_players[0])
-        partner_of_second = manager.get_mafia_partner(mafia_players[1])
-
-        assert partner_of_first == mafia_players[1]
-        assert partner_of_second == mafia_players[0]
+        for mafia_name in mafia_players:
+            partners = manager.get_mafia_partners(mafia_name)
+            assert len(partners) == 2
+            assert mafia_name not in partners
+            assert set(partners) == (set(mafia_players) - {mafia_name})
 
     def test_non_mafia_has_no_partner(self, manager):
         """Non-Mafia players return None for partner."""
@@ -295,15 +363,26 @@ class TestMafiaPartner:
             name for name, info in manager.players.items() if info.role == "detective"
         )
 
-        assert manager.get_mafia_partner(town_player) is None
-        assert manager.get_mafia_partner(detective) is None
+        assert manager.get_mafia_partners(town_player) == []
+        assert manager.get_mafia_partners(detective) == []
 
 
 class TestPublicState:
     @pytest.fixture
     def manager(self):
         return GameStateManager(
-            ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace"],
+            [
+                "Alice",
+                "Bob",
+                "Charlie",
+                "Diana",
+                "Eve",
+                "Frank",
+                "Grace",
+                "Hector",
+                "Ivy",
+                "Jules",
+            ],
             seed=42,
         )
 
@@ -315,7 +394,7 @@ class TestPublicState:
         state = manager.get_public_state()
         assert state.phase == "day_1"
         assert state.round_number == 1
-        assert len(state.living_players) == 7
+        assert len(state.living_players) == 10
         assert state.dead_players == []
         assert state.nominated_players == []
 
@@ -547,7 +626,7 @@ class TestGameLogWriter:
         # Read back
         data = writer.read("test123")
         assert data is not None
-        assert data["schema_version"] == "1.2"
+        assert data["schema_version"] == "1.3"
         assert data["winner"] == "town"
         assert len(data["players"]) == 2
         assert len(data["events"]) == 1
@@ -567,7 +646,7 @@ class TestGameLogWriter:
     async def test_write_game_log(self, tmp_path):
         """Async write_game_log writes to disk."""
         writer = GameLogWriter(str(tmp_path))
-        log_data = {"game_id": "async123", "schema_version": "1.2"}
+        log_data = {"game_id": "async123", "schema_version": "1.3"}
 
         path = await writer.write_game_log(log_data)
         assert (tmp_path / "game_async123.json").exists()

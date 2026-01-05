@@ -9,6 +9,7 @@ from src.schemas import (
     DayRoundTranscript,
     DefenseOutput,
     DefenseSpeech,
+    DoctorProtectOutput,
     Event,
     GameState,
     InvestigationOutput,
@@ -31,6 +32,7 @@ class TestActionType:
         assert ActionType.LAST_WORDS == "last_words"
         assert ActionType.NIGHT_KILL == "night_kill"
         assert ActionType.INVESTIGATION == "investigation"
+        assert ActionType.DOCTOR_PROTECT == "doctor_protect"
 
 
 class TestGameState:
@@ -38,7 +40,7 @@ class TestGameState:
         """GameState can be created with valid data."""
         assert sample_game_state.phase == "day_1"
         assert sample_game_state.round_number == 1
-        assert len(sample_game_state.living_players) == 7
+        assert len(sample_game_state.living_players) == 10
 
     def test_game_state_validation(self):
         """GameState validates required fields."""
@@ -124,12 +126,11 @@ class TestPersona:
                 core_traits=["one", "two", "three", "four", "five", "six"],
             )
 
-    def test_persona_with_role_guidance(self, sample_persona):
-        """Persona can include role guidance."""
-        assert sample_persona.role_guidance is not None
-        assert sample_persona.role_guidance.town
-        assert sample_persona.role_guidance.mafia
-        assert sample_persona.role_guidance.detective
+    def test_persona_with_tactics(self, sample_persona):
+        """Persona includes role-specific tactics."""
+        assert sample_persona.tactics.town
+        assert sample_persona.tactics.mafia
+        assert sample_persona.tactics.detective
 
 
 class TestTranscript:
@@ -159,9 +160,9 @@ class TestTranscript:
             round_number=1,
             night_death=None,
             vote_death="Charlie",
-            accusations=["Alice accused Charlie"],
             vote_result="eliminated:Charlie",
-            claims=[],
+            vote_line="Alice->Charlie",
+            defense_note=None,
         )
         assert summary.vote_death == "Charlie"
 
@@ -213,6 +214,17 @@ class TestSGROutputs:
             target="Bob",
         )
         assert output.target == "Bob"
+
+    def test_doctor_protect_output(self):
+        """DoctorProtectOutput captures protection target."""
+        output = DoctorProtectOutput(
+            observations="Night 1 with limited info.",
+            suspicions="Alice seems threatened.",
+            strategy="Protect likely night targets.",
+            reasoning="Alice is a key town voice.",
+            target="Alice",
+        )
+        assert output.target == "Alice"
 
     def test_last_words_output(self):
         """LastWordsOutput captures final statement."""
